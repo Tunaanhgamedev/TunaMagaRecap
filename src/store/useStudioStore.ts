@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   ActiveTab,
   Project,
@@ -110,7 +111,9 @@ interface StudioState {
   stopNarrationAudio: () => void;
 }
 
-export const useStudioStore = create<StudioState>((set, get) => ({
+export const useStudioStore = create<StudioState>()(
+  persist(
+    (set, get) => ({
   activeTab: 'library',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -679,4 +682,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     // Play welcome narration
     get().playNarrationAudio('Chào mừng các bạn đến với Manga Studio AI! Video tóm tắt chapter đã được tạo thành công.');
   },
-}));
+}),
+    {
+      name: 'manga-studio-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        pages: state.pages,
+        projects: state.projects,
+        selectedProject: state.selectedProject,
+        clips: state.clips,
+        subtitles: state.subtitles,
+        scriptData: state.scriptData,
+        seo: state.seo,
+        thumbnail: state.thumbnail,
+        mangaUrlInput: state.mangaUrlInput,
+      }),
+    }
+  )
+);
