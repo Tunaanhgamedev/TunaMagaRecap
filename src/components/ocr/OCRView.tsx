@@ -282,11 +282,7 @@ export const OCRView: React.FC = () => {
     setIsRunningOCR(true);
     try {
       const imgUrl = (currentPage as any).rawImageUrl || currentPage.imageUrl;
-      const API_BASE_URL =
-        typeof window !== "undefined" &&
-        window.location.origin.includes("localhost")
-          ? "/api"
-          : "http://localhost:3001/api";
+      const API_BASE_URL = "http://localhost:3001/api";
 
       const res = await fetch(`${API_BASE_URL}/ocr/detect`, {
         method: "POST",

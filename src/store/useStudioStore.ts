@@ -27,7 +27,7 @@ import {
   AIPluginConfig,
 } from '../types/studio';
 
-const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? '/api' : 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 interface StudioState {
   activeTab: ActiveTab;

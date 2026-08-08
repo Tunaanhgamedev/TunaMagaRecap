@@ -212,13 +212,105 @@ async function sniffScript(imageBuffer, candidateLang) {
 }
 
 /**
- * Real OCR extraction with script-sniffing, true image dimensions, and Tesseract v5/v6 structure traversal.
- *
- * Pipeline:
- *   1. Preprocess image (grayscale, normalize, sharpen) and read real dimensions via Sharp metadata.
- *   2. Sniff actual script with a fast eng pass — if it disagrees with requestedLang, switch traineddata.
- *   3. Run full OCR with the correct single-language model.
- *   4. Traverse blocks/paragraphs/lines and build panels.
+ * Cluster OCR text lines into tightly-fitted speech bubble bounding boxes
+ */
+function clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidence) {
+  const validLines = [];
+  for (const line of rawLines) {
+    const cleaned = cleanOCRText(line.text || '');
+    if (!cleaned) continue;
+    
+    // Filter out low confidence noise lines (art strokes, blood, screentone)
+    const conf = line.confidence || avgConfidence;
+    if (conf < 40 && cleaned.length < 5) continue;
+
+    const bbox = line.bbox || { x0: 0, y0: 0, x1: imgWidth, y1: imgHeight };
+    const lh = bbox.y1 - bbox.y0;
+
+    // Filter out huge full-page spanning blocks (>40% page height)
+    if (lh > imgHeight * 0.4) continue;
+
+    validLines.push({
+      text: cleaned,
+      confidence: conf,
+      x0: bbox.x0,
+      y0: bbox.y0,
+      x1: bbox.x1,
+      y1: bbox.y1,
+    });
+  }
+
+  if (validLines.length === 0) return [];
+
+  // Group lines if vertical gap < 3.5% of page height and horizontal alignment overlap
+  const clusters = [];
+  const visited = new Set();
+
+  for (let i = 0; i < validLines.length; i++) {
+    if (visited.has(i)) continue;
+    const currentCluster = [validLines[i]];
+    visited.add(i);
+
+    let addedMore = true;
+    while (addedMore) {
+      addedMore = false;
+      for (let j = 0; j < validLines.length; j++) {
+        if (visited.has(j)) continue;
+
+        const candidate = validLines[j];
+        const isNear = currentCluster.some((member) => {
+          const vertDist = Math.max(0, Math.max(member.y0, candidate.y0) - Math.min(member.y1, candidate.y1));
+          const horizOverlap = Math.min(member.x1, candidate.x1) - Math.max(member.x0, candidate.x0);
+          const maxW = Math.max(member.x1 - member.x0, candidate.x1 - candidate.x0);
+          return vertDist < imgHeight * 0.035 && horizOverlap > -maxW * 0.4;
+        });
+
+        if (isNear) {
+          currentCluster.push(candidate);
+          visited.add(j);
+          addedMore = true;
+        }
+      }
+    }
+
+    clusters.push(currentCluster);
+  }
+
+  // Sort clusters top-to-bottom
+  clusters.sort((a, b) => {
+    const minYA = Math.min(...a.map((l) => l.y0));
+    const minYB = Math.min(...b.map((l) => l.y0));
+    return minYA - minYB;
+  });
+
+  // Convert clusters into tight speech bubble bounding boxes
+  return clusters.map((cluster, cIdx) => {
+    const x0 = Math.min(...cluster.map((l) => l.x0));
+    const y0 = Math.min(...cluster.map((l) => l.y0));
+    const x1 = Math.max(...cluster.map((l) => l.x1));
+    const y1 = Math.max(...cluster.map((l) => l.y1));
+
+    const combinedText = cluster.map((l) => l.text).join(' ');
+    const avgConf = cluster.reduce((sum, l) => sum + l.confidence, 0) / cluster.length;
+
+    // Relative percentage coordinates padded tightly around text (+-1%)
+    const x = Math.max(0, Math.round((x0 / imgWidth) * 100) - 1);
+    const y = Math.max(0, Math.round((y0 / imgHeight) * 100) - 1);
+    const w = Math.min(100 - x, Math.round(((x1 - x0) / imgWidth) * 100) + 2);
+    const h = Math.min(100 - y, Math.round(((y1 - y0) / imgHeight) * 100) + 2);
+
+    return {
+      text: combinedText,
+      confidence: Math.round(avgConf * 10) / 10,
+      bbox: { x, y, w: Math.max(w, 15), h: Math.max(h, 4) },
+      textType: classifyTextType(combinedText),
+      speaker: guessSpeaker(combinedText, cIdx),
+    };
+  });
+}
+
+/**
+ * Real OCR extraction with script-sniffing, line-clustering speech bubble segmentation, and Tesseract v5/v6 structure traversal.
  */
 export async function ocrExtractText(imageSource, requestedLang = 'ko', pageIndex = 1) {
   try {
@@ -252,46 +344,31 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
 
     console.log(`[MangaOCR Page ${pageIndex}] ✅ Dimensions: ${imgWidth}x${imgHeight}, Recognized: ${fullText.length} chars, Lang: ${detectedLang}`);
 
-    const textBlocks = [];
-
-    // Traverse blocks -> paragraphs -> lines (compatible with all Tesseract.js versions)
-    const rawParagraphs = data.paragraphs || [];
     const rawLines = data.lines || [];
+    const rawParagraphs = data.paragraphs || [];
 
-    if (rawParagraphs.length > 0) {
+    // 1. First attempt tight line-clustering into distinct speech bubbles
+    let textBlocks = clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidence);
+
+    // 2. Fallback to paragraph blocks if clustering yielded no blocks
+    if (textBlocks.length === 0 && rawParagraphs.length > 0) {
       for (const para of rawParagraphs) {
         const cleaned = cleanOCRText(para.text || '');
         if (!cleaned) continue;
 
         const bbox = para.bbox || { x0: 0, y0: 0, x1: imgWidth, y1: imgHeight };
-        const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 2);
-        const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 2);
-        const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 4);
-        const h = Math.min(100 - y, Math.round(((bbox.y1 - bbox.y0) / imgHeight) * 100) + 4);
+        const ph = bbox.y1 - bbox.y0;
+        if (ph > imgHeight * 0.6) continue; // Skip huge full-page merged paragraphs
+
+        const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 1);
+        const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 1);
+        const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 2);
+        const h = Math.min(100 - y, Math.round(((bbox.y1 - bbox.y0) / imgHeight) * 100) + 2);
 
         textBlocks.push({
           text: cleaned,
           confidence: Math.round((para.confidence || avgConfidence) * 10) / 10,
-          bbox: { x, y, w: Math.max(w, 20), h: Math.max(h, 10) },
-          textType: classifyTextType(cleaned),
-          speaker: guessSpeaker(cleaned, textBlocks.length),
-        });
-      }
-    } else if (rawLines.length > 0) {
-      for (const line of rawLines) {
-        const cleaned = cleanOCRText(line.text || '');
-        if (!cleaned) continue;
-
-        const bbox = line.bbox || { x0: 0, y0: 0, x1: imgWidth, y1: imgHeight };
-        const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 2);
-        const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 2);
-        const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 4);
-        const h = Math.min(100 - y, Math.round(((bbox.y1 - bbox.y0) / imgHeight) * 100) + 4);
-
-        textBlocks.push({
-          text: cleaned,
-          confidence: Math.round((line.confidence || avgConfidence) * 10) / 10,
-          bbox: { x, y, w: Math.max(w, 20), h: Math.max(h, 10) },
+          bbox: { x, y, w: Math.max(w, 20), h: Math.max(h, 6) },
           textType: classifyTextType(cleaned),
           speaker: guessSpeaker(cleaned, textBlocks.length),
         });
@@ -300,6 +377,15 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
 
     // Construct panels from recognized blocks
     const panels = [];
+
+    // Filter out garbled noise blocks (e.g., blood drops or art strokes misrecognized as symbols)
+    function isNoiseText(text) {
+      if (!text || text.trim().length < 2) return true;
+      const letters = text.match(/[\p{L}\p{N}]/gu) || [];
+      // If fewer than 35% characters are letters/numbers and string is non-trivial, it's drawing noise
+      if (letters.length / text.length < 0.35 && text.length > 4) return true;
+      return false;
+    }
 
     if (textBlocks.length === 0) {
       // Art/action frame with no detected text
@@ -329,19 +415,25 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
         ],
       });
     } else {
+      let panelCount = 0;
       for (let i = 0; i < textBlocks.length; i++) {
         const block = textBlocks[i];
+        if (isNoiseText(block.text)) {
+          console.log(`[MangaOCR Page ${pageIndex}] 🧹 Filtered out art noise block: "${block.text}"`);
+          continue;
+        }
+        panelCount++;
         panels.push({
-          id: `panel-${pageIndex}-${i + 1}`,
+          id: `panel-${pageIndex}-${panelCount}`,
           pageIndex,
-          panelIndex: i + 1,
+          panelIndex: panelCount,
           bbox: block.bbox,
-          suggestedCameraEffect: i === 0 ? 'dramatic_zoom' : i % 2 === 1 ? 'pan_right' : 'pan_up',
-          aiDescription: `Trang ${pageIndex}: Khung thoại #${i + 1} (${block.textType})`,
+          suggestedCameraEffect: panelCount === 1 ? 'dramatic_zoom' : panelCount % 2 === 0 ? 'pan_right' : 'pan_up',
+          aiDescription: `Trang ${pageIndex}: Khung thoại #${panelCount} (${block.textType})`,
           dialogues: [
             {
-              id: `d-${pageIndex}-${i + 1}`,
-              panelId: `panel-${pageIndex}-${i + 1}`,
+              id: `d-${pageIndex}-${panelCount}`,
+              panelId: `panel-${pageIndex}-${panelCount}`,
               speaker: block.speaker,
               text: block.text,
               originalText: block.text,
