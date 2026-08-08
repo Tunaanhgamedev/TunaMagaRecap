@@ -434,12 +434,80 @@ export const TimelineView: React.FC = () => {
     alert(`🎉 Đã xuất thành công dự án CapCut (${aspectRatio}) với đầy đủ keyframe của từng Bounding Box!`);
   };
 
-  const handleExportWebM = () => {
+  const handleExportWebM = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      alert('❌ Canvas chưa sẵn sàng để xuất video.');
+      return;
+    }
+
     setIsExporting(true);
-    setTimeout(() => {
+    try {
+      // 1. Reset timeline playback to start
+      useStudioStore.setState({ currentTime: 0, isPlaying: true });
+
+      // 2. Capture canvas stream at 60 FPS
+      const stream = (canvas as any).captureStream ? (canvas as any).captureStream(60) : null;
+      if (!stream) {
+        throw new Error('Trình duyệt không hỗ trợ HTML5 Canvas captureStream.');
+      }
+
+      // Check supported MIME type
+      let mimeType = 'video/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+          mimeType = 'video/mp4;codecs=avc1';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+          mimeType = 'video/webm;codecs=vp9';
+        } else if (MediaRecorder.isTypeSupported('video/webm')) {
+          mimeType = 'video/webm';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: mimeType.startsWith('video/') ? mimeType : undefined,
+        videoBitsPerSecond: 6000000, // High quality 6Mbps bitrate
+      });
+
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(chunks, { type: mimeType.includes('mp4') ? 'video/mp4' : 'video/webm' });
+        const downloadUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `${selectedProject?.seriesName || 'Manga'}_Recap_Chapter_${aspectRatio.replace(':', 'x')}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
+
+        setIsExporting(false);
+        useStudioStore.setState({ isPlaying: false });
+      };
+
+      mediaRecorder.start();
+
+      // Record for the total duration of the timeline video + 500ms buffer
+      const durationMs = Math.max(3000, Math.ceil(totalVideoDuration * 1000) + 500);
+      setTimeout(() => {
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      }, durationMs);
+    } catch (err: any) {
+      console.error('[Export Video Error]', err);
+      alert(`❌ Lỗi xuất video: ${err.message}`);
       setIsExporting(false);
-      alert('🎉 Đã xuất video WebM 4K thành công với đúng khung hình của từng Panel!');
-    }, 2000);
+    }
   };
 
   return (
