@@ -15,7 +15,11 @@ import {
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
-  const { projects, selectedProject, queueTasks, setActiveTab, setSelectedProject, deleteProject } = useStudioStore();
+  const { projects, selectedProject, queueTasks, setActiveTab, setSelectedProject, deleteProject, fetchProjectsFromBackend } = useStudioStore();
+
+  React.useEffect(() => {
+    fetchProjectsFromBackend();
+  }, [fetchProjectsFromBackend]);
 
   return (
     <div className="p-4 space-y-4 max-w-6xl mx-auto">
@@ -162,10 +166,10 @@ export const DashboardView: React.FC = () => {
                         e.stopPropagation();
                         deleteProject(project.id);
                       }}
-                      className="absolute top-1.5 right-1.5 bg-red-950/90 hover:bg-red-600 text-red-300 hover:text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
+                      className="absolute top-1.5 right-1.5 z-10 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
                       title="Xóa dự án này khỏi hệ thống"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
 
                     {/* Continue Edit Badge */}
