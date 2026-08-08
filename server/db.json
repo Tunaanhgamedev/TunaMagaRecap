@@ -1,7 +1,7 @@
 {
   "projects": [
     {
-      "id": "proj-url-1786159018108",
+      "id": "proj-url-1786159393885",
       "seriesName": "Vũ Trang Siêu Nhiên - Dandadan!! -  Dandadan Chap 1 Next Chap 2 Tiếng Việt",
       "chapterNumber": 1,
       "episodeTitle": "Chapter 1: Khởi Đầu Thức Tỉnh (74 trang ảnh thật)",
@@ -58,6 +58,16 @@
       "status": "ready",
       "durationEst": 260,
       "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00000.webp%3Fv%3D5.90",
+      "updatedAt": "Vừa import từ ThuVienSach"
+    },
+    {
+      "id": "proj-url-1786129521424",
+      "seriesName": "Sách Kinh Sám Hối (Đạo Cao Đài) - Sách Nói, PDF & EPUB Download",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Khởi Đầu Thức Tỉnh (14 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 56,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimages%2Fkhtl.webp",
       "updatedAt": "Vừa import từ ThuVienSach"
     }
   ],
