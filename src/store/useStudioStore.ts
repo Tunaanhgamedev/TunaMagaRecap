@@ -817,7 +817,6 @@ export const useStudioStore = create<StudioState>()(
   },
 
   translateAllDialogues: (targetLang) => {
-    // Dynamic Manga Term Dictionary to translate actual dialogue text
     const termDict: Record<string, string> = {
       '성진우': 'Sung Jinwoo',
       '헌터': 'Thợ săn',

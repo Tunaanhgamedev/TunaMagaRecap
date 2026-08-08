@@ -532,16 +532,40 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/translate' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const payload = JSON.parse(body || '{}');
         const text = payload.text || '';
         const targetLang = payload.targetLanguage || 'vi';
         const sourceLang = payload.sourceLanguage || 'ko';
+        const geminiKey = payload.apiKey || process.env.GEMINI_API_KEY || '';
 
-        // Real translation dictionary for common Manga/Webtoon terms
+        // 1. Try Gemini AI Translation first for 100% natural manga storytelling
+        if (geminiKey && text) {
+          try {
+            const translatedDialogues = await AIVisionEngine.translateMangaWithGemini({
+              dialogues: [{ text, originalText: text }],
+              targetLang,
+              apiKey: geminiKey,
+            });
+            if (translatedDialogues && translatedDialogues[0] && translatedDialogues[0].translatedText) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                success: true,
+                originalText: text,
+                translatedText: translatedDialogues[0].translatedText,
+                targetLanguage: targetLang,
+                isAIPowered: true,
+              }));
+              return;
+            }
+          } catch (aiErr) {
+            console.log('[Server Translate] Gemini fallback:', aiErr.message);
+          }
+        }
+
+        // 2. Offline dictionary translation fallback
         const mangaDictionary = {
-          // Korean terms
           '성진우': 'Sung Jinwoo',
           '헌터': 'Thợ săn',
           'E급': 'Cấp E',
@@ -558,6 +582,10 @@ const server = http.createServer(async (req, res) => {
           '플레이어': 'Người chơi',
           '시스템': 'Hệ thống',
           '스킬': 'Kỹ năng',
+          'Haah': 'Hộc... hộc...',
+          'Kha': 'Khặc!',
+          'Guh': 'Ư... a...',
+          'Argh': 'Á á á!',
           '레벨업': 'Thăng cấp',
           '상태창': 'Bảng trạng thái',
           '퀘스트': 'Nhiệm vụ',
