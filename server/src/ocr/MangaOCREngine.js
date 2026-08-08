@@ -111,15 +111,25 @@ export function guessSpeaker(text, blockIndex) {
 }
 
 /**
- * Clean up OCR noise (remove single stray punctuation or broken symbols)
+ * Clean up OCR noise (remove single stray punctuation or broken symbols, restore proper words)
  */
 function cleanOCRText(raw) {
   if (!raw) return '';
-  return raw
+  let cleaned = raw
     .replace(/[\r\n]+/g, ' ')
     .replace(/\s{2,}/g, ' ')
-    .replace(/[|—_\\]/g, '')
+    .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&]/g, ' ')
+    // Fix spaced out characters like "J i n w o o" -> "Jinwoo"
+    .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2$3')
+    .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2')
+    .replace(/\s{2,}/g, ' ')
     .trim();
+
+  // If text is only stray single letters or gibberish with no vowels, ignore
+  const letters = cleaned.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー]/g, '');
+  if (letters.length < 2) return '';
+
+  return cleaned;
 }
 
 /**
