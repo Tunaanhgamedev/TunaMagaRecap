@@ -15,7 +15,16 @@ import {
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
-  const { projects, selectedProject, queueTasks, setActiveTab, setSelectedProject, deleteProject, fetchProjectsFromBackend } = useStudioStore();
+  const {
+    projects,
+    selectedProject,
+    queueTasks,
+    setActiveTab,
+    setSelectedProject,
+    deleteProject,
+    clearAllProjects,
+    fetchProjectsFromBackend,
+  } = useStudioStore();
 
   React.useEffect(() => {
     fetchProjectsFromBackend();
@@ -125,9 +134,21 @@ export const DashboardView: React.FC = () => {
               <Film className="w-3.5 h-3.5 text-violet-400" />
               <span>Dự Án Gần Đây ({projects.length})</span>
             </h2>
-            <button onClick={() => setActiveTab('library')} className="text-[11px] text-cyan-400 hover:underline">
-              Xem tất cả →
-            </button>
+            <div className="flex items-center space-x-2">
+              {projects.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllProjects}
+                  className="text-[10.5px] text-red-400 hover:text-red-300 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                  title="Dọn dẹp xóa sạch toàn bộ danh sách dự án cũ"
+                >
+                  Xóa Hết ({projects.length})
+                </button>
+              )}
+              <button onClick={() => setActiveTab('library')} className="text-[11px] text-cyan-400 hover:underline">
+                Xem tất cả →
+              </button>
+            </div>
           </div>
 
           {projects.length === 0 ? (

@@ -48,6 +48,7 @@ interface StudioState {
   fetchProjectsFromBackend: () => Promise<void>;
   setSelectedProject: (p: Project) => void;
   deleteProject: (projectId: string) => Promise<void>;
+  clearAllProjects: () => Promise<void>;
   setSelectedChapter: (c: Chapter) => void;
   addMangaPages: (chapterId: string, files: File[]) => void;
   clearCurrentProject: () => void;
@@ -303,44 +304,7 @@ export const useStudioStore = create<StudioState>()(
     });
   },
 
-  projects: [
-    {
-      id: 'proj-1786204153272',
-      seriesName: 'Tôi Thăng Cấp Một Mình - Solo Leveling',
-      chapterNumber: 1,
-      episodeTitle: 'Chapter 1: Solo Leveling (65 trang ảnh thật)',
-      status: 'ready',
-      durationEst: 260,
-      coverUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&auto=format&fit=crop&q=80',
-      sourceName: 'ThuVienSach Adapter',
-      sourceUrl: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html',
-      updatedAt: '22:49:13',
-    },
-    {
-      id: 'proj-1786202964366',
-      seriesName: 'Tôi Thăng Cấp Một Mình - Solo Leveling',
-      chapterNumber: 3,
-      episodeTitle: 'Chapter 3: Solo Leveling (65 trang ảnh thật)',
-      status: 'ready',
-      durationEst: 260,
-      coverUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=80',
-      sourceName: 'ThuVienSach Adapter',
-      sourceUrl: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-3.html',
-      updatedAt: '22:29:24',
-    },
-    {
-      id: 'proj-1786163485531',
-      seriesName: 'Truyện Đảo Hải Tặc',
-      chapterNumber: 3,
-      episodeTitle: 'Chapter 3: Truyện Đảo Hải Tặc (75 trang ảnh thật)',
-      status: 'ready',
-      durationEst: 300,
-      coverUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
-      sourceName: 'Generic Adapter',
-      sourceUrl: 'https://dilib.vn/truyen-tranh/dao-hai-tac-one-piece-14728-chap-3.html',
-      updatedAt: '11:31:25',
-    },
-  ],
+  projects: [],
   selectedProject: null,
   chapters: [],
   selectedChapter: null,
@@ -348,7 +312,7 @@ export const useStudioStore = create<StudioState>()(
     try {
       const res = await fetch(`${API_BASE_URL}/projects`);
       const data = await res.json();
-      if (data.success && data.projects && data.projects.length > 0) {
+      if (data.success && Array.isArray(data.projects)) {
         set({ projects: data.projects });
       }
     } catch (err) {}
@@ -371,6 +335,21 @@ export const useStudioStore = create<StudioState>()(
         selectedProject: newSelected,
         scrapeStatusMessage: '✓ Đã xóa dự án thành công!',
       };
+    });
+  },
+  clearAllProjects: async () => {
+    try {
+      await fetch(`${API_BASE_URL}/projects/clear-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearAll: true }),
+      });
+    } catch (e) {}
+
+    set({
+      projects: [],
+      selectedProject: null,
+      scrapeStatusMessage: '✓ Đã dọn dẹp sạch toàn bộ dự án cũ!',
     });
   },
   setSelectedChapter: (c) => set({ selectedChapter: c }),

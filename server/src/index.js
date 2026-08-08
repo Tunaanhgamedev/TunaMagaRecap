@@ -136,16 +136,26 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 3b. POST Delete Project (Prisma SQLite & Local DB)
-  if ((pathname === '/api/projects/delete' || pathname === '/api/projects') && req.method === 'DELETE') {
+  // 3b. POST & DELETE Delete Project (Prisma SQLite & Local DB)
+  if (
+    (pathname === '/api/projects/delete' || pathname === '/api/projects' || pathname === '/api/projects/clear-all') &&
+    (req.method === 'POST' || req.method === 'DELETE')
+  ) {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
     req.on('end', async () => {
       try {
         const payload = JSON.parse(body || '{}');
         const projId = payload.id || '';
+        const clearAll = payload.clearAll || pathname === '/api/projects/clear-all';
 
-        if (projId) {
+        if (clearAll) {
+          try {
+            await prisma.project.deleteMany({});
+          } catch (e) {}
+          db.projects = [];
+          saveDB(db);
+        } else if (projId) {
           try {
             await prisma.project.delete({ where: { id: projId } });
           } catch (e) {}
@@ -155,7 +165,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: 'Đã xóa dự án thành công' }));
+        res.end(JSON.stringify({ success: true, projects: db.projects, message: 'Đã xóa dự án thành công' }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
