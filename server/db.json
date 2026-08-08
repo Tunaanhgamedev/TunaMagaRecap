@@ -1,7 +1,17 @@
 {
   "projects": [
     {
-      "id": "proj-url-1786158075885",
+      "id": "proj-url-1786158593925",
+      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
+      "chapterNumber": 2,
+      "episodeTitle": "Chapter 2: Khởi Đầu Thức Tỉnh (65 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 260,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00065.webp%3Fv%3D5.90",
+      "updatedAt": "Vừa import từ ThuVienSach"
+    },
+    {
+      "id": "proj-url-1786158576935",
       "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
       "chapterNumber": 1,
       "episodeTitle": "Chapter 1: Khởi Đầu Thức Tỉnh (65 trang ảnh thật)",
