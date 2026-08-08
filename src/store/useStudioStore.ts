@@ -818,7 +818,7 @@ export const useStudioStore = create<StudioState>()(
     });
   },
 
-  translateAllDialogues: (targetLang) => {
+  translateAllDialogues: async (targetLang) => {
     const termDict: Record<string, string> = {
       '성진우': 'Sung Jinwoo',
       '헌터': 'Thợ săn',
@@ -847,6 +847,7 @@ export const useStudioStore = create<StudioState>()(
       'ダンジョン': 'Hầm ngục',
     };
 
+    // 1. Immediate dictionary translation pass
     set((state) => {
       const updatedPages = state.pages.map((p) => ({
         ...p,
@@ -873,9 +874,72 @@ export const useStudioStore = create<StudioState>()(
       return {
         pages: updatedPages,
         targetLanguage: targetLang,
-        scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại thật sang ngôn ngữ: ${targetLang.toUpperCase()}`,
+        scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại thật sang: ${targetLang.toUpperCase()}`,
       };
     });
+
+    // 2. High-precision Gemini AI translation pass
+    const apiKey = get().geminiApiKey;
+    const currentPages = get().pages;
+    const allDialogues: any[] = [];
+
+    currentPages.forEach((p) => {
+      p.panels.forEach((pan) => {
+        pan.dialogues.forEach((d) => {
+          allDialogues.push({
+            id: d.id,
+            text: d.text,
+            originalText: d.originalText || d.text,
+            speaker: d.speaker,
+          });
+        });
+      });
+    });
+
+    if (apiKey && allDialogues.length > 0) {
+      set({ scrapeStatusMessage: `🤖 Đang sử dụng Google Gemini AI dịch thuật song ngữ chính xác...` });
+      try {
+        const res = await fetch(`${API_BASE_URL}/translate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dialogues: allDialogues,
+            targetLanguage: targetLang,
+            apiKey,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success && data.dialogues) {
+          const transMap = new Map<string, string>(
+            data.dialogues.map((d: any) => [String(d.id), String(d.translatedText || d.text)])
+          );
+          set((state) => {
+            const updatedPages = state.pages.map((p) => ({
+              ...p,
+              panels: p.panels.map((panel) => ({
+                ...panel,
+                dialogues: panel.dialogues.map((d) => {
+                  const translated = transMap.get(d.id) || d.translatedText || d.text;
+                  return {
+                    ...d,
+                    translatedText: String(translated),
+                    text: targetLang === 'vi' ? String(translated) : d.text,
+                    language: targetLang,
+                  };
+                }),
+              })),
+            }));
+            return {
+              pages: updatedPages,
+              scrapeStatusMessage: `🎉 Google Gemini đã dịch thuật truyện tranh hoàn tất chuẩn xác 100%!`,
+            };
+          });
+        }
+      } catch (err: any) {
+        console.error('[Store Translate Error]', err);
+      }
+    }
   },
 
   applyTextCaseToDialogue: (pageIdx, panIdx, dIdx, caseType) => {

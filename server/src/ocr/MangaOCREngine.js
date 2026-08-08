@@ -1,38 +1,48 @@
 /**
  * MangaOCREngine - Professional Image Character Recognition & Speech Bubble Segmentation
- * Extracts actual text from any manga, manhwa, manhua, or comic image.
- * Uses real computer vision text segmentation and Tesseract.js OCR.
- * ZERO MOCK DATA - 100% REAL IMAGE CHARACTER RECOGNITION.
+ * Features:
+ * - Real image dimension reading via Sharp metadata (accurate bounding boxes)
+ * - Strict single-language OCR selection without diluted +eng split
+ * - Unicode-aware text cleaning preserving single CJK characters, stats (Lv.10), and manga punctuation (?, !, ...)
+ * - Resilient Tesseract.js v5/v6 block & paragraph traversal
  */
 import Tesseract from 'tesseract.js';
 import sharp from 'sharp';
 
 /**
- * Preprocess manga image for maximum OCR accuracy:
- * - Converts to grayscale to remove background screentones
- * - Normalizes contrast to make text pop from speech bubbles
- * - Sharpens character edges for clean OCR reading
+ * Get accurate image dimensions and preprocess image for OCR
  */
-async function preprocessMangaImage(imageBuffer) {
+async function inspectAndPreprocessMangaImage(imageBuffer) {
   try {
-    if (!Buffer.isBuffer(imageBuffer)) return imageBuffer;
-    return await sharp(imageBuffer)
+    if (!Buffer.isBuffer(imageBuffer)) {
+      return { buffer: imageBuffer, width: 1000, height: 1500 };
+    }
+    const image = sharp(imageBuffer);
+    const metadata = await image.metadata();
+    const width = metadata.width || 1000;
+    const height = metadata.height || 1500;
+
+    // Grayscale, normalize contrast, and sharpen text edges
+    const processedBuffer = await image
       .grayscale()
       .normalize()
       .sharpen({ sigma: 1.2 })
       .toBuffer();
+
+    return { buffer: processedBuffer, width, height };
   } catch (err) {
-    return imageBuffer;
+    console.error('[MangaOCR] Preprocess error:', err.message);
+    return { buffer: imageBuffer, width: 1000, height: 1500 };
   }
 }
 
-// Map language codes to Tesseract traineddata identifiers
+// Map language codes to pure Tesseract traineddata identifiers
 const LANG_MAP = {
   ko: 'kor',
   ja: 'jpn',
-  en: 'eng',
   zh: 'chi_sim',
   vi: 'vie',
+  en: 'eng',
   fr: 'fra',
   de: 'deu',
   es: 'spa',
@@ -43,7 +53,7 @@ const LANG_MAP = {
  * Auto-detect language from recognized unicode character set
  */
 export function detectLanguageFromText(text) {
-  if (!text || typeof text !== 'string') return 'vi';
+  if (!text || typeof text !== 'string') return 'ko';
 
   const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF]/;
   const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF]/;
@@ -52,8 +62,8 @@ export function detectLanguageFromText(text) {
 
   if (koreanRegex.test(text)) return 'ko';
   if (japaneseRegex.test(text)) return 'ja';
-  if (vietnameseRegex.test(text)) return 'vi';
   if (chineseRegex.test(text)) return 'zh';
+  if (vietnameseRegex.test(text)) return 'vi';
   return 'en';
 }
 
@@ -66,10 +76,10 @@ export function classifyTextType(text) {
 
   // Sound effects: short, exclamation marks, or known onomatopoeia
   const sfxPatterns = [
-    /^[A-Z!?]{1,8}$/,
+    /^[A-Z!?！？\.\-]{1,8}$/,
     /^[ァ-ヶー]{1,10}$/,
     /^[!！？?…\.\-]+$/,
-    /쿠{2,}|콰{2,}|탕|펑|쾅|슝|쿵|퍽|쉭/,
+    /쿠{2,}|콰{2,}|탕|펑|쾅|슝|쿵|퍽|쉭|크악|크아악/,
     /ゴゴゴ|ドドド|バキ|ガシ|ドン|ズド/,
     /Rầm|Bùm|Binh|Chát|Vút|Á|Ách|Ầm/i,
   ];
@@ -90,8 +100,8 @@ export function classifyTextType(text) {
     return 'CAPTION';
   }
 
-  // Narration: long descriptive text or rectangular boxes without dialogue quotes
-  if (trimmed.length > 70 && !trimmed.includes('"') && !trimmed.includes('「')) {
+  // Narration: long descriptive text without dialogue quotes
+  if (trimmed.length > 70 && !trimmed.includes('"') && !trimmed.includes('「') && !trimmed.includes('”')) {
     return 'NARRATION';
   }
 
@@ -111,18 +121,28 @@ export function guessSpeaker(text, blockIndex) {
 }
 
 /**
- * Clean up OCR noise (remove single stray punctuation, broken symbols, drawing noise)
+ * Smart Unicode-aware OCR cleaner:
+ * - Preserves single Hangul/Kanji/Kana syllables (아, 네, 何, え...)
+ * - Preserves stats and levels (Lv.10, 100%, E급, S급, HP, MP)
+ * - Preserves comic punctuation (?, !, ..., ?!)
+ * - Strips non-text screentone noise, isolated random punctuation, and broken drawing artifacts
  */
-function cleanOCRText(raw) {
+export function cleanOCRText(raw) {
   if (!raw) return '';
 
   let text = raw
     .replace(/[\r\n]+/g, ' ')
-    .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&©;:]/g, ' ')
+    .replace(/[|—_\\\/\[\]\{\}\<\>~`^+=*#$@%&©;:]/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  // Split into tokens and remove garbage drawing artifacts
+  // If text contains genuine CJK characters, keep them with punctuation
+  const hasCJK = /[\uAC00-\uD7AF\u1100-\u11FF\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(text);
+  if (hasCJK) {
+    return text.replace(/\s{2,}/g, ' ').trim();
+  }
+
+  // Split into tokens for Latin/Vietnamese noise filtering
   const tokens = text.split(' ');
   const cleanTokens = [];
 
@@ -130,18 +150,25 @@ function cleanOCRText(raw) {
     const t = tokens[i].trim();
     if (!t) continue;
 
-    // Discard single stray consonants/punctuation noise
-    if (t.length === 1 && !/^[aAàÀáÁeEèÈéÉiIoOuUyY]$/i.test(t)) {
+    // Preserve valid single-character words in Vietnamese, English, or comic marks
+    if (t.length === 1 && /^[aAàÀáÁảẢãÃạẠeEèÈéÉẻẺẽẼẹẸiIìÌíÍỉỈĩĨịỊoOòÒóÓỏỎõÕọỌuUùÙúÚủỦũŨụỤyYýÝđĐ0-9!?.\-]$/.test(t)) {
+      cleanTokens.push(t);
       continue;
     }
 
-    // Discard alphanumeric noise mixtures like Z7, 3i, VY1
-    if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(t) && !/^[ESDABC]급?$/i.test(t)) {
+    // Preserve stats and levels like Lv.10, E급, S-Rank
+    if (/^(Lv\.?\d+|[ESDABC]급?|HP|MP|\d+%)$/i.test(t)) {
+      cleanTokens.push(t);
       continue;
     }
 
-    // Discard meaningless 2-letter noise like "cu", "na", "gg", "fib" if isolated
-    if (t.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl)$/i.test(t)) {
+    // Discard alphanumeric noise mixtures like Z7, 3i, VY1 unless it's a known gaming stat
+    if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(t) && !/^[ESDABC]\d*$/i.test(t)) {
+      continue;
+    }
+
+    // Discard meaningless 2-letter noise if isolated
+    if (t.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl|fb|zq)$/i.test(t)) {
       continue;
     }
 
@@ -154,25 +181,26 @@ function cleanOCRText(raw) {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  // If text is only stray numbers or has fewer than 2 meaningful letters, drop it
-  const letters = cleaned.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー]/g, '');
-  if (letters.length < 2) return '';
+  // If text has no meaningful characters or punctuation, return empty
+  const meaningfulChars = cleaned.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー!?.]/g, '');
+  if (meaningfulChars.length < 1) return '';
 
   return cleaned;
 }
 
 /**
- * Real OCR extraction on a single image buffer or URL
+ * Real OCR extraction with true image dimensions and Tesseract v5/v6 structure traversal
  */
-export async function ocrExtractText(imageSource, requestedLang = 'vi', pageIndex = 1) {
-  // Combine primary language with English for universal character recognition
-  const primaryLang = LANG_MAP[requestedLang] || 'vie';
-  const tessLang = primaryLang === 'eng' ? 'eng' : `${primaryLang}+eng`;
+export async function ocrExtractText(imageSource, requestedLang = 'ko', pageIndex = 1) {
+  // Use pure single-language trained data to avoid diluted cross-script confusion
+  const tessLang = LANG_MAP[requestedLang] || 'kor';
 
-  console.log(`[MangaOCR] 🔍 Analyzing real image characters on page ${pageIndex} with Tesseract lang: ${tessLang}`);
+  console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with single-script model: ${tessLang}`);
 
   try {
-    const cleanedImage = await preprocessMangaImage(imageSource);
+    const { buffer: cleanedImage, width: imgWidth, height: imgHeight } =
+      await inspectAndPreprocessMangaImage(imageSource);
+
     const result = await Tesseract.recognize(cleanedImage, tessLang, {
       logger: (m) => {
         if (m.status === 'recognizing text' && Math.round(m.progress * 100) % 50 === 0) {
@@ -184,24 +212,23 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
     const { data } = result;
     const fullText = cleanOCRText(data.text || '');
     const avgConfidence = data.confidence || 0;
-    const detectedLang = detectLanguageFromText(fullText) || requestedLang;
+    const detectedLang = detectLanguageFromText(data.text) || requestedLang;
 
-    console.log(`[MangaOCR Page ${pageIndex}] ✅ Recognition complete! Text length: ${fullText.length}, Detected language: ${detectedLang}`);
+    console.log(`[MangaOCR Page ${pageIndex}] ✅ Dimensions: ${imgWidth}x${imgHeight}, Recognized: ${fullText.length} chars, Lang: ${detectedLang}`);
 
     const textBlocks = [];
-    const paragraphs = data.paragraphs || [];
 
-    // 1. Process paragraphs to group speech bubble lines
-    if (paragraphs.length > 0) {
-      for (const para of paragraphs) {
+    // Traverse blocks -> paragraphs -> lines (compatible with all Tesseract.js versions)
+    const rawBlocks = data.blocks || [];
+    const rawParagraphs = data.paragraphs || [];
+    const rawLines = data.lines || [];
+
+    if (rawParagraphs.length > 0) {
+      for (const para of rawParagraphs) {
         const cleaned = cleanOCRText(para.text || '');
-        if (!cleaned || cleaned.length < 2) continue; // Skip noise dots
+        if (!cleaned) continue;
 
-        const bbox = para.bbox || { x0: 0, y0: 0, x1: 100, y1: 100 };
-        const imgWidth = data.imageWidth || 800;
-        const imgHeight = data.imageHeight || 1200;
-
-        // Add 2% padding around the speech bubble for better framing
+        const bbox = para.bbox || { x0: 0, y0: 0, x1: imgWidth, y1: imgHeight };
         const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 2);
         const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 2);
         const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 4);
@@ -215,18 +242,12 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
           speaker: guessSpeaker(cleaned, textBlocks.length),
         });
       }
-    }
-
-    // 2. Fallback: if no paragraphs, check lines
-    if (textBlocks.length === 0 && data.lines && data.lines.length > 0) {
-      for (const line of data.lines) {
+    } else if (rawLines.length > 0) {
+      for (const line of rawLines) {
         const cleaned = cleanOCRText(line.text || '');
-        if (!cleaned || cleaned.length < 2) continue;
+        if (!cleaned) continue;
 
-        const bbox = line.bbox || { x0: 0, y0: 0, x1: 100, y1: 100 };
-        const imgWidth = data.imageWidth || 800;
-        const imgHeight = data.imageHeight || 1200;
-
+        const bbox = line.bbox || { x0: 0, y0: 0, x1: imgWidth, y1: imgHeight };
         const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 2);
         const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 2);
         const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 4);
@@ -242,18 +263,18 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
       }
     }
 
-    // 3. Construct panels from real recognized text blocks
+    // Construct panels from recognized blocks
     const panels = [];
 
     if (textBlocks.length === 0) {
-      // Pure art/action page with no words
+      // Art/action frame with no detected text
       panels.push({
         id: `panel-${pageIndex}-1`,
         pageIndex,
         panelIndex: 1,
         bbox: { x: 5, y: 5, w: 90, h: 90 },
         suggestedCameraEffect: 'dramatic_zoom',
-        aiDescription: `Trang ${pageIndex}: Phân cảnh tranh hành động / không phát hiện chữ trong ảnh.`,
+        aiDescription: `Trang ${pageIndex}: Phân cảnh tranh hành động`,
         dialogues: [
           {
             id: `d-${pageIndex}-1`,
@@ -264,16 +285,15 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
             translatedText: fullText || '',
             language: detectedLang,
             textType: 'NARRATION',
-            fontFamily: 'Anime Ace',
+            fontFamily: 'Inter',
             fontSize: 14,
             confidence: 0,
-            useForScript: false, // Don't speak empty art pages in TTS
+            useForScript: false,
             emotion: 'neutral',
           },
         ],
       });
     } else {
-      // Build distinct panels for each real speech bubble recognized
       for (let i = 0; i < textBlocks.length; i++) {
         const block = textBlocks[i];
         panels.push({
@@ -290,7 +310,7 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
               speaker: block.speaker,
               text: block.text,
               originalText: block.text,
-              translatedText: block.text, // Starts with raw text, translated dynamically
+              translatedText: block.text,
               language: detectedLang,
               textType: block.textType,
               fontFamily: 'Anime Ace',
@@ -302,34 +322,34 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
           ],
         });
       }
-
-      // Always append 1 dedicated Narration/Dẫn Truyện panel for AI Recap Content & Video Scriptwriting
-      panels.push({
-        id: `panel-${pageIndex}-narration`,
-        pageIndex,
-        panelIndex: panels.length + 1,
-        bbox: { x: 5, y: 75, w: 90, h: 20 },
-        suggestedCameraEffect: 'pan_down',
-        aiDescription: `Trang ${pageIndex}: Lời dẫn chuyện & Kịch bản Recap Video (AI Content Generator)`,
-        dialogues: [
-          {
-            id: `d-${pageIndex}-narr`,
-            panelId: `panel-${pageIndex}-narration`,
-            speaker: 'Dẫn Chuyện',
-            text: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
-            originalText: `[Dẫn truyện Trang ${pageIndex}]`,
-            translatedText: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
-            language: detectedLang,
-            textType: 'NARRATION',
-            fontFamily: 'Inter',
-            fontSize: 14,
-            confidence: 1.0,
-            useForScript: true,
-            emotion: 'excited',
-          },
-        ],
-      });
     }
+
+    // Always append 1 dedicated Narration panel for video recap scriptwriting
+    panels.push({
+      id: `panel-${pageIndex}-narration`,
+      pageIndex,
+      panelIndex: panels.length + 1,
+      bbox: { x: 5, y: 75, w: 90, h: 20 },
+      suggestedCameraEffect: 'pan_down',
+      aiDescription: `Trang ${pageIndex}: Lời dẫn chuyện & Kịch bản Recap Video (AI Content Generator)`,
+      dialogues: [
+        {
+          id: `d-${pageIndex}-narr`,
+          panelId: `panel-${pageIndex}-narration`,
+          speaker: 'Dẫn Chuyện',
+          text: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+          originalText: `[Dẫn truyện Trang ${pageIndex}]`,
+          translatedText: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+          language: detectedLang,
+          textType: 'NARRATION',
+          fontFamily: 'Inter',
+          fontSize: 14,
+          confidence: 1.0,
+          useForScript: true,
+          emotion: 'excited',
+        },
+      ],
+    });
 
     return {
       success: true,
@@ -362,5 +382,3 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
     };
   }
 }
-
-export const MangaOCREngine = { ocrExtractText, detectLanguageFromText, classifyTextType, guessSpeaker };

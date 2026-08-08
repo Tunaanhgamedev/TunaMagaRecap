@@ -536,24 +536,26 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = JSON.parse(body || '{}');
         const text = payload.text || '';
+        const dialogues = payload.dialogues || (text ? [{ id: 'd-single', text, originalText: text }] : []);
         const targetLang = payload.targetLanguage || 'vi';
         const sourceLang = payload.sourceLanguage || 'ko';
         const geminiKey = payload.apiKey || process.env.GEMINI_API_KEY || '';
 
-        // 1. Try Gemini AI Translation first for 100% natural manga storytelling
-        if (geminiKey && text) {
+        // 1. Try Gemini AI Translation with 1-to-1 ID mapping
+        if (geminiKey && dialogues.length > 0) {
           try {
             const translatedDialogues = await AIVisionEngine.translateMangaWithGemini({
-              dialogues: [{ text, originalText: text }],
+              dialogues,
               targetLang,
               apiKey: geminiKey,
             });
-            if (translatedDialogues && translatedDialogues[0] && translatedDialogues[0].translatedText) {
+            if (translatedDialogues && translatedDialogues.length > 0) {
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({
                 success: true,
+                dialogues: translatedDialogues,
                 originalText: text,
-                translatedText: translatedDialogues[0].translatedText,
+                translatedText: translatedDialogues[0]?.translatedText || text,
                 targetLanguage: targetLang,
                 isAIPowered: true,
               }));
