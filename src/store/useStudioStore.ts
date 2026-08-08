@@ -82,6 +82,8 @@ interface StudioState {
   currentTime: number;
   duration: number;
   clips: TimelineClip[];
+  aspectRatio: '16:9' | '9:16';
+  setAspectRatio: (aspect: '16:9' | '9:16') => void;
   togglePlay: () => void;
   setCurrentTime: (t: number) => void;
   addClipToTrack: (clip: TimelineClip) => void;
@@ -656,6 +658,8 @@ export const useStudioStore = create<StudioState>()(
   currentTime: 0,
   duration: 14,
   clips: [],
+  aspectRatio: '16:9',
+  setAspectRatio: (aspect) => set({ aspectRatio: aspect }),
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
   setCurrentTime: (t) => set({ currentTime: t }),
   addClipToTrack: (clip) => set((state) => ({ clips: [...state.clips, clip] })),
