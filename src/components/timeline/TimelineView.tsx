@@ -317,49 +317,6 @@ export const TimelineView: React.FC = () => {
 
         ctx.drawImage(img, cropX, cropY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
-
-        // Overlay Panel Badge
-        ctx.save();
-        ctx.fillStyle = 'rgba(8, 10, 15, 0.75)';
-        ctx.fillRect(16, 16, 210, 32);
-        ctx.fillStyle = '#22d3ee';
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText(`TRANG ${activeItem.pageIndex} • PANEL ${activeItem.panelIndex}`, 24, 36);
-        ctx.restore();
-
-        // Subtitle Overlay (Character Dialogue)
-        if (activeItem.dialogueText) {
-          ctx.save();
-          const subtitleY = canvas.height - (aspectRatio === '9:16' ? 140 : 60);
-
-          ctx.font = '900 22px system-ui';
-          ctx.textAlign = 'center';
-
-          const textMetrics = ctx.measureText(activeItem.dialogueText);
-          const bgWidth = Math.min(canvas.width - 40, textMetrics.width + 36);
-
-          // Yellow CapCut Style Subtitle Pill
-          ctx.fillStyle = 'rgba(234, 179, 8, 0.95)';
-          ctx.beginPath();
-          ctx.roundRect(canvas.width / 2 - bgWidth / 2, subtitleY - 26, bgWidth, 38, [8]);
-          ctx.fill();
-
-          // Subtitle Text
-          ctx.fillStyle = '#0f172a';
-          ctx.fillText(activeItem.dialogueText, canvas.width / 2, subtitleY);
-
-          // Speaker Badge above Subtitle
-          ctx.fillStyle = 'rgba(124, 58, 237, 0.95)';
-          ctx.beginPath();
-          ctx.roundRect(canvas.width / 2 - 80, subtitleY - 50, 160, 20, [4]);
-          ctx.fill();
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px monospace';
-          ctx.fillText(activeItem.speaker.toUpperCase(), canvas.width / 2, subtitleY - 36);
-
-          ctx.restore();
-        }
       };
 
       renderFrame();
