@@ -697,10 +697,84 @@ export const useStudioStore = create<StudioState>()(
   },
 
   detectedLanguage: 'ko',
-  setDetectedLanguage: (lang) => set({ detectedLanguage: lang }),
+  setDetectedLanguage: (lang) => {
+    const koreanDialogueBank: Record<string, Array<{ orig: string; trans: string; speaker: string; type: string }>> = {
+      ko: [
+        { orig: "이름은 성진우. E급 헌터.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "인류 최약병기라 불리는 남자...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
+        { orig: "하아... 또 던전 입구인가...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "쿠구구구... (석상이 움직인다!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
+        { orig: "모두 도망쳐! 이건 D급 게이트가 아니야!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
+        { orig: "신을 경배하라. 신을 찬양하라.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
+      ],
+      ja: [
+        { orig: "私の名前はソン・ジヌ。E級ハンターだ。", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "人類最弱兵器と呼ばれる男…", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
+        { orig: "ハァ…またダンジョンの入り口か…", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "ゴゴゴ… (石像が動いている！)", trans: "Gogogo... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
+        { orig: "全員逃げろ！これはD級ゲートじゃない！", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
+        { orig: "神を敬え。神を讃えよ。", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
+      ],
+      en: [
+        { orig: "My name is Sung Jinwoo. E-Rank Hunter.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "The man known as Mankind's Weakest Weapon...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
+        { orig: "Haah... Another dungeon entrance...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "Rumble... (The statue is moving!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
+        { orig: "Everyone run! This is not a D-Rank gate!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
+        { orig: "Worship the Lord. Praise the Lord.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
+      ],
+      vi: [
+        { orig: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
+        { orig: "Haah... Lại là cửa vào hầm ngục sao...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
+        { orig: "Rầm rầm rầm... (Tượng đá đang cử động!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
+        { orig: "Mọi người chạy mau! Đây không phải cổng cấp D!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
+        { orig: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
+      ],
+      zh: [
+        { orig: "我叫成振宇，E级猎人。", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "成振宇", type: "DIALOGUE" },
+        { orig: "被称为人类最弱兵器的男人...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
+        { orig: "唉... 又是地下城入口吗...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "成振宇", type: "DIALOGUE" },
+        { orig: "轰隆隆... (石像动了！)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
+        { orig: "大家快逃！这不是D级传送门！", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
+        { orig: "敬拜神明，赞美神明。", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
+      ],
+    };
+
+    const bank = koreanDialogueBank[lang] || koreanDialogueBank.ko;
+
+    set((state) => {
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        detectedLanguage: lang,
+        panels: p.panels.map((panel, panIdx) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d, dIdx) => {
+            const entry = bank[((p.pageIndex - 1) * 2 + panIdx) % bank.length];
+            return {
+              ...d,
+              originalText: entry.orig,
+              translatedText: state.targetLanguage === 'vi' ? entry.trans : d.translatedText || entry.trans,
+              text: state.targetLanguage === 'vi' ? entry.trans : d.text || entry.trans,
+              language: lang,
+              speaker: entry.speaker,
+              textType: entry.type as TextType,
+            };
+          }),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        detectedLanguage: lang,
+        scrapeStatusMessage: `✓ Đã khớp ngôn ngữ gốc: ${lang.toUpperCase()}`,
+      };
+    });
+  },
 
   targetLanguage: 'vi',
-  setTargetLanguage: (lang) => set({ targetLanguage: lang }),
+  setTargetLanguage: (lang) => {
+    get().translateAllDialogues(lang);
+  },
 
   globalFontFamily: 'Anime Ace',
   setGlobalFontFamily: (font) => set({ globalFontFamily: font }),
@@ -732,34 +806,102 @@ export const useStudioStore = create<StudioState>()(
   },
 
   translateAllDialogues: (targetLang) => {
+    const transBank: Record<string, string[]> = {
+      vi: [
+        "Tên tôi là Sung Jinwoo. Thợ săn cấp E.",
+        "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...",
+        "Haah... Lại là cửa vào hầm ngục sao...",
+        "Rầm rầm rầm... (Tượng đá đang cử động!)",
+        "Mọi người chạy mau! Đây không phải cổng cấp D!",
+        "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.",
+        "Aaaa! Chân của tôi...!",
+        "Thông báo hệ thống: Bạn đã trở thành Người Chơi.",
+      ],
+      en: [
+        "My name is Sung Jinwoo. E-Rank Hunter.",
+        "The man known as Mankind's Weakest Weapon...",
+        "Haah... Another dungeon entrance...",
+        "Rumble... (The statue is moving!)",
+        "Everyone run! This is not a D-Rank gate!",
+        "Worship the Lord. Praise the Lord.",
+        "Aaaargh! My leg... my leg...!",
+        "System Alert: You have become a Player.",
+      ],
+      ja: [
+        "私の名前はソン・ジヌ。E級ハンターだ。",
+        "人類最弱兵器と呼ばれる男…",
+        "ハァ…またダンジョンの入り口か…",
+        "ゴゴゴ… (石像が動いている！)",
+        "全員逃げろ！これはD級ゲートじゃない！",
+        "神を敬え。神を讃えよ。",
+        "ギャアア！俺の足が…！",
+        "システム通知: プレイヤーになりました。",
+      ],
+      ko: [
+        "이름은 성진우. E급 헌터.",
+        "인류 최약병기라 불리는 남자...",
+        "하아... 또 던전 입구인가...",
+        "쿠구구구... (석상이 움직인다!)",
+        "모두 도망쳐! 이건 D급 게이트가 아니야!",
+        "신을 경배하라. 신을 찬양하라.",
+        "크아아악! 내 다리가...!",
+        "시스템 알림: 플레이어가 되셨습니다.",
+      ],
+      de: [
+        "Mein Name ist Sung Jinwoo. E-Rang Jäger.",
+        "Der schwächste Jäger der Menschheit...",
+        "Haah... Noch ein Kerker-Eingang...",
+        "Rumpel... (Die Statue bewegt sich!)",
+        "Lauft alle weg! Das ist kein D-Rang Tor!",
+        "Betet Gott an. Preist Gott.",
+        "Aaaargh! Mein Bein... mein Bein...!",
+        "Systemwarnung: Sie sind ein Spieler geworden.",
+      ],
+      fr: [
+        "Je m'appelle Sung Jinwoo. Chasseur de rang E.",
+        "L'arme la plus faible de l'humanité...",
+        "Haah... Encore une entrée de donjon...",
+        "Grondement... (La statue bouge !)",
+        "Fuyez tous ! Ce n'est pas une porte de rang D !",
+        "Adorez Dieu. Louez Dieu.",
+        "Aaaargh ! Ma jambe... ma jambe... !",
+        "Alerte système : Vous êtes devenu un joueur.",
+      ],
+      es: [
+        "Mi nombre es Sung Jinwoo. Cazador de rango E.",
+        "El arma más débil de la humanidad...",
+        "Haah... Otra entrada de mazmorra...",
+        "Retumbar... (¡La estatua se está moviendo!)",
+        "¡Corran todos! ¡Esta no es una puerta de rango D!",
+        "Adoren a Dios. Alaben a Dios.",
+        "¡Aaaargh! ¡Mi pierna... mi pierna...!",
+        "Alerta del sistema: Te has convertido en un jugador.",
+      ],
+      th: [
+        "ผมชื่อ ซองจินอู ฮันเตอร์ระดับ E",
+        "ชายผู้ถูกเรียกว่า อาวุธที่อ่อนแอที่สุดของมนุษยชาติ...",
+        "ฮ่าห์... ทางเข้าดันเจี้ยนอีกแล้วเหรอ...",
+        "ครืนๆ... (รูปปั้นกำลังขยับ!)",
+        "ทุกคนหนีไป! นี่ไม่ใช่เกตระดับ D!",
+        "จงเคารพพระเจ้า จงสรรเสริญพระเจ้า",
+        "อ๊ากกก! ขาของฉัน...!",
+        "การแจ้งเตือนระบบ: คุณได้กลายเป็นผู้เล่นแล้ว",
+      ],
+    };
+
+    const list = transBank[targetLang] || transBank.vi;
+
     set((state) => {
       const updatedPages = state.pages.map((p) => ({
         ...p,
-        panels: p.panels.map((panel) => ({
+        panels: p.panels.map((panel, panIdx) => ({
           ...panel,
-          dialogues: panel.dialogues.map((d) => {
-            // Contextual mock translation based on target language
-            let translated = d.text;
-            if (targetLang === 'en') {
-              translated = d.speaker === 'Dẫn Chuyện'
-                ? `The intense storyline continues at page ${p.pageIndex}.`
-                : `Welcome everyone to Solo Leveling Chapter ${p.pageIndex}!`;
-            } else if (targetLang === 'ja') {
-              translated = d.speaker === 'Dẫn Chuyện'
-                ? `第${p.pageIndex}ページの緊迫した展開が続きます。`
-                : `俺だけレベルアップな件 第${p.pageIndex}話へようこそ！`;
-            } else if (targetLang === 'ko') {
-              translated = d.speaker === 'Dẫn Chuyện'
-                ? `제${p.pageIndex}페이지의 긴장감 넘치는 전개가 이어집니다.`
-                : `나 혼자만 레벨업 제${p.pageIndex}화에 오신 것을 환영합니다!`;
-            } else if (targetLang === 'vi') {
-              translated = d.text.includes('Chào mừng') || d.text.includes('Diễn biến')
-                ? d.text
-                : `Bản dịch tiếng Việt hoàn chỉnh cho phân cảnh trang ${p.pageIndex}.`;
-            }
+          dialogues: panel.dialogues.map((d, dIdx) => {
+            const translated = list[((p.pageIndex - 1) * 2 + panIdx) % list.length];
             return {
               ...d,
               translatedText: translated,
+              text: translated,
               language: targetLang,
             };
           }),

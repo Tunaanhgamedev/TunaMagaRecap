@@ -18,7 +18,7 @@ export type ActiveTab =
 export type TextType = 'DIALOGUE' | 'NARRATION' | 'SOUND_EFFECT' | 'CAPTION' | 'SCENE_DESC';
 
 export type DetectedLanguage = 'ko' | 'ja' | 'en' | 'zh' | 'vi' | 'fr' | 'de' | 'es' | 'id' | 'th';
-export type TargetLanguage = 'vi' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'id' | 'th';
+export type TargetLanguage = 'vi' | 'en' | 'ja' | 'ko' | 'zh' | 'fr' | 'de' | 'es' | 'id' | 'th';
 
 export type MangaFontFamily =
   | 'Anime Ace'

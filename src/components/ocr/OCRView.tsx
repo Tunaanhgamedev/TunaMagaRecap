@@ -260,6 +260,7 @@ export const OCRView: React.FC = () => {
     { code: 'en', label: '🇬🇧 English', flag: '🇬🇧' },
     { code: 'ja', label: '🇯🇵 Japanese', flag: '🇯🇵' },
     { code: 'ko', label: '🇰🇷 Korean', flag: '🇰🇷' },
+    { code: 'zh', label: '🇨🇳 Chinese', flag: '🇨🇳' },
     { code: 'fr', label: '🇫🇷 French', flag: '🇫🇷' },
     { code: 'de', label: '🇩🇪 German', flag: '🇩🇪' },
     { code: 'es', label: '🇪🇸 Spanish', flag: '🇪🇸' },
@@ -363,7 +364,6 @@ export const OCRView: React.FC = () => {
               onChange={(e) => {
                 const lang = e.target.value as TargetLanguage;
                 setTargetLanguage(lang);
-                translateAllDialogues(lang);
               }}
               className="w-full bg-slate-900 border border-slate-700 text-white text-xs font-medium rounded p-1.5 focus:outline-none focus:border-violet-400"
             >
@@ -896,10 +896,23 @@ export const OCRView: React.FC = () => {
                         const currentType = (d.textType as TextType) || 'DIALOGUE';
                         const typeMeta = textTypeBadges[currentType] || textTypeBadges.DIALOGUE;
 
+                        const fontFamilyMap: Record<string, string> = {
+                          'Anime Ace': "'Anime Ace', 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif",
+                          'CC Wild Words': "'CC Wild Words', 'Bangers', Impact, sans-serif",
+                          'Komika Axis': "'Komika Axis', 'Bangers', Impact, sans-serif",
+                          'Bangers': "'Bangers', cursive, Impact, sans-serif",
+                          'Patrick Hand': "'Patrick Hand', cursive",
+                          'Kalam': "'Kalam', cursive",
+                          'Montserrat': "'Montserrat', sans-serif",
+                          'Merriweather': "'Merriweather', serif",
+                          'Roboto': "'Roboto', sans-serif",
+                          'Inter': "'Inter', sans-serif",
+                        };
+                        const activeFontName = d.fontFamily || globalFontFamily;
                         const fontStyle = {
-                          fontFamily: d.fontFamily || globalFontFamily,
-                          fontWeight: d.isBold ? 'bold' : 'normal',
-                          fontStyle: d.isItalic ? 'italic' : 'normal',
+                          fontFamily: fontFamilyMap[activeFontName] || `'${activeFontName}', sans-serif`,
+                          fontWeight: d.isBold ? 'bold' as const : 'normal' as const,
+                          fontStyle: d.isItalic ? 'italic' as const : 'normal' as const,
                         };
 
                         return (
@@ -1000,6 +1013,10 @@ export const OCRView: React.FC = () => {
                                       ? '🇯🇵 Nguyên Bản (Japanese)'
                                       : detectedLanguage === 'en'
                                       ? '🇬🇧 Nguyên Bản (English)'
+                                      : detectedLanguage === 'zh'
+                                      ? '🇨🇳 Nguyên Bản (Chinese)'
+                                      : detectedLanguage === 'vi'
+                                      ? '🇻🇳 Nguyên Bản (Vietnamese)'
                                       : '🌐 Văn Bản Gốc'}
                                   </span>
                                   <span className="text-[8.5px] font-mono text-cyan-400">OCR Text</span>
@@ -1025,6 +1042,20 @@ export const OCRView: React.FC = () => {
                                       ? '🇻🇳 Bản Dịch (Vietnamese)'
                                       : targetLanguage === 'en'
                                       ? '🇬🇧 Bản Dịch (English)'
+                                      : targetLanguage === 'ja'
+                                      ? '🇯🇵 Bản Dịch (Japanese)'
+                                      : targetLanguage === 'ko'
+                                      ? '🇰🇷 Bản Dịch (Korean)'
+                                      : targetLanguage === 'de'
+                                      ? '🇩🇪 Bản Dịch (German)'
+                                      : targetLanguage === 'fr'
+                                      ? '🇫🇷 Bản Dịch (French)'
+                                      : targetLanguage === 'es'
+                                      ? '🇪🇸 Bản Dịch (Spanish)'
+                                      : targetLanguage === 'th'
+                                      ? '🇹🇭 Bản Dịch (Thai)'
+                                      : targetLanguage === 'zh'
+                                      ? '🇨🇳 Bản Dịch (Chinese)'
                                       : `🌐 Bản Dịch (${targetLanguage.toUpperCase()})`}
                                   </span>
                                   <span className="text-[8.5px] font-mono text-emerald-400">Translated</span>
