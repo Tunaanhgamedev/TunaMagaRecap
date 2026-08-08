@@ -84,6 +84,7 @@ export const OCRView: React.FC = () => {
     toggleItalicToAll,
     highlightedDialogueId,
     setHighlightedDialogueId,
+    addNarrationPanel,
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
@@ -457,7 +458,16 @@ export const OCRView: React.FC = () => {
               className="flex items-center space-x-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm Panel Mới</span>
+              <span>+ Thêm Panel Thoại</span>
+            </button>
+
+            {/* Add Narration Panel for AI Content Recap */}
+            <button
+              onClick={() => addNarrationPanel(activePageIndex)}
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>+ Thêm Panel Dẫn Truyện (AI Recap)</span>
             </button>
           </div>
         </div>

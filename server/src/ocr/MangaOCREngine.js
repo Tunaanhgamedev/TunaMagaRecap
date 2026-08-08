@@ -262,7 +262,32 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
             },
           ],
         });
-      }
+      // Always append 1 dedicated Narration/Dẫn Truyện panel for AI Recap Content & Video Scriptwriting
+      panels.push({
+        id: `panel-${pageIndex}-narration`,
+        pageIndex,
+        panelIndex: panels.length + 1,
+        bbox: { x: 5, y: 75, w: 90, h: 20 },
+        suggestedCameraEffect: 'pan_down',
+        aiDescription: `Trang ${pageIndex}: Lời dẫn chuyện & Kịch bản Recap Video (AI Content Generator)`,
+        dialogues: [
+          {
+            id: `d-${pageIndex}-narr`,
+            panelId: `panel-${pageIndex}-narration`,
+            speaker: 'Dẫn Chuyện',
+            text: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+            originalText: `[Dẫn truyện Trang ${pageIndex}]`,
+            translatedText: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+            language: detectedLang,
+            textType: 'NARRATION',
+            fontFamily: 'Inter',
+            fontSize: 14,
+            confidence: 1.0,
+            useForScript: true,
+            emotion: 'excited',
+          },
+        ],
+      });
     }
 
     return {

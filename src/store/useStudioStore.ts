@@ -67,6 +67,7 @@ interface StudioState {
   splitTwoPanelsMode: (pageIdx: number) => void;
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
+  addNarrationPanel: (pageIdx: number) => void;
   replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
   batchOCRAllPages: () => Promise<void>;
   isBatchOCRLoading: boolean;
@@ -1054,6 +1055,44 @@ export const useStudioStore = create<StudioState>()(
         }
       }
       return { pages: updatedPages };
+    });
+  },
+
+  addNarrationPanel: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (!page) return {};
+
+      const nextPanelNum = page.panels.length + 1;
+      const newNarrationPanel: Panel = {
+        id: `panel-${page.pageIndex}-narr-${Date.now()}`,
+        pageIndex: page.pageIndex,
+        panelIndex: nextPanelNum,
+        bbox: { x: 5, y: 75, w: 90, h: 20 },
+        suggestedCameraEffect: 'pan_down',
+        aiDescription: `Trang ${page.pageIndex}: Lời dẫn chuyện & Kịch bản Recap Video (AI Content Generator)`,
+        dialogues: [
+          {
+            id: `d-${page.pageIndex}-narr-${Date.now()}`,
+            panelId: `panel-${page.pageIndex}-narr-${Date.now()}`,
+            speaker: 'Dẫn Chuyện',
+            text: `[Dẫn truyện Trang ${page.pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh này...`,
+            originalText: `[Dẫn truyện Trang ${page.pageIndex}]`,
+            translatedText: `[Dẫn truyện Trang ${page.pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh này...`,
+            language: state.detectedLanguage,
+            textType: 'NARRATION',
+            fontFamily: 'Inter',
+            fontSize: 14,
+            confidence: 1.0,
+            useForScript: true,
+            emotion: 'excited',
+          },
+        ],
+      };
+
+      page.panels.push(newNarrationPanel);
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã thêm Panel Dẫn Truyện cho Trang ${page.pageIndex}!` };
     });
   },
   replacePagePanels: (pageIdx, newPanels) => {
