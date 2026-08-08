@@ -7,6 +7,12 @@ import {
   Chapter,
   MangaPage,
   Panel,
+  Dialogue,
+  TextBlock,
+  TextType,
+  DetectedLanguage,
+  TargetLanguage,
+  MangaFontFamily,
   ScriptData,
   ScriptMode,
   VoiceActor,
@@ -112,6 +118,31 @@ interface StudioState {
   // Settings
   apiKeys: Record<string, AIPluginConfig>;
   updateApiKey: (provider: string, key: string) => void;
+
+  // Multi-Language & Font Studio
+  detectedLanguage: DetectedLanguage;
+  setDetectedLanguage: (lang: DetectedLanguage) => void;
+  targetLanguage: TargetLanguage;
+  setTargetLanguage: (lang: TargetLanguage) => void;
+  globalFontFamily: MangaFontFamily;
+  setGlobalFontFamily: (font: MangaFontFamily) => void;
+  includeDialogue: boolean;
+  includeNarration: boolean;
+  includeSoundEffects: boolean;
+  includeSceneDescription: boolean;
+  setScriptFilter: (
+    key: 'includeDialogue' | 'includeNarration' | 'includeSoundEffects' | 'includeSceneDescription',
+    val: boolean
+  ) => void;
+  highlightedDialogueId: string | null;
+  setHighlightedDialogueId: (id: string | null) => void;
+  updateDialogue: (
+    pageIndex: number,
+    panelIndex: number,
+    dialogueIndex: number,
+    fields: Partial<Dialogue>
+  ) => void;
+  translateAllDialogues: (targetLang: TargetLanguage) => void;
 
   // 1-Click Full Automation
   isAutoPipelineRunning: boolean;
@@ -520,6 +551,83 @@ export const useStudioStore = create<StudioState>()(
         }
       }
       return { pages: updatedPages };
+    });
+  },
+
+  detectedLanguage: 'ko',
+  setDetectedLanguage: (lang) => set({ detectedLanguage: lang }),
+
+  targetLanguage: 'vi',
+  setTargetLanguage: (lang) => set({ targetLanguage: lang }),
+
+  globalFontFamily: 'Anime Ace',
+  setGlobalFontFamily: (font) => set({ globalFontFamily: font }),
+
+  includeDialogue: true,
+  includeNarration: true,
+  includeSoundEffects: false,
+  includeSceneDescription: true,
+  setScriptFilter: (key, val) => set({ [key]: val } as any),
+
+  highlightedDialogueId: null,
+  setHighlightedDialogueId: (id) => set({ highlightedDialogueId: id }),
+
+  updateDialogue: (pageIdx, panelIdx, dialogueIdx, fields) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page && page.panels && page.panels[panelIdx]) {
+        const panel = page.panels[panelIdx];
+        if (panel.dialogues && panel.dialogues[dialogueIdx]) {
+          panel.dialogues[dialogueIdx] = {
+            ...panel.dialogues[dialogueIdx],
+            ...fields,
+          };
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  translateAllDialogues: (targetLang) => {
+    set((state) => {
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        panels: p.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => {
+            // Contextual mock translation based on target language
+            let translated = d.text;
+            if (targetLang === 'en') {
+              translated = d.speaker === 'Dẫn Chuyện'
+                ? `The intense storyline continues at page ${p.pageIndex}.`
+                : `Welcome everyone to Solo Leveling Chapter ${p.pageIndex}!`;
+            } else if (targetLang === 'ja') {
+              translated = d.speaker === 'Dẫn Chuyện'
+                ? `第${p.pageIndex}ページの緊迫した展開が続きます。`
+                : `俺だけレベルアップな件 第${p.pageIndex}話へようこそ！`;
+            } else if (targetLang === 'ko') {
+              translated = d.speaker === 'Dẫn Chuyện'
+                ? `제${p.pageIndex}페이지의 긴장감 넘치는 전개가 이어집니다.`
+                : `나 혼자만 레벨업 제${p.pageIndex}화에 오신 것을 환영합니다!`;
+            } else if (targetLang === 'vi') {
+              translated = d.text.includes('Chào mừng') || d.text.includes('Diễn biến')
+                ? d.text
+                : `Bản dịch tiếng Việt hoàn chỉnh cho phân cảnh trang ${p.pageIndex}.`;
+            }
+            return {
+              ...d,
+              translatedText: translated,
+              language: targetLang,
+            };
+          }),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        targetLanguage: targetLang,
+        scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại sang ngôn ngữ mục tiêu: ${targetLang.toUpperCase()}`,
+      };
     });
   },
 

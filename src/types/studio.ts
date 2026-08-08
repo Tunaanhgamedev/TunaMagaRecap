@@ -15,12 +15,52 @@ export type ActiveTab =
   | 'sync_center' // Dual Cloud & Local Database Sync Center
   | 'settings';
 
+export type TextType = 'DIALOGUE' | 'NARRATION' | 'SOUND_EFFECT' | 'CAPTION' | 'SCENE_DESC';
+
+export type DetectedLanguage = 'ko' | 'ja' | 'en' | 'zh' | 'vi' | 'fr' | 'de' | 'es' | 'id' | 'th';
+export type TargetLanguage = 'vi' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'id' | 'th';
+
+export type MangaFontFamily =
+  | 'Anime Ace'
+  | 'CC Wild Words'
+  | 'Komika Axis'
+  | 'Bangers'
+  | 'Roboto'
+  | 'Inter'
+  | 'Montserrat'
+  | 'Patrick Hand'
+  | 'Kalam'
+  | 'Merriweather';
+
+export interface TextBlock {
+  id: string;
+  panelId: string;
+  type: TextType;
+  language: DetectedLanguage;
+  confidence: number;
+  originalText: string;
+  translatedText: string;
+  editedText?: string;
+  fontFamily: MangaFontFamily;
+  fontSize: number;
+  bbox?: { x: number; y: number; w: number; h: number };
+  useForScript: boolean;
+}
+
 export interface Dialogue {
   id: string;
   panelId: string;
   speaker: string;
   text: string;
+  originalText?: string;
   translatedText?: string;
+  editedText?: string;
+  language?: DetectedLanguage;
+  textType?: TextType;
+  fontFamily?: MangaFontFamily;
+  fontSize?: number;
+  confidence?: number;
+  useForScript?: boolean;
   emotion: 'neutral' | 'shouting' | 'whispering' | 'scared' | 'excited' | 'sad';
   bbox?: { x: number; y: number; w: number; h: number };
 }

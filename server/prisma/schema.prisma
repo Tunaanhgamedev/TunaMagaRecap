@@ -109,6 +109,7 @@ model Panel {
   suggestedCameraEffect String     @default("zoom_in")
   aiDescription         String     @default("")
   dialogues             Dialogue[]
+  textBlocks            TextBlock[]
 }
 
 model Dialogue {
@@ -117,8 +118,37 @@ model Dialogue {
   panel          Panel   @relation(fields: [panelId], references: [id], onDelete: Cascade)
   speaker        String
   text           String
+  originalText   String  @default("")
   translatedText String  @default("")
+  editedText     String  @default("")
+  language       String  @default("ko") // ko, ja, en, vi, zh
+  textType       String  @default("DIALOGUE") // DIALOGUE, NARRATION, SOUND_EFFECT, CAPTION, SCENE_DESC
+  fontFamily     String  @default("Anime Ace") // Anime Ace, CC Wild Words, Komika Axis, Bangers, Inter
+  fontSize       Int     @default(14)
+  confidence     Float   @default(0.985)
+  useForScript   Boolean @default(true)
   emotion        String  @default("neutral") // neutral, shouting, scared, excited, sad
+}
+
+model TextBlock {
+  id             String   @id @default(uuid())
+  panelId        String
+  panel          Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  type           String   @default("DIALOGUE") // DIALOGUE, NARRATION, SOUND_EFFECT, CAPTION, SCENE_DESC
+  language       String   @default("ko") // ko, ja, en, vi, zh
+  confidence     Float    @default(0.985)
+  originalText   String
+  translatedText String   @default("")
+  editedText     String   @default("")
+  fontFamily     String   @default("Anime Ace")
+  fontSize       Int      @default(14)
+  x              Float?
+  y              Float?
+  width          Float?
+  height         Float?
+  useForScript   Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ==========================================
