@@ -99,14 +99,16 @@ export const OCRView: React.FC = () => {
               {currentPage ? (
                 <div className="relative max-w-full max-h-[520px]">
                   <img
-                    src={currentPage.imageUrl}
+                    src={currentPage.imageUrl.startsWith('http') ? currentPage.imageUrl : `http://localhost:3001${currentPage.imageUrl.startsWith('/') ? '' : '/'}${currentPage.imageUrl}`}
                     referrerPolicy="no-referrer"
                     alt="Manga Page"
-                    className="w-full h-auto rounded object-contain"
+                    className="w-full h-auto rounded object-contain max-h-[500px]"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      if (!target.src.includes('proxy-image')) {
-                        target.src = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(currentPage.imageUrl)}`;
+                      const raw = (currentPage as any).rawImageUrl || currentPage.imageUrl;
+                      const fallback = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(raw)}&referer=https%3A%2F%2Ftruyenqqko.com%2F`;
+                      if (target.src !== fallback) {
+                        target.src = fallback;
                       }
                     }}
                   />

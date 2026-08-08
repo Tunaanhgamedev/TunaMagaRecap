@@ -206,32 +206,33 @@ export const LibraryView: React.FC = () => {
               <div
                 key={page.id}
                 onClick={() => setActiveTab('ocr')}
-                className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group"
+                className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group shadow-lg"
               >
-                <div className="relative h-48 bg-slate-900 overflow-hidden">
+                <div className="relative h-56 bg-slate-950 overflow-hidden flex items-center justify-center">
                   <img
-                    src={page.imageUrl}
+                    src={page.imageUrl.startsWith('http') ? page.imageUrl : `http://localhost:3001${page.imageUrl.startsWith('/') ? '' : '/'}${page.imageUrl}`}
                     referrerPolicy="no-referrer"
                     alt={`Page ${page.pageIndex}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     onError={(e) => {
-                      // Fallback to proxy if direct hotlink blocked
                       const target = e.target as HTMLImageElement;
-                      if (!target.src.includes('proxy-image')) {
-                        target.src = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(page.imageUrl)}`;
+                      const raw = (page as any).rawImageUrl || page.imageUrl;
+                      const fallback = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(raw)}&referer=${encodeURIComponent(mangaUrlInput.trim() || 'https://truyenqqko.com/')}`;
+                      if (target.src !== fallback) {
+                        target.src = fallback;
                       }
                     }}
                   />
-                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.2 rounded bg-slate-950/80 text-[9px] font-mono text-cyan-300">
+                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-slate-950/90 text-[10px] font-mono font-bold text-cyan-300 shadow">
                     Trang {page.pageIndex}
                   </span>
-                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.2 rounded bg-violet-600/90 text-[9px] font-semibold text-white">
+                  <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-violet-600/90 text-[9px] font-semibold text-white shadow">
                     {page.panels.length} Panels
                   </span>
                 </div>
 
-                <div className="p-2 flex items-center justify-between text-[10px] bg-slate-950/60">
-                  <span className="text-slate-400">Đã nạp</span>
+                <div className="p-2 flex items-center justify-between text-[10px] bg-slate-950/80 border-t border-slate-900">
+                  <span className="text-slate-400">Ảnh Chapter Gốc</span>
                   <span className="text-emerald-400 font-semibold flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3" />
                     <span>Sẵn Sàng</span>

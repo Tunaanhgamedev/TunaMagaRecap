@@ -1,6 +1,6 @@
 export const TruyenQQAdapter = {
   name: 'TruyenQQ Adapter',
-  domains: ['truyenqqko.com', 'truyenqq.com', 'truyenqqviet.com', 'truyenqqpro.com', 'truyenqqto.com'],
+  domains: ['truyenqqko.com', 'truyenqq.com', 'truyenqqviet.com', 'truyenqqpro.com', 'truyenqqto.com', 'truyenvua.com'],
 
   canHandle(url) {
     const lower = (url || '').toLowerCase();
@@ -35,7 +35,7 @@ export const TruyenQQAdapter = {
         .replace(/Truyện Tranh\s*/gi, '')
         .replace(/Đọc Truyện\s*/gi, '')
         .replace(/,\s*TruyenQQ.*/gi, '')
-        .replace(/[-|].*(TruyenQQ|NetTruyen).*/gi, '')
+        .replace(/[-|].*(TruyenQQ|NetTruyen|TruyenVua).*/gi, '')
         .replace(/-?\s*Chap(?:ter)?\s*\d+.*/gi, '')
         .replace(/\s*-\s*Next\s*Chap.*/gi, '')
         .replace(/Tiếng Việt.*/gi, '')
@@ -57,48 +57,29 @@ export const TruyenQQAdapter = {
   async getChapterImages(url, htmlContent) {
     const images = [];
     const html = htmlContent || '';
-    let domain = 'truyenqqko.com';
-    try {
-      domain = new URL(url).hostname;
-    } catch (e) {}
 
-    // 1. Scan #vungdoc and .chapter_content images
-    const regex = /<img[^>]+(?:src|data-src|data-original|data-cdn)=["']([^"']+)["'][^>]*>/gi;
+    // Extract all real comic images (e.g. truyenvua.com / truyenqq CDN)
+    const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     let m;
     while ((m = regex.exec(html)) !== null) {
       const src = m[1].trim();
       if (
         src &&
-        !src.startsWith('data:') &&
-        (src.includes('chapter') ||
-          src.includes('comic') ||
-          src.includes('truyen') ||
-          src.includes('upload') ||
-          src.includes('storage') ||
-          src.includes('.webp') ||
+        (src.includes('truyenvua.com') ||
+          src.includes('truyenqq') ||
+          src.includes('/fix-') ||
           src.includes('.jpg') ||
+          src.includes('.webp') ||
           src.includes('.png')) &&
+        !src.includes('template/frontend') &&
+        !src.includes('avatar') &&
+        !src.includes('160x160') &&
         !src.includes('logo') &&
         !src.includes('favicon') &&
         !src.includes('banner') &&
-        !src.includes('avatar') &&
-        !src.includes('icon') &&
         !src.includes('ads')
       ) {
-        let full = src;
-        if (src.startsWith('//')) full = 'https:' + src;
-        else if (src.startsWith('/')) full = `https://${domain}${src}`;
-        else if (!src.startsWith('http')) full = `https://${domain}/${src}`;
-
-        if (!images.includes(full)) images.push(full);
-      }
-    }
-
-    // 2. Fallback: if server HTML was sanitized, generate sequential Dandadan chapter images
-    if (images.length === 0) {
-      for (let i = 1; i <= 74; i++) {
-        const num = String(i).padStart(3, '0');
-        images.push(`https://${domain}/uploads/comics/dandadan/chap-1/${num}.webp`);
+        if (!images.includes(src)) images.push(src);
       }
     }
 
