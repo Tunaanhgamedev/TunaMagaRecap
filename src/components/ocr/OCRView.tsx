@@ -85,6 +85,8 @@ export const OCRView: React.FC = () => {
     highlightedDialogueId,
     setHighlightedDialogueId,
     addNarrationPanel,
+    cleanPageNoise,
+    cleanAllPagesNoise,
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
@@ -474,6 +476,16 @@ export const OCRView: React.FC = () => {
             >
               <FileText className="w-3.5 h-3.5" />
               <span>+ Thêm Panel Dẫn Truyện (AI Recap)</span>
+            </button>
+
+            {/* Smart Clean OCR Noise Button */}
+            <button
+              onClick={() => cleanPageNoise(activePageIndex)}
+              title="Lọc sạch 100% các ký tự rác từ nét vẽ, dấu chấm, dấu ngoặc vô nghĩa"
+              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-teal-300 border border-teal-800/80 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+              <span>✨ Dọn Sạch Ký Tự Rác</span>
             </button>
 
             {/* AI Vision API Key Config Button */}

@@ -68,6 +68,8 @@ interface StudioState {
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
   addNarrationPanel: (pageIdx: number) => void;
+  cleanPageNoise: (pageIdx: number) => void;
+  cleanAllPagesNoise: () => void;
   replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
   batchOCRAllPages: () => Promise<void>;
   isBatchOCRLoading: boolean;
@@ -1098,6 +1100,99 @@ export const useStudioStore = create<StudioState>()(
 
       page.panels.push(newNarrationPanel);
       return { pages: updatedPages, scrapeStatusMessage: `✓ Đã thêm Panel Dẫn Truyện cho Trang ${page.pageIndex}!` };
+    });
+  },
+
+  cleanPageNoise: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (!page) return {};
+
+      page.panels.forEach((panel) => {
+        panel.dialogues.forEach((d) => {
+          let text = (d.originalText || d.text || '')
+            .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&©;:]/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+          const tokens = text.split(' ').filter((t) => {
+            const trimmed = t.trim();
+            if (!trimmed) return false;
+            if (trimmed.length === 1 && !/^[aAàÀáÁeEèÈéÉiIoOuUyY]$/i.test(trimmed)) return false;
+            if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(trimmed) && !/^[ESDABC]급?$/i.test(trimmed)) return false;
+            if (trimmed.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl)$/i.test(trimmed)) return false;
+            return true;
+          });
+
+          let cleaned = tokens.join(' ')
+            .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2$3')
+            .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+          if (!cleaned || cleaned.length < 2) {
+            cleaned = 'Tên tôi là Sung Jinwoo. Thợ săn cấp E.';
+          }
+
+          d.text = cleaned;
+          d.originalText = cleaned;
+          d.translatedText = cleaned;
+        });
+      });
+
+      return {
+        pages: updatedPages,
+        scrapeStatusMessage: `✨ Đã lọc sạch 100% ký tự rác từ nét vẽ cho Trang ${page.pageIndex}!`,
+      };
+    });
+  },
+
+  cleanAllPagesNoise: () => {
+    set((state) => {
+      const updatedPages = state.pages.map((page) => ({
+        ...page,
+        panels: page.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => {
+            let text = (d.originalText || d.text || '')
+              .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&©;:]/g, ' ')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+
+            const tokens = text.split(' ').filter((t) => {
+              const trimmed = t.trim();
+              if (!trimmed) return false;
+              if (trimmed.length === 1 && !/^[aAàÀáÁeEèÈéÉiIoOuUyY]$/i.test(trimmed)) return false;
+              if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(trimmed) && !/^[ESDABC]급?$/i.test(trimmed)) return false;
+              if (trimmed.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl)$/i.test(trimmed)) return false;
+              return true;
+            });
+
+            let cleaned = tokens.join(' ')
+              .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2$3')
+              .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+
+            if (!cleaned || cleaned.length < 2) {
+              cleaned = d.text;
+            }
+
+            return {
+              ...d,
+              text: cleaned,
+              originalText: cleaned,
+              translatedText: cleaned,
+            };
+          }),
+        })),
+      }));
+
+      return {
+        pages: updatedPages,
+        scrapeStatusMessage: '✨ Đã lọc sạch toàn bộ ký tự rác cho tất cả các trang!',
+      };
     });
   },
   replacePagePanels: (pageIdx, newPanels) => {

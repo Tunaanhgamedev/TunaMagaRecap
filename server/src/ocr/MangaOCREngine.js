@@ -111,21 +111,50 @@ export function guessSpeaker(text, blockIndex) {
 }
 
 /**
- * Clean up OCR noise (remove single stray punctuation or broken symbols, restore proper words)
+ * Clean up OCR noise (remove single stray punctuation, broken symbols, drawing noise)
  */
 function cleanOCRText(raw) {
   if (!raw) return '';
-  let cleaned = raw
+
+  let text = raw
     .replace(/[\r\n]+/g, ' ')
+    .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&©;:]/g, ' ')
     .replace(/\s{2,}/g, ' ')
-    .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&]/g, ' ')
-    // Fix spaced out characters like "J i n w o o" -> "Jinwoo"
+    .trim();
+
+  // Split into tokens and remove garbage drawing artifacts
+  const tokens = text.split(' ');
+  const cleanTokens = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].trim();
+    if (!t) continue;
+
+    // Discard single stray consonants/punctuation noise
+    if (t.length === 1 && !/^[aAàÀáÁeEèÈéÉiIoOuUyY]$/i.test(t)) {
+      continue;
+    }
+
+    // Discard alphanumeric noise mixtures like Z7, 3i, VY1
+    if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(t) && !/^[ESDABC]급?$/i.test(t)) {
+      continue;
+    }
+
+    // Discard meaningless 2-letter noise like "cu", "na", "gg", "fib" if isolated
+    if (t.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl)$/i.test(t)) {
+      continue;
+    }
+
+    cleanTokens.push(t);
+  }
+
+  let cleaned = cleanTokens.join(' ')
     .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2$3')
     .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  // If text is only stray single letters or gibberish with no vowels, ignore
+  // If text is only stray numbers or has fewer than 2 meaningful letters, drop it
   const letters = cleaned.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー]/g, '');
   if (letters.length < 2) return '';
 

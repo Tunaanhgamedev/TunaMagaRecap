@@ -35,6 +35,31 @@ export async function analyzeMangaWithGeminiVision({ imageBase64, mimeType = 'im
     throw new Error('Chưa cấu hình GEMINI_API_KEY trong file .env hoặc Cài Đặt AI.');
   }
 
+  const prompt = `You are an elite Manga/Manhwa/Webtoon OCR & Translation Expert.
+Analyze this manga page image with 100% precision:
+1. Detect each speech bubble, narration box, and sound effect on the image.
+2. Read the EXACT original text inside each bubble. Filter out noise or drawing lines.
+3. Translate each dialogue into natural, fluent ${targetLang === 'vi' ? 'Tiếng Việt (phong cách truyện tranh Việt Nam như Solo Leveling)' : targetLang}.
+4. Provide the bounding box {x, y, w, h} as integer percentages (0-100) relative to image size.
+5. Identify the speaker name (e.g., Sung Jinwoo, Thợ Săn, Hệ Thống, Dẫn Chuyện).
+6. Write a 1-sentence engaging recap narration summary for this page for YouTube/TikTok recap video voiceover.
+
+Return ONLY a valid JSON object in this exact schema with no markdown formatting:
+{
+  "detectedLanguage": "ko",
+  "pageSummary": "Tóm tắt diễn biến hấp dẫn của trang này cho video recap",
+  "panels": [
+    {
+      "speaker": "Sung Jinwoo",
+      "textType": "DIALOGUE",
+      "originalText": "Tên tôi là Sung Jinwoo. Thợ săn cấp E.",
+      "translatedText": "Tên tôi là Sung Jinwoo. Thợ săn cấp E.",
+      "bbox": { "x": 15, "y": 20, "w": 40, "h": 25 },
+      "emotion": "excited"
+    }
+  ]
+}`;
+
   const MODEL_CANDIDATES = [
     'gemini-2.0-flash',
     'gemini-1.5-flash-latest',
