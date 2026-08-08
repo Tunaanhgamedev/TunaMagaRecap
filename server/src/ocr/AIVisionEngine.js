@@ -39,7 +39,7 @@ Instructions:
 2. Transcribe the EXACT original text inside each bubble in its original language (Korean, Japanese, English, Chinese, or Vietnamese). Do not summarize or invent text.
 3. Translate each bubble faithfully and accurately into ${targetLang === 'vi' ? 'Vietnamese (Tiếng Việt)' : targetLang}, preserving the exact dialogue meaning and character tone.
 4. Estimate bounding box {x, y, w, h} as integer percentages (0-100) on the image.
-5. Identify the speaker (e.g. Sung Jinwoo, Hunter, Narrator, System Alert).
+5. Identify the speaker (e.g. Main Character, Side Character, Narrator, System Alert).
 6. Write a 1-sentence recap narration summary describing the scene.
 
 Return ONLY a valid JSON object in this exact schema with no markdown code fences:
@@ -49,7 +49,7 @@ Return ONLY a valid JSON object in this exact schema with no markdown code fence
   "panels": [
     {
       "id": "panel-1",
-      "speaker": "Sung Jinwoo",
+      "speaker": "Main Character",
       "textType": "DIALOGUE",
       "originalText": "Verbatim text in bubble",
       "translatedText": "Bản dịch tiếng Việt chính xác và tự nhiên",

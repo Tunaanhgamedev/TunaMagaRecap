@@ -278,113 +278,25 @@ export const useStudioStore = create<StudioState>()(
         return;
       }
     } catch (err) {
-      console.warn('Backend fetch failed, activating fallback client scraper...');
+      console.warn('Backend fetch failed:', err);
     }
 
-    // Universal fallback scraper for all manga links & titles
-    let seriesTitle = 'Tôi Thăng Cấp Một Mình - Solo Leveling';
+    // Dynamic title & chapter parsing from URL
+    let seriesTitle = 'Manga Project';
     let chapterNum = 1;
 
-    if (rawUrl.includes('asura') || rawUrl.includes('178')) {
-      seriesTitle = 'Solo Leveling (Asura)';
-      chapterNum = 178;
-    } else if (rawUrl.includes('nettruyen')) {
-      seriesTitle = 'Bộ Truyện NetTruyen Hot';
-      chapterNum = 1;
-    } else {
-      const matchName = rawUrl.match(/(?:truyen-tranh\/|series\/)?([a-zA-Z0-9-]+?)(?:-\d+)?(?:-chap|-chapter|\.html)/i);
-      if (matchName && matchName[1]) {
-        seriesTitle = matchName[1].split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-      }
-      const matchChap = rawUrl.match(/chap(?:ter)?[-_\s]?(\d+)/i);
-      if (matchChap && matchChap[1]) {
-        chapterNum = parseInt(matchChap[1], 10);
-      }
+    const matchName = rawUrl.match(/(?:truyen-tranh\/|series\/)?([a-zA-Z0-9-]+?)(?:-\d+)?(?:-chap|-chapter|\.html)/i);
+    if (matchName && matchName[1]) {
+      seriesTitle = matchName[1].split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
     }
-
-    const fallbackPages: MangaPage[] = Array.from({ length: 65 }).map((_, i) => {
-      const num = String(i).padStart(5, '0');
-      const imgUrl = `https://thuviensach.vn/img/comic/Solo-Leveling/img_${num}.webp?v=5.90`;
-      return {
-        id: `p-manga-${i + 1}`,
-        pageIndex: i + 1,
-        imageUrl: imgUrl,
-        panels: [
-          {
-            id: `panel-manga-${i + 1}-1`,
-            pageIndex: i + 1,
-            panelIndex: 1,
-            bbox: { x: 5, y: 8, w: 90, h: 42 },
-            suggestedCameraEffect: 'dramatic_zoom',
-            aiDescription: `Trang ${i + 1}: Diễn biến gay cấn trong ${seriesTitle} Chapter ${chapterNum}.`,
-            dialogues: [
-              { id: `d-manga-${i + 1}-1`, panelId: `panel-manga-${i + 1}-1`, speaker: 'Nhân Vật Chính', text: i === 0 ? 'Haah... Mình vẫn còn thở được sao?' : 'Nguy hiểm quá, phải cẩn thận!', emotion: 'scared' },
-            ],
-          },
-        ],
-      };
-    });
-
-    const fallbackProject: Project = {
-      id: `proj-url-${Date.now()}`,
-      seriesName: seriesTitle,
-      chapterNumber: chapterNum,
-      episodeTitle: `Chapter ${chapterNum}: Khởi Đầu Thức Tỉnh (65 trang ảnh thật)`,
-      status: 'ready',
-      durationEst: 65 * 4.0,
-      coverUrl: fallbackPages[0].imageUrl,
-      updatedAt: 'Vừa import thành công',
-    };
-
-    const fallbackClips: TimelineClip[] = fallbackPages.map((p, idx) => ({
-      id: `c-img-${idx + 1}`,
-      trackId: 'image' as const,
-      startTime: idx * 4.0,
-      duration: 4.0,
-      title: `Trang ${p.pageIndex}`,
-      color: '#8b5cf6',
-      imageUrl: p.imageUrl,
-      animationEffect: 'dramatic_zoom' as const,
-    }));
+    const matchChap = rawUrl.match(/chap(?:ter)?[-_\s]?(\d+)/i);
+    if (matchChap && matchChap[1]) {
+      chapterNum = parseInt(matchChap[1], 10);
+    }
 
     set({
       isLoadingUrl: false,
-      scrapeStatusMessage: `🎉 Đã cào thành công 65 trang ảnh thật của ${seriesTitle} Chapter ${chapterNum}!`,
-      projects: [fallbackProject, ...get().projects],
-      selectedProject: fallbackProject,
-      pages: fallbackPages,
-      clips: fallbackClips,
-      subtitles: [
-        { id: 'sub-1', startTime: 0.5, endTime: 3.5, text: 'Haah... Mình vẫn còn thở được sao?', speaker: 'Nhân Vật', stylePreset: 'tiktok_yellow' },
-      ],
-      duration: 65 * 4.0,
-      scriptData: {
-        mode: 'review',
-        title: `Kịch Bản Review: ${seriesTitle} Chapter ${chapterNum}`,
-        content: `# KỊCH BẢN REVIEW: ${seriesTitle.toUpperCase()} CHAPTER ${chapterNum}\n\n## Phân Đoạn 1: Mở Đầu Diễn Biến\n**Giọng đọc**: "Chào mừng các bạn đến với video review ${seriesTitle} Chapter ${chapterNum}! Hôm nay chúng ta cùng phân tích chi tiết diễn biến mới nhất."`,
-        chunks: [
-          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với ${seriesTitle} Chapter ${chapterNum}!`, emotion: 'excited', estDurationSec: 4.5 },
-        ],
-        wordCount: 920,
-        estReadTimeMinutes: 4.5,
-      },
-      seo: {
-        title: `Review ${seriesTitle} Chapter ${chapterNum} Chi Tiết | Manga Studio AI`,
-        description: `Tóm tắt và phân tích chi tiết ${seriesTitle} Chapter ${chapterNum} với 65 trang ảnh sắc nét.`,
-        tags: [`${seriesTitle}`, `Chapter ${chapterNum}`, 'Manga Recap'],
-        hashtags: [`#${seriesTitle.replace(/\s+/g, '')}`, '#MangaRecap'],
-        playlist: `${seriesTitle} Full Recap`,
-        scheduleTime: '2026-08-08 19:00',
-        targetAudience: 'Manga & Anime Fans',
-      },
-      thumbnail: {
-        mainTitle: seriesTitle.toUpperCase(),
-        subtitle: `CHAPTER ${chapterNum}: THỨC TỈNH`,
-        badge: 'HOT REVIEW',
-        characterImage: fallbackPages[0].imageUrl,
-        bgGradient: 'from-purple-900 via-slate-900 to-cyan-950',
-        glowColor: '#8b5cf6',
-      },
+      scrapeStatusMessage: `❌ Không thể cào ảnh tự động từ URL này. Vui lòng tải ảnh trang truyện lên hoặc thử URL khác.`,
     });
   },
 
@@ -711,69 +623,16 @@ export const useStudioStore = create<StudioState>()(
 
   detectedLanguage: 'ko',
   setDetectedLanguage: (lang) => {
-    const koreanDialogueBank: Record<string, Array<{ orig: string; trans: string; speaker: string; type: string }>> = {
-      ko: [
-        { orig: "이름은 성진우. E급 헌터.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "인류 최약병기라 불리는 남자...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
-        { orig: "하아... 또 던전 입구인가...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "쿠구구구... (석상이 움직인다!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
-        { orig: "모두 도망쳐! 이건 D급 게이트가 아니야!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
-        { orig: "신을 경배하라. 신을 찬양하라.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
-      ],
-      ja: [
-        { orig: "私の名前はソン・ジヌ。E級ハンターだ。", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "人類最弱兵器と呼ばれる男…", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
-        { orig: "ハァ…またダンジョンの入り口か…", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "ゴゴゴ… (石像が動いている！)", trans: "Gogogo... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
-        { orig: "全員逃げろ！これはD級ゲートじゃない！", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
-        { orig: "神を敬え。神を讃えよ。", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
-      ],
-      en: [
-        { orig: "My name is Sung Jinwoo. E-Rank Hunter.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "The man known as Mankind's Weakest Weapon...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
-        { orig: "Haah... Another dungeon entrance...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "Rumble... (The statue is moving!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
-        { orig: "Everyone run! This is not a D-Rank gate!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
-        { orig: "Worship the Lord. Praise the Lord.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
-      ],
-      vi: [
-        { orig: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
-        { orig: "Haah... Lại là cửa vào hầm ngục sao...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE" },
-        { orig: "Rầm rầm rầm... (Tượng đá đang cử động!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
-        { orig: "Mọi người chạy mau! Đây không phải cổng cấp D!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
-        { orig: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
-      ],
-      zh: [
-        { orig: "我叫成振宇，E级猎人。", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "成振宇", type: "DIALOGUE" },
-        { orig: "被称为人类最弱兵器的男人...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION" },
-        { orig: "唉... 又是地下城入口吗...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "成振宇", type: "DIALOGUE" },
-        { orig: "轰隆隆... (石像动了！)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT" },
-        { orig: "大家快逃！这不是D级传送门！", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE" },
-        { orig: "敬拜神明，赞美神明。", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION" },
-      ],
-    };
-
-    const bank = koreanDialogueBank[lang] || koreanDialogueBank.ko;
-
     set((state) => {
       const updatedPages = state.pages.map((p) => ({
         ...p,
         detectedLanguage: lang,
-        panels: p.panels.map((panel, panIdx) => ({
+        panels: p.panels.map((panel) => ({
           ...panel,
-          dialogues: panel.dialogues.map((d, dIdx) => {
-            const entry = bank[((p.pageIndex - 1) * 2 + panIdx) % bank.length];
-            return {
-              ...d,
-              originalText: entry.orig,
-              translatedText: state.targetLanguage === 'vi' ? entry.trans : d.translatedText || entry.trans,
-              text: state.targetLanguage === 'vi' ? entry.trans : d.text || entry.trans,
-              language: lang,
-              speaker: entry.speaker,
-              textType: entry.type as TextType,
-            };
-          }),
+          dialogues: panel.dialogues.map((d) => ({
+            ...d,
+            language: lang,
+          })),
         })),
       }));
       return {
@@ -1196,7 +1055,7 @@ export const useStudioStore = create<StudioState>()(
             .trim();
 
           if (!cleaned || cleaned.length < 2) {
-            cleaned = 'Tên tôi là Sung Jinwoo. Thợ săn cấp E.';
+            cleaned = d.text || d.originalText || '';
           }
 
           d.text = cleaned;

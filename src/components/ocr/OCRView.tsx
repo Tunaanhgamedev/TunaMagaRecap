@@ -1120,11 +1120,8 @@ export const OCRView: React.FC = () => {
                       {panel.dialogues?.map((d, dIdx) => {
                         const original =
                           d.originalText ||
-                          (detectedLanguage === "ko"
-                            ? `이름은 성진우 (Trang ${currentPage.pageIndex})`
-                            : detectedLanguage === "ja"
-                              ? `第${currentPage.pageIndex}話のセリフ`
-                              : `Solo Leveling dialogue page ${currentPage.pageIndex}`);
+                          d.text ||
+                          `[Trang ${currentPage.pageIndex} - Thoại #${dIdx + 1}]`;
 
                         const translated = d.translatedText || d.text;
                         const currentType =
@@ -1601,7 +1598,7 @@ export const OCRView: React.FC = () => {
               <div className="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-lg flex items-start space-x-2.5">
                 <span className="text-base">⚡</span>
                 <div className="text-[11px] text-emerald-200">
-                  <strong>Tốc Độ Xử Lý:</strong> ~300ms/trang, tự động phát hiện nhân vật chính (Sung Jinwoo, Dẫn Chuyện) và viết kịch bản Video Recap cho từng cảnh.
+                  <strong>Tốc Độ Xử Lý:</strong> ~300ms/trang, tự động nhận diện nhân vật và phân cảnh để viết kịch bản Video Recap.
                 </div>
               </div>
             </div>

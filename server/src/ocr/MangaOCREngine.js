@@ -22,11 +22,15 @@ async function inspectAndPreprocessMangaImage(imageBuffer) {
     const width = metadata.width || 1000;
     const height = metadata.height || 1500;
 
-    // Grayscale, normalize contrast, and sharpen text edges
+    // Upscale small images to help Tesseract read dense speech bubble glyphs
+    const targetWidth = width < 1500 ? width * 2 : width;
+
+    // Grayscale, normalize contrast, and apply gentle sharpening (sigma 0.5 to prevent edge halos/diacritic distortion)
     const processedBuffer = await image
+      .resize({ width: Math.round(targetWidth) })
       .grayscale()
       .normalize()
-      .sharpen({ sigma: 1.2 })
+      .sharpen({ sigma: 0.5 })
       .toBuffer();
 
     return { buffer: processedBuffer, width, height };
@@ -368,9 +372,9 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
           id: `d-${pageIndex}-narr`,
           panelId: `panel-${pageIndex}-narration`,
           speaker: 'Dẫn Chuyện',
-          text: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+          text: `[Dẫn truyện Trang ${pageIndex}]`,
           originalText: `[Dẫn truyện Trang ${pageIndex}]`,
-          translatedText: `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt diễn biến kịch tính phân cảnh trang này...`,
+          translatedText: `[Dẫn truyện Trang ${pageIndex}]`,
           language: detectedLang,
           textType: 'NARRATION',
           fontFamily: 'Inter',

@@ -41,17 +41,15 @@ export const LibraryView: React.FC = () => {
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const urlToScrape = mangaUrlInput.trim() || 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html';
+    const urlToScrape = mangaUrlInput.trim();
+    if (!urlToScrape) return;
     setMangaUrlInput(urlToScrape);
     fetchMangaFromUrl(urlToScrape);
   };
 
   const quickLinks = [
-    { title: 'Solo Leveling (Chap 1)', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
-    { title: 'Đại Quản Gia Ma Hoàng', url: 'https://thuviensach.vn/truyen-tranh/dai-quan-gia-la-ma-hoang-chap-1.html' },
-    { title: 'One Piece (Đảo Hải Tặc)', url: 'https://thuviensach.vn/truyen-tranh/dao-hai-tac-one-piece-chap-1.html' },
-    { title: 'Chú Thuật Hồi Chiến', url: 'https://thuviensach.vn/truyen-tranh/chu-thuat-hoi-chien-jujutsu-kaisen-chap-1.html' },
-    { title: 'Asura: Solo Leveling Chap 178', url: 'https://asuracomic.net/series/solo-leveling-chapter-178' },
+    { title: 'Ví Dụ: ThuVienSach Chapter 1', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
+    { title: 'Ví Dụ: AsuraScans Chapter 178', url: 'https://asuracomic.net/series/solo-leveling-chapter-178' },
   ];
 
   return (
@@ -273,16 +271,12 @@ export const LibraryView: React.FC = () => {
 
           <div className="pt-2 flex items-center justify-center space-x-3">
             <button
-              type="button"
-              onClick={() => {
-                const sample = 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html';
-                setMangaUrlInput(sample);
-                fetchMangaFromUrl(sample);
-              }}
+              type="submit"
+              onClick={handleUrlSubmit}
               className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-violet-900/30 transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-yellow-300" />
-              <span>⚡ Nạp Ngay Solo Leveling Chapter 1 (65 Trang Ảnh Thật)</span>
+              <span>⚡ Cào Tự Động Toàn Bộ Trang Ảnh & Thoại Từ URL</span>
             </button>
           </div>
         </div>

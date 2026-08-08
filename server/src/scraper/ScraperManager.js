@@ -39,14 +39,10 @@ export class ScraperManager {
     const rawImages = await adapter.getChapterImages(rawUrl, info.html);
     console.log(`[ScraperManager] 🖼️ Adapter "${adapter.name}" thu thập được ${rawImages.length} ảnh trang truyện.`);
 
-    // 3. Fallback if site blocked
+    // 3. Throw clear error if no images found instead of injecting fake manga images
     let finalImages = rawImages;
     if (finalImages.length === 0) {
-      const fallbackCount = 65;
-      finalImages = Array.from({ length: fallbackCount }).map((_, i) => {
-        const num = String(i).padStart(5, '0');
-        return `https://thuviensach.vn/img/comic/Solo-Leveling/img_${num}.webp?v=5.90`;
-      });
+      throw new Error('Không thể tự động thu thập ảnh từ đường dẫn này. Vui lòng kiểm tra lại URL hoặc tải ảnh lên trực tiếp.');
     }
 
     // 4. Build Manga Pages with Accurate OCR from Image and Language Detection

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
-  const { projects, queueTasks, setActiveTab, setSelectedProject } = useStudioStore();
+  const { projects, selectedProject, queueTasks, setActiveTab, setSelectedProject } = useStudioStore();
 
   return (
     <div className="p-4 space-y-4 max-w-6xl mx-auto">
@@ -101,7 +101,9 @@ export const DashboardView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Zap className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-xs font-bold text-white">Tiến Độ: Solo Leveling Chap 178</span>
+            <span className="text-xs font-bold text-white">
+              Tiến Độ: {selectedProject ? `${selectedProject.seriesName} (Chapter ${selectedProject.chapterNumber})` : 'Chưa Chọn Dự Án'}
+            </span>
           </div>
           <span className="text-xs font-mono font-extrabold text-cyan-400">85%</span>
         </div>

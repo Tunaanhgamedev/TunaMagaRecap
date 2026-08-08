@@ -568,7 +568,6 @@ const server = http.createServer(async (req, res) => {
 
         // 2. Offline dictionary translation fallback
         const mangaDictionary = {
-          '성진우': 'Sung Jinwoo',
           '헌터': 'Thợ săn',
           'E급': 'Cấp E',
           'D급': 'Cấp D',
