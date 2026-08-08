@@ -18,6 +18,7 @@ import {
   Tv,
   Maximize2,
   Sparkles,
+  Volume2,
 } from 'lucide-react';
 
 export const TimelineView: React.FC = () => {
@@ -42,9 +43,16 @@ export const TimelineView: React.FC = () => {
   } = useStudioStore();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const lastSpokenPanelIdRef = useRef<string>('');
   const [isExporting, setIsExporting] = useState(false);
-  const [activePanelInfo, setActivePanelInfo] = useState<{ pageIndex: number; panelIndex: number; effect: string; speaker: string; text: string } | null>(null);
-  const lastSpokenIdRef = useRef<string>('');
+  const [activePanelInfo, setActivePanelInfo] = useState<{
+    pageIndex: number;
+    panelIndex: number;
+    effect: string;
+    speaker: string;
+    text: string;
+  } | null>(null);
 
   // Flatten all panels from all pages into a continuous sequence of video timeline blocks
   const panelTimeline = React.useMemo(() => {
@@ -67,20 +75,38 @@ export const TimelineView: React.FC = () => {
     const defaultDurationPerPanel = 3.5;
 
     pages.forEach((page, pIdx) => {
-      const pagePanels = page.panels && page.panels.length > 0 ? page.panels : [
-        {
-          id: `p-full-${pIdx}`,
-          pageIndex: page.pageIndex,
-          panelIndex: 1,
-          bbox: { x: 5, y: 5, w: 90, h: 90 },
-          suggestedCameraEffect: 'dramatic_zoom',
-          aiDescription: `Trang ${page.pageIndex}`,
-          dialogues: [{ id: `d-${pIdx}`, speaker: 'Dẫn Chuyện', text: `Phân cảnh Trang ${page.pageIndex} của bộ truyện.`, emotion: 'neutral' }],
-        },
-      ];
+      const pagePanels =
+        page.panels && page.panels.length > 0
+          ? page.panels
+          : [
+              {
+                id: `p-full-${pIdx}`,
+                pageIndex: page.pageIndex,
+                panelIndex: 1,
+                bbox: { x: 5, y: 5, w: 90, h: 90 },
+                suggestedCameraEffect: 'dramatic_zoom',
+                aiDescription: `Trang ${page.pageIndex}`,
+                dialogues: [
+                  {
+                    id: `d-${pIdx}`,
+                    speaker: 'Dẫn Chuyện',
+                    text: `Phân cảnh Trang ${page.pageIndex} của bộ truyện.`,
+                    emotion: 'neutral',
+                  },
+                ],
+              },
+            ];
 
       pagePanels.forEach((panel, panIdx) => {
-        const d = panel.dialogues && panel.dialogues[0] ? panel.dialogues[0] : { speaker: 'Dẫn Chuyện', text: `Diễn biến tại Trang ${page.pageIndex} Panel ${panIdx + 1}.`, emotion: 'neutral' };
+        const d =
+          panel.dialogues && panel.dialogues[0]
+            ? panel.dialogues[0]
+            : {
+                speaker: 'Dẫn Chuyện',
+                text: `Diễn biến gay cấn tại Trang ${page.pageIndex} Panel ${panIdx + 1}.`,
+                emotion: 'neutral',
+              };
+
         timelineItems.push({
           id: `t-${page.pageIndex}-${panIdx + 1}`,
           pageIndex: page.pageIndex,
@@ -102,7 +128,40 @@ export const TimelineView: React.FC = () => {
     return timelineItems;
   }, [pages]);
 
-  const totalVideoDuration = Math.max(12, panelTimeline.length > 0 ? panelTimeline[panelTimeline.length - 1].startTime + panelTimeline[panelTimeline.length - 1].duration : duration);
+  const totalVideoDuration = Math.max(
+    12,
+    panelTimeline.length > 0
+      ? panelTimeline[panelTimeline.length - 1].startTime +
+          panelTimeline[panelTimeline.length - 1].duration
+      : duration
+  );
+
+  // Pre-fetch and cache all page images into imageCacheRef
+  useEffect(() => {
+    pages.forEach((page) => {
+      const raw = (page as any).rawImageUrl || page.imageUrl;
+      const proxyUrl = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
+        raw
+      )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`;
+
+      if (!imageCacheRef.current.has(page.imageUrl)) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = proxyUrl;
+        img.onload = () => {
+          imageCacheRef.current.set(page.imageUrl, img);
+        };
+        img.onerror = () => {
+          // Fallback to direct URL if proxy fails
+          const directImg = new Image();
+          directImg.src = page.imageUrl;
+          directImg.onload = () => {
+            imageCacheRef.current.set(page.imageUrl, directImg);
+          };
+        };
+      }
+    });
+  }, [pages]);
 
   // Empty State
   if (pages.length === 0) {
@@ -116,7 +175,7 @@ export const TimelineView: React.FC = () => {
           </p>
           <button
             onClick={() => setActiveTab('library')}
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-md transition-all active:scale-95"
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Mở Thư Viện & Dán Link Truyện</span>
@@ -147,9 +206,10 @@ export const TimelineView: React.FC = () => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Find current active panel block
-    const activeItem = panelTimeline.find(
-      (item) => currentTime >= item.startTime && currentTime < item.startTime + item.duration
-    ) || panelTimeline[0];
+    const activeItem =
+      panelTimeline.find(
+        (item) => currentTime >= item.startTime && currentTime < item.startTime + item.duration
+      ) || panelTimeline[0];
 
     if (activeItem) {
       setActivePanelInfo({
@@ -160,35 +220,43 @@ export const TimelineView: React.FC = () => {
         text: activeItem.dialogueText,
       });
 
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      const imgUrl = activeItem.imageUrl.startsWith('http')
-        ? activeItem.imageUrl
-        : `http://localhost:3001${activeItem.imageUrl.startsWith('/') ? '' : '/'}${activeItem.imageUrl}`;
-
-      img.src = imgUrl;
-
-      img.onerror = () => {
+      // Retrieve cached image or create on-the-fly
+      let img = imageCacheRef.current.get(activeItem.imageUrl);
+      if (!img) {
+        img = new Image();
+        img.crossOrigin = 'anonymous';
         const raw = activeItem.rawImageUrl || activeItem.imageUrl;
-        img.src = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(raw)}&referer=https%3A%2F%2Ftruyenqqko.com%2F`;
-      };
+        img.src = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
+          raw
+        )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`;
+        img.onload = () => {
+          if (img) imageCacheRef.current.set(activeItem.imageUrl, img);
+        };
+      }
 
       const elapsed = currentTime - activeItem.startTime;
       const progress = Math.min(1, Math.max(0, elapsed / activeItem.duration));
 
       const renderFrame = () => {
-        if (!img.naturalWidth || !img.naturalHeight) {
-          // Placeholder gradient while image is loading
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+          // Illustrated fallback card if image is loading
           const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
           grad.addColorStop(0, '#1e1b4b');
           grad.addColorStop(1, '#0f172a');
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = 'bold 18px system-ui';
+
+          ctx.fillStyle = '#22d3ee';
+          ctx.font = 'bold 24px system-ui';
           ctx.textAlign = 'center';
-          ctx.fillText(`Đang tải Trang ${activeItem.pageIndex} - Panel ${activeItem.panelIndex}...`, canvas.width / 2, canvas.height / 2);
+          ctx.fillText(
+            `Trang ${activeItem.pageIndex} • Panel ${activeItem.panelIndex}`,
+            canvas.width / 2,
+            canvas.height / 2 - 20
+          );
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '14px system-ui';
+          ctx.fillText(`"${activeItem.dialogueText}"`, canvas.width / 2, canvas.height / 2 + 20);
           return;
         }
 
@@ -206,7 +274,10 @@ export const TimelineView: React.FC = () => {
 
         if (activeItem.cameraEffect === 'dramatic_zoom' || activeItem.cameraEffect === 'zoom_in') {
           scale = 1.0 + progress * 0.18; // Smooth 18% zoom into focal point
-        } else if (activeItem.cameraEffect === 'slow_zoom_out' || activeItem.cameraEffect === 'zoom_out') {
+        } else if (
+          activeItem.cameraEffect === 'slow_zoom_out' ||
+          activeItem.cameraEffect === 'zoom_out'
+        ) {
           scale = 1.18 - progress * 0.18;
         } else if (activeItem.cameraEffect === 'pan_right') {
           shiftX = (progress - 0.5) * (canvas.width * 0.08);
@@ -216,7 +287,10 @@ export const TimelineView: React.FC = () => {
           shiftY = (progress - 0.5) * (canvas.height * 0.12);
         } else if (activeItem.cameraEffect === 'pan_up') {
           shiftY = -(progress - 0.5) * (canvas.height * 0.12);
-        } else if (activeItem.cameraEffect === 'camera_shake' || activeItem.cameraEffect === 'shake') {
+        } else if (
+          activeItem.cameraEffect === 'camera_shake' ||
+          activeItem.cameraEffect === 'shake'
+        ) {
           shiftX = (Math.random() - 0.5) * 8;
           shiftY = (Math.random() - 0.5) * 6;
         }
@@ -241,17 +315,7 @@ export const TimelineView: React.FC = () => {
           drawW = canvas.height * aspectCrop;
         }
 
-        ctx.drawImage(
-          img,
-          cropX,
-          cropY,
-          cropW,
-          cropH,
-          -drawW / 2,
-          -drawH / 2,
-          drawW,
-          drawH
-        );
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
 
         // Overlay Panel Badge
@@ -298,13 +362,12 @@ export const TimelineView: React.FC = () => {
         }
       };
 
+      renderFrame();
+
       // Trigger voice narration for the active panel dialogue
-      if (isPlaying && activeItem.dialogueText && lastSpokenIdRef.current !== activeItem.id) {
-        lastSpokenIdRef.current = activeItem.id;
+      if (isPlaying && activeItem.dialogueText && lastSpokenPanelIdRef.current !== activeItem.id) {
+        lastSpokenPanelIdRef.current = activeItem.id;
         playNarrationAudio(activeItem.dialogueText);
-      } else if (!isPlaying) {
-        lastSpokenIdRef.current = '';
-        stopNarrationAudio();
       }
     }
 
@@ -314,6 +377,7 @@ export const TimelineView: React.FC = () => {
         useStudioStore.setState((s) => {
           const next = s.currentTime + 0.1;
           if (next >= totalVideoDuration) {
+            lastSpokenPanelIdRef.current = '';
             return { currentTime: 0, isPlaying: false };
           }
           return { currentTime: next };
@@ -321,6 +385,8 @@ export const TimelineView: React.FC = () => {
       }, 100);
 
       return () => clearInterval(interval);
+    } else {
+      lastSpokenPanelIdRef.current = '';
     }
   }, [currentTime, isPlaying, panelTimeline, aspectRatio, totalVideoDuration]);
 
@@ -360,7 +426,10 @@ export const TimelineView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedProject?.seriesName || 'Manga'}_CapCut_${aspectRatio.replace(':', 'x')}_Draft.json`;
+    a.download = `${selectedProject?.seriesName || 'Manga'}_CapCut_${aspectRatio.replace(
+      ':',
+      'x'
+    )}_Draft.json`;
     a.click();
     alert(`🎉 Đã xuất thành công dự án CapCut (${aspectRatio}) với đầy đủ keyframe của từng Bounding Box!`);
   };
@@ -381,7 +450,8 @@ export const TimelineView: React.FC = () => {
           <h1 className="text-base font-bold text-white flex items-center space-x-2">
             <Film className="w-4 h-4 text-cyan-400" />
             <span>
-              NLE Video Timeline & CapCut ({selectedProject?.seriesName || 'Manga'} - {panelTimeline.length} Panels)
+              NLE Video Timeline & CapCut ({selectedProject?.seriesName || 'Manga'} -{' '}
+              {panelTimeline.length} Panels)
             </span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
@@ -395,7 +465,11 @@ export const TimelineView: React.FC = () => {
             <Mic className="w-3.5 h-3.5 text-cyan-400" />
             <select
               value={assignedVoiceId}
-              onChange={(e) => setAssignedVoiceId(e.target.value)}
+              onChange={(e) => {
+                const newV = e.target.value;
+                setAssignedVoiceId(newV);
+                playNarrationAudio(activePanelInfo?.text || 'Đã chuyển sang giọng đọc Vbee mới!');
+              }}
               className="bg-slate-950 border border-slate-700 text-cyan-300 text-[11px] font-bold rounded px-2 py-1 focus:outline-none focus:border-cyan-400"
             >
               {voiceActors.map((v) => (
@@ -407,7 +481,11 @@ export const TimelineView: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => playNarrationAudio(activePanelInfo?.text || 'Xin chào! Đây là giọng lồng tiếng AI Vbee chất lượng cao.')}
+              onClick={() =>
+                playNarrationAudio(
+                  activePanelInfo?.text || 'Xin chào! Đây là giọng lồng tiếng AI Vbee chất lượng cao.'
+                )
+              }
               className="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow cursor-pointer flex items-center space-x-1 transition-all active:scale-95"
             >
               <span>🔊 Nghe Thử Voice</span>
@@ -482,7 +560,9 @@ export const TimelineView: React.FC = () => {
               <canvas
                 ref={canvasRef}
                 className={`rounded shadow-2xl ${
-                  aspectRatio === '9:16' ? 'h-[440px] w-auto max-w-[250px]' : 'w-full h-auto max-h-[440px]'
+                  aspectRatio === '9:16'
+                    ? 'h-[440px] w-auto max-w-[250px]'
+                    : 'w-full h-auto max-h-[440px]'
                 }`}
               />
             </div>
@@ -497,8 +577,11 @@ export const TimelineView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setCurrentTime(0)}
-                className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors"
+                onClick={() => {
+                  setCurrentTime(0);
+                  stopNarrationAudio();
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors cursor-pointer"
                 title="Về đầu video"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -515,7 +598,10 @@ export const TimelineView: React.FC = () => {
                 max={totalVideoDuration}
                 step={0.1}
                 value={currentTime}
-                onChange={(e) => setCurrentTime(parseFloat(e.target.value))}
+                onChange={(e) => {
+                  const t = parseFloat(e.target.value);
+                  setCurrentTime(t);
+                }}
                 className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
               />
             </div>
@@ -562,7 +648,9 @@ export const TimelineView: React.FC = () => {
                   <Camera className="w-3.5 h-3.5" />
                   <span>1. Image Panel Track</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">{panelTimeline.length} Panels</span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {panelTimeline.length} Panels
+                </span>
               </div>
 
               <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
@@ -570,7 +658,7 @@ export const TimelineView: React.FC = () => {
                   <Mic className="w-3.5 h-3.5" />
                   <span>2. Voice TTS Track</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">ElevenLabs / Azure</span>
+                <span className="text-[10px] text-slate-400 font-mono">Vbee Studio / Azure</span>
               </div>
 
               <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
@@ -598,23 +686,31 @@ export const TimelineView: React.FC = () => {
         <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
           <div className="flex items-center space-x-1.5 font-bold text-slate-200">
             <Layers className="w-4 h-4 text-violet-400" />
-            <span>NLE 5-Tracks Timeline (Nhấp vào từng Panel để chuyển ngay tới khung hình đó)</span>
+            <span>NLE 5-Tracks Timeline (Nhấp vào từng Panel để chuyển ngay tới khung hình & giọng đọc đó)</span>
           </div>
-          <span className="text-[11px] font-mono text-cyan-400">Thời lượng: {totalVideoDuration.toFixed(0)}s</span>
+          <span className="text-[11px] font-mono text-cyan-400">
+            Thời lượng: {totalVideoDuration.toFixed(0)}s
+          </span>
         </div>
 
         {/* Timeline Tracks Grid */}
         <div className="space-y-2 overflow-x-auto pb-2">
           {/* Track 1: IMAGE PANELS */}
           <div className="flex items-center space-x-2 min-w-[720px]">
-            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">PANELS</span>
+            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
+              PANELS
+            </span>
             <div className="flex-1 flex space-x-1">
               {panelTimeline.map((item) => {
-                const isActive = currentTime >= item.startTime && currentTime < item.startTime + item.duration;
+                const isActive =
+                  currentTime >= item.startTime && currentTime < item.startTime + item.duration;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setCurrentTime(item.startTime)}
+                    onClick={() => {
+                      setCurrentTime(item.startTime);
+                      playNarrationAudio(item.dialogueText);
+                    }}
                     className={`flex-1 py-1.5 px-1 rounded text-[10px] font-mono font-bold transition-all text-center truncate cursor-pointer ${
                       isActive
                         ? 'bg-cyan-500 text-slate-950 font-black ring-2 ring-cyan-300 shadow-md'
@@ -630,28 +726,40 @@ export const TimelineView: React.FC = () => {
 
           {/* Track 2: VOICE TTS */}
           <div className="flex items-center space-x-2 min-w-[720px]">
-            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">VOICE</span>
+            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
+              VOICE
+            </span>
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded py-1.5 px-2 flex items-center space-x-2">
               <div className="h-2 flex-1 bg-gradient-to-r from-cyan-500/40 via-violet-500/40 to-cyan-500/40 rounded animate-pulse" />
-              <span className="text-[9px] font-mono text-cyan-300 shrink-0">Giọng Lồng Tiếng Đồng Bộ</span>
+              <span className="text-[9px] font-mono text-cyan-300 shrink-0">
+                Giọng Vbee Lồng Tiếng Đồng Bộ
+              </span>
             </div>
           </div>
 
           {/* Track 3: SUBTITLE */}
           <div className="flex items-center space-x-2 min-w-[720px]">
-            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">SUBTITLE</span>
+            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
+              SUBTITLE
+            </span>
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded py-1.5 px-2 flex items-center space-x-2">
               <div className="h-2 flex-1 bg-amber-500/30 rounded" />
-              <span className="text-[9px] font-mono text-yellow-300 shrink-0">Phụ Đề Màu Vàng CapCut</span>
+              <span className="text-[9px] font-mono text-yellow-300 shrink-0">
+                Phụ Đề Màu Vàng CapCut
+              </span>
             </div>
           </div>
 
           {/* Track 4: MUSIC */}
           <div className="flex items-center space-x-2 min-w-[720px]">
-            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">MUSIC</span>
+            <span className="w-16 text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
+              MUSIC
+            </span>
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded py-1.5 px-2 flex items-center space-x-2">
               <div className="h-2 flex-1 bg-emerald-500/20 rounded" />
-              <span className="text-[9px] font-mono text-emerald-400 shrink-0">BGM Nhạc Nền Anime</span>
+              <span className="text-[9px] font-mono text-emerald-400 shrink-0">
+                BGM Nhạc Nền Anime
+              </span>
             </div>
           </div>
         </div>
