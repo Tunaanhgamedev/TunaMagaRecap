@@ -32,6 +32,8 @@ export type MangaFontFamily =
   | 'Kalam'
   | 'Merriweather';
 
+export type TextCaseType = 'upper' | 'lower' | 'sentence' | 'title' | 'none';
+
 export interface TextBlock {
   id: string;
   panelId: string;
@@ -43,6 +45,9 @@ export interface TextBlock {
   editedText?: string;
   fontFamily: MangaFontFamily;
   fontSize: number;
+  isBold?: boolean;
+  isItalic?: boolean;
+  textCase?: TextCaseType;
   bbox?: { x: number; y: number; w: number; h: number };
   useForScript: boolean;
 }
@@ -59,6 +64,9 @@ export interface Dialogue {
   textType?: TextType;
   fontFamily?: MangaFontFamily;
   fontSize?: number;
+  isBold?: boolean;
+  isItalic?: boolean;
+  textCase?: TextCaseType;
   confidence?: number;
   useForScript?: boolean;
   emotion: 'neutral' | 'shouting' | 'whispering' | 'scared' | 'excited' | 'sad';

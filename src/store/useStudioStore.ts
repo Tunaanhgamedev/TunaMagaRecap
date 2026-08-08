@@ -10,6 +10,7 @@ import {
   Dialogue,
   TextBlock,
   TextType,
+  TextCaseType,
   DetectedLanguage,
   TargetLanguage,
   MangaFontFamily,
@@ -146,6 +147,18 @@ interface StudioState {
     fields: Partial<Dialogue>
   ) => void;
   translateAllDialogues: (targetLang: TargetLanguage) => void;
+  applyTextCaseToDialogue: (
+    pageIdx: number,
+    panIdx: number,
+    dIdx: number,
+    caseType: TextCaseType
+  ) => void;
+  applyTextCaseToAll: (caseType: TextCaseType) => void;
+  applyFontToAll: (fontFamily: MangaFontFamily) => void;
+  toggleBoldDialogue: (pageIdx: number, panIdx: number, dIdx: number) => void;
+  toggleItalicDialogue: (pageIdx: number, panIdx: number, dIdx: number) => void;
+  toggleBoldToAll: () => void;
+  toggleItalicToAll: () => void;
 
   // 1-Click Full Automation
   isAutoPipelineRunning: boolean;
@@ -756,6 +769,179 @@ export const useStudioStore = create<StudioState>()(
         pages: updatedPages,
         targetLanguage: targetLang,
         scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại sang ngôn ngữ mục tiêu: ${targetLang.toUpperCase()}`,
+      };
+    });
+  },
+
+  applyTextCaseToDialogue: (pageIdx, panIdx, dIdx, caseType) => {
+    const transform = (str: string) => {
+      if (!str) return '';
+      if (caseType === 'upper') return str.toUpperCase();
+      if (caseType === 'lower') return str.toLowerCase();
+      if (caseType === 'title') {
+        return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+      }
+      if (caseType === 'sentence') {
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+      }
+      return str;
+    };
+
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page && page.panels && page.panels[panIdx]) {
+        const panel = page.panels[panIdx];
+        if (panel.dialogues && panel.dialogues[dIdx]) {
+          const d = panel.dialogues[dIdx];
+          panel.dialogues[dIdx] = {
+            ...d,
+            text: transform(d.text),
+            translatedText: transform(d.translatedText || d.text),
+            originalText: transform(d.originalText || d.text),
+            textCase: caseType,
+          };
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  applyTextCaseToAll: (caseType) => {
+    const transform = (str: string) => {
+      if (!str) return '';
+      if (caseType === 'upper') return str.toUpperCase();
+      if (caseType === 'lower') return str.toLowerCase();
+      if (caseType === 'title') {
+        return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+      }
+      if (caseType === 'sentence') {
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+      }
+      return str;
+    };
+
+    set((state) => {
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        panels: p.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => ({
+            ...d,
+            text: transform(d.text),
+            translatedText: transform(d.translatedText || d.text),
+            originalText: transform(d.originalText || d.text),
+            textCase: caseType,
+          })),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        scrapeStatusMessage: `✓ Đã chuyển đổi chữ (${caseType.toUpperCase()}) cho toàn bộ thoại trong chapter!`,
+      };
+    });
+  },
+
+  applyFontToAll: (fontFamily) => {
+    set((state) => {
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        panels: p.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => ({
+            ...d,
+            fontFamily,
+          })),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        globalFontFamily: fontFamily,
+        scrapeStatusMessage: `✓ Đã áp dụng phông chữ "${fontFamily}" cho toàn bộ thoại trong chapter!`,
+      };
+    });
+  },
+
+  toggleBoldDialogue: (pageIdx, panIdx, dIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page && page.panels && page.panels[panIdx]) {
+        const panel = page.panels[panIdx];
+        if (panel.dialogues && panel.dialogues[dIdx]) {
+          const d = panel.dialogues[dIdx];
+          panel.dialogues[dIdx] = {
+            ...d,
+            isBold: !d.isBold,
+          };
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  toggleItalicDialogue: (pageIdx, panIdx, dIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page && page.panels && page.panels[panIdx]) {
+        const panel = page.panels[panIdx];
+        if (panel.dialogues && panel.dialogues[dIdx]) {
+          const d = panel.dialogues[dIdx];
+          panel.dialogues[dIdx] = {
+            ...d,
+            isItalic: !d.isItalic,
+          };
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  toggleBoldToAll: () => {
+    set((state) => {
+      const allCurrentlyBold = state.pages.every((p) =>
+        p.panels.every((pan) => pan.dialogues.every((d) => d.isBold))
+      );
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        panels: p.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => ({
+            ...d,
+            isBold: !allCurrentlyBold,
+          })),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        scrapeStatusMessage: !allCurrentlyBold
+          ? '✓ Đã in đậm (Bold) toàn bộ thoại chapter!'
+          : '✓ Đã bỏ in đậm toàn bộ thoại chapter!',
+      };
+    });
+  },
+
+  toggleItalicToAll: () => {
+    set((state) => {
+      const allCurrentlyItalic = state.pages.every((p) =>
+        p.panels.every((pan) => pan.dialogues.every((d) => d.isItalic))
+      );
+      const updatedPages = state.pages.map((p) => ({
+        ...p,
+        panels: p.panels.map((panel) => ({
+          ...panel,
+          dialogues: panel.dialogues.map((d) => ({
+            ...d,
+            isItalic: !allCurrentlyItalic,
+          })),
+        })),
+      }));
+      return {
+        pages: updatedPages,
+        scrapeStatusMessage: !allCurrentlyItalic
+          ? '✓ Đã in nghiêng (Italic) toàn bộ thoại chapter!'
+          : '✓ Đã bỏ in nghiêng toàn bộ thoại chapter!',
       };
     });
   },

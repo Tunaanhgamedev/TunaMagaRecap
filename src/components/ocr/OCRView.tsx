@@ -31,12 +31,18 @@ import {
   Upload,
   SplitSquareVertical,
   Square,
+  Bold,
+  Italic,
+  CaseSensitive,
+  CaseUpper,
+  CaseLower,
 } from 'lucide-react';
 import {
   DetectedLanguage,
   TargetLanguage,
   MangaFontFamily,
   TextType,
+  TextCaseType,
 } from '../../types/studio';
 
 export const OCRView: React.FC = () => {
@@ -69,6 +75,13 @@ export const OCRView: React.FC = () => {
     includeSceneDescription,
     setScriptFilter,
     translateAllDialogues,
+    applyTextCaseToDialogue,
+    applyTextCaseToAll,
+    applyFontToAll,
+    toggleBoldDialogue,
+    toggleItalicDialogue,
+    toggleBoldToAll,
+    toggleItalicToAll,
     highlightedDialogueId,
     setHighlightedDialogueId,
   } = useStudioStore();
@@ -77,8 +90,7 @@ export const OCRView: React.FC = () => {
   const [resizingPanelId, setResizingPanelId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showAddUrlModal, setShowAddUrlModal] = useState(false);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [fontApplyScope, setFontApplyScope] = useState<'all' | 'single'>('all');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -268,20 +280,20 @@ export const OCRView: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* 1. TOP CHAPTER ANALYSIS & MULTI-LANGUAGE / FONT CONTROL BAR */}
+      {/* 1. TOP CHAPTER ANALYSIS & MULTI-LANGUAGE / TYPOGRAPHY CONTROL BAR */}
       <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
           <div className="flex items-center space-x-2">
             <span className="text-lg">🧠</span>
             <div>
               <h2 className="text-sm font-bold text-white flex items-center space-x-2">
-                <span>Phân Tích Chapter & Workspace Dịch Đa Ngôn Ngữ</span>
+                <span>Phân Tích Chapter & Typography Workspace</span>
                 <span className="text-[10px] font-mono bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800">
                   Figma-Like Manga Editor
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400">
-                Nhận diện ngôn ngữ gốc • OCR trích xuất thoại • Dịch song ngữ • Tùy chỉnh font chữ & đưa vào AI Script Director.
+                Nhận diện ngôn ngữ gốc • OCR trích xuất thoại • Đổi font chữ & Định dạng chữ (In hoa, Thường, Nghiêng, Đậm) • Dịch song ngữ.
               </p>
             </div>
           </div>
@@ -363,15 +375,28 @@ export const OCRView: React.FC = () => {
             </select>
           </div>
 
-          {/* Manga Font Family Selector */}
+          {/* Manga Font Family Selector with Scope */}
           <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 space-y-1">
-            <label className="text-[10px] font-semibold text-slate-400 flex items-center space-x-1">
-              <Type className="w-3 h-3 text-amber-400" />
-              <span>Phông Chữ Manga (Font)</span>
-            </label>
+            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400">
+              <span className="flex items-center space-x-1">
+                <Type className="w-3 h-3 text-amber-400" />
+                <span>Phông Chữ Manga (Font)</span>
+              </span>
+              <button
+                onClick={() => applyFontToAll(globalFontFamily)}
+                className="text-[9px] text-amber-300 hover:text-amber-200 font-bold underline cursor-pointer"
+                title="Áp dụng phông chữ này cho toàn bộ thoại chapter"
+              >
+                Áp Dụng Tất Cả
+              </button>
+            </div>
             <select
               value={globalFontFamily}
-              onChange={(e) => setGlobalFontFamily(e.target.value as MangaFontFamily)}
+              onChange={(e) => {
+                const font = e.target.value as MangaFontFamily;
+                setGlobalFontFamily(font);
+                applyFontToAll(font);
+              }}
               className="w-full bg-slate-900 border border-slate-700 text-white text-xs font-medium rounded p-1.5 focus:outline-none focus:border-amber-400"
             >
               {fontOptions.map((font) => (
@@ -426,6 +451,74 @@ export const OCRView: React.FC = () => {
                 <span>Bối Cảnh</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        {/* 1.1 ADVANCED TYPOGRAPHY & TEXT TRANSFORMATION BAR (HOA, THƯỜNG, ĐẬM, NGHIÊNG, ĐẦU CÂU) */}
+        <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center space-x-2">
+            <span className="text-amber-400 font-bold flex items-center space-x-1">
+              <CaseSensitive className="w-4 h-4" />
+              <span>Đổi Kiểu Chữ Toàn Bộ Chapter:</span>
+            </span>
+
+            {/* UPPERCASE */}
+            <button
+              onClick={() => applyTextCaseToAll('upper')}
+              className="bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-black cursor-pointer transition-all active:scale-95 shadow-sm"
+              title="Chuyển toàn bộ thoại thành CHỮ IN HOA TẤT CẢ (Chuẩn Manga)"
+            >
+              <span>VIẾT HOA HẾT (AA)</span>
+            </button>
+
+            {/* lowercase */}
+            <button
+              onClick={() => applyTextCaseToAll('lower')}
+              className="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-mono cursor-pointer transition-all active:scale-95 shadow-sm"
+              title="Chuyển toàn bộ thoại thành chữ viết thường tất cả"
+            >
+              <span>viết thường (aa)</span>
+            </button>
+
+            {/* Sentence case */}
+            <button
+              onClick={() => applyTextCaseToAll('sentence')}
+              className="bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-all active:scale-95 shadow-sm"
+              title="Viết hoa chữ cái đầu câu, còn lại viết thường"
+            >
+              <span>Hoa đầu câu (Aa...)</span>
+            </button>
+
+            {/* Title Case */}
+            <button
+              onClick={() => applyTextCaseToAll('title')}
+              className="bg-slate-900 hover:bg-slate-800 text-violet-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-all active:scale-95 shadow-sm"
+              title="Viết hoa mỗi chữ cái đầu của từng từ"
+            >
+              <span>Hoa Đầu Mỗi Từ (Ab)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {/* Bold All */}
+            <button
+              onClick={toggleBoldToAll}
+              className="bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 px-2.5 py-1 rounded text-[11px] font-black flex items-center space-x-1 cursor-pointer transition-all active:scale-95"
+              title="Bật/Tắt In Đậm (Bold) cho toàn bộ thoại"
+            >
+              <Bold className="w-3.5 h-3.5" />
+              <span>In Đậm Toàn Bộ</span>
+            </button>
+
+            {/* Italic All */}
+            <button
+              onClick={toggleItalicToAll}
+              className="bg-slate-900 hover:bg-slate-800 text-pink-300 border border-slate-700 px-2.5 py-1 rounded text-[11px] italic flex items-center space-x-1 cursor-pointer transition-all active:scale-95"
+              title="Bật/Tắt In Nghiêng (Italic) cho toàn bộ thoại"
+            >
+              <Italic className="w-3.5 h-3.5" />
+              <span>In Nghiêng Toàn Bộ</span>
+            </button>
           </div>
         </div>
       </div>
@@ -803,6 +896,12 @@ export const OCRView: React.FC = () => {
                         const currentType = (d.textType as TextType) || 'DIALOGUE';
                         const typeMeta = textTypeBadges[currentType] || textTypeBadges.DIALOGUE;
 
+                        const fontStyle = {
+                          fontFamily: d.fontFamily || globalFontFamily,
+                          fontWeight: d.isBold ? 'bold' : 'normal',
+                          fontStyle: d.isItalic ? 'italic' : 'normal',
+                        };
+
                         return (
                           <div
                             key={d.id || dIdx}
@@ -913,7 +1012,7 @@ export const OCRView: React.FC = () => {
                                       originalText: e.target.value,
                                     })
                                   }
-                                  style={{ fontFamily: d.fontFamily || globalFontFamily }}
+                                  style={fontStyle}
                                   className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded p-2 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
                                 />
                               </div>
@@ -940,14 +1039,88 @@ export const OCRView: React.FC = () => {
                                     });
                                     updateDialogueText(activePageIndex, panel.id, d.id, e.target.value);
                                   }}
-                                  style={{ fontFamily: d.fontFamily || globalFontFamily }}
+                                  style={fontStyle}
                                   className="w-full bg-slate-900 border border-slate-800 text-amber-200 text-xs rounded p-2 focus:outline-none focus:border-violet-400 leading-relaxed resize-none"
                                 />
                               </div>
                             </div>
 
-                            {/* Font and Style Selector per TextBlock */}
-                            <div className="flex items-center justify-between pt-0.5 text-[9.5px] text-slate-400">
+                            {/* Individual Typography Toolbar for This Specific Dialogue Block */}
+                            <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-900 text-[9.5px] text-slate-400">
+                              {/* Left: Quick Case & Bold/Italic Format Buttons for this block */}
+                              <div className="flex items-center space-x-1">
+                                <span className="text-amber-400 font-bold">Chữ câu này:</span>
+
+                                {/* UPPERCASE */}
+                                <button
+                                  type="button"
+                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'upper')}
+                                  className="bg-slate-900 hover:bg-slate-800 text-cyan-300 px-1.5 py-0.5 rounded border border-slate-800 font-bold cursor-pointer"
+                                  title="Viết hoa toàn bộ câu này"
+                                >
+                                  AA
+                                </button>
+
+                                {/* lowercase */}
+                                <button
+                                  type="button"
+                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'lower')}
+                                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-800 font-mono cursor-pointer"
+                                  title="Viết thường toàn bộ câu này"
+                                >
+                                  aa
+                                </button>
+
+                                {/* Sentence Case */}
+                                <button
+                                  type="button"
+                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'sentence')}
+                                  className="bg-slate-900 hover:bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded border border-slate-800 cursor-pointer font-semibold"
+                                  title="Viết hoa chữ cái đầu câu"
+                                >
+                                  Aa...
+                                </button>
+
+                                {/* Title Case */}
+                                <button
+                                  type="button"
+                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'title')}
+                                  className="bg-slate-900 hover:bg-slate-800 text-violet-300 px-1.5 py-0.5 rounded border border-slate-800 cursor-pointer font-semibold"
+                                  title="Viết hoa đầu mỗi từ"
+                                >
+                                  Ab
+                                </button>
+
+                                {/* Bold */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleBoldDialogue(activePageIndex, panIdx, dIdx)}
+                                  className={`px-1.5 py-0.5 rounded border font-bold cursor-pointer transition-colors ${
+                                    d.isBold
+                                      ? 'bg-amber-950 border-amber-600 text-amber-300'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                  title="In đậm câu này"
+                                >
+                                  B
+                                </button>
+
+                                {/* Italic */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleItalicDialogue(activePageIndex, panIdx, dIdx)}
+                                  className={`px-1.5 py-0.5 rounded border italic cursor-pointer transition-colors ${
+                                    d.isItalic
+                                      ? 'bg-pink-950 border-pink-600 text-pink-300'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                  title="In nghiêng câu này"
+                                >
+                                  I
+                                </button>
+                              </div>
+
+                              {/* Right: Custom Font Selector for this specific text block */}
                               <div className="flex items-center space-x-1.5">
                                 <Type className="w-3 h-3 text-amber-400" />
                                 <span>Font riêng:</span>
@@ -967,11 +1140,6 @@ export const OCRView: React.FC = () => {
                                   ))}
                                 </select>
                               </div>
-
-                              <span className="text-[9px] text-slate-500 font-mono">
-                                Type: {currentType} • Lang: {detectedLanguage.toUpperCase()} ➔{' '}
-                                {targetLanguage.toUpperCase()}
-                              </span>
                             </div>
                           </div>
                         );
