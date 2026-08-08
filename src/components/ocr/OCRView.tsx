@@ -862,9 +862,7 @@ export const OCRView: React.FC = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Bạn có chắc muốn xóa trang ${idx + 1}?`)) {
-                        deletePage(idx);
-                      }
+                      deletePage(idx);
                     }}
                     className="absolute top-1 right-1 bg-red-950/90 text-red-300 hover:bg-red-600 hover:text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
                     title="Xóa trang này"
