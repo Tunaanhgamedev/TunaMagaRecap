@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { scraperManager } from './scraper/ScraperManager.js';
 import { storyMemoryEngine } from './story/StoryMemoryEngine.js';
 import { CapCutGenerator } from './story/CapCutGenerator.js';
+import { ocrExtractText } from './ocr/MangaOCREngine.js';
 
 const PORT = 3001;
 const prisma = new PrismaClient();
@@ -176,85 +177,76 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 5. POST OCR Panel Detect & Vision Speech Bubble Analysis
+  // 5. POST Real OCR - Extract actual text from manga page images using Tesseract.js
   if (pathname === '/api/ocr/detect' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const payload = JSON.parse(body || '{}');
         const pIdx = Number(payload.pageIndex) || 1;
-        const seriesName = payload.seriesName || 'Solo Leveling';
         const lang = payload.language || 'ko';
+        const imageUrl = payload.imageUrl || '';
 
-        const koreanDialogueBank = [
-          { orig: "이름은 성진우. E급 헌터.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE", effect: "dramatic_zoom" },
-          { orig: "인류 최약병기라 불리는 남자...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION", effect: "zoom_in" },
-          { orig: "하아... 또 던전 입구인가...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE", effect: "pan_up" },
-          { orig: "쿠구구구... (석상이 움직인다!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT", effect: "shake" },
-          { orig: "모두 도망쳐! 이건 D급 게이트가 아니야!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE", effect: "dramatic_zoom" },
-          { orig: "신을 경배하라. 신을 찬양하라.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION", effect: "zoom_out" },
-        ];
+        if (!imageUrl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'imageUrl is required' }));
+          return;
+        }
 
-        const p1 = koreanDialogueBank[(pIdx * 2) % koreanDialogueBank.length];
-        const p2 = koreanDialogueBank[(pIdx * 2 + 1) % koreanDialogueBank.length];
-
-        const panels = [
-          {
-            id: `panel-${pIdx}-1`,
-            pageIndex: pIdx,
-            panelIndex: 1,
-            bbox: { x: 5, y: 8, w: 90, h: 42 },
-            suggestedCameraEffect: p1.effect,
-            aiDescription: `Trang ${pIdx}: Khung tranh mở đầu phân cảnh của bộ truyện ${seriesName}.`,
-            dialogues: [
-              {
-                id: `d-${pIdx}-1`,
-                panelId: `panel-${pIdx}-1`,
-                speaker: p1.speaker,
-                text: p1.trans,
-                originalText: p1.orig,
-                translatedText: p1.trans,
-                language: lang,
-                textType: p1.type,
-                fontFamily: 'Anime Ace',
-                fontSize: 14,
-                confidence: 0.987,
-                useForScript: true,
-                emotion: p1.type === 'SOUND_EFFECT' ? 'excited' : 'neutral',
+        // Download the image first
+        let imageSource = imageUrl;
+        if (imageUrl.startsWith('/api/proxy-image')) {
+          // It's a local proxy URL, resolve it
+          const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
+          const realUrl = proxyUrl.searchParams.get('url');
+          if (realUrl) {
+            // Download image bytes
+            const referer = proxyUrl.searchParams.get('referer') || 'https://google.com';
+            const imgRes = await fetch(realUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': referer,
+                'Accept': 'image/*,*/*;q=0.8',
               },
-            ],
-          },
-          {
-            id: `panel-${pIdx}-2`,
-            pageIndex: pIdx,
-            panelIndex: 2,
-            bbox: { x: 5, y: 52, w: 90, h: 42 },
-            suggestedCameraEffect: p2.effect,
-            aiDescription: `Trang ${pIdx}: Cốt truyện mở rộng kịch tính.`,
-            dialogues: [
-              {
-                id: `d-${pIdx}-2`,
-                panelId: `panel-${pIdx}-2`,
-                speaker: p2.speaker,
-                text: p2.trans,
-                originalText: p2.orig,
-                translatedText: p2.trans,
-                language: lang,
-                textType: p2.type,
-                fontFamily: 'Anime Ace',
-                fontSize: 14,
-                confidence: 0.985,
-                useForScript: true,
-                emotion: p2.type === 'SOUND_EFFECT' ? 'excited' : 'neutral',
-              },
-            ],
-          },
-        ];
+            });
+            if (imgRes.ok) {
+              const arrayBuffer = await imgRes.arrayBuffer();
+              imageSource = Buffer.from(arrayBuffer);
+            } else {
+              imageSource = realUrl; // Let Tesseract try the URL directly
+            }
+          }
+        } else if (imageUrl.startsWith('http')) {
+          // Direct URL - download it
+          try {
+            const imgRes = await fetch(imageUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*' },
+            });
+            if (imgRes.ok) {
+              const arrayBuffer = await imgRes.arrayBuffer();
+              imageSource = Buffer.from(arrayBuffer);
+            }
+          } catch (e) {
+            imageSource = imageUrl;
+          }
+        }
+
+        console.log(`[Server] 🔍 Running REAL OCR on page ${pIdx}, lang=${lang}`);
+        const ocrResult = await ocrExtractText(imageSource, lang, pIdx);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, pageIndex: pIdx, panels }));
+        res.end(JSON.stringify({
+          success: true,
+          pageIndex: pIdx,
+          panels: ocrResult.panels,
+          rawText: ocrResult.rawText,
+          confidence: ocrResult.confidence,
+          textBlockCount: ocrResult.textBlockCount,
+          language: ocrResult.language,
+        }));
       } catch (err) {
+        console.error('[Server] OCR Error:', err);
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }

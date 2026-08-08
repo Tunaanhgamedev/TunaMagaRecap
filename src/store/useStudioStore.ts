@@ -67,6 +67,7 @@ interface StudioState {
   splitTwoPanelsMode: (pageIdx: number) => void;
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
+  replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
 
   // AI Script Director
   scriptData: ScriptData | null;
@@ -1099,6 +1100,19 @@ export const useStudioStore = create<StudioState>()(
         }
       }
       return { pages: updatedPages };
+    });
+  },
+
+  replacePagePanels: (pageIdx, newPanels) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      if (updatedPages[pageIdx]) {
+        updatedPages[pageIdx] = {
+          ...updatedPages[pageIdx],
+          panels: newPanels,
+        };
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã cập nhật ${newPanels.length} phân cảnh từ kết quả OCR thật!` };
     });
   },
 

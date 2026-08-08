@@ -84,6 +84,7 @@ export const OCRView: React.FC = () => {
     toggleItalicToAll,
     highlightedDialogueId,
     setHighlightedDialogueId,
+    replacePagePanels,
   } = useStudioStore();
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -91,6 +92,7 @@ export const OCRView: React.FC = () => {
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [fontApplyScope, setFontApplyScope] = useState<'all' | 'single'>('all');
+  const [isRunningOCR, setIsRunningOCR] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -234,6 +236,37 @@ export const OCRView: React.FC = () => {
     }
   };
 
+  const handleRunRealOCR = async () => {
+    if (!currentPage) return;
+    setIsRunningOCR(true);
+    try {
+      const imgUrl = (currentPage as any).rawImageUrl || currentPage.imageUrl;
+      const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? '/api' : 'http://localhost:3001/api';
+
+      const res = await fetch(`${API_BASE_URL}/ocr/detect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pageIndex: currentPage.pageIndex,
+          imageUrl: imgUrl,
+          language: detectedLanguage,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.panels) {
+        replacePagePanels(activePageIndex, data.panels);
+        translateAllDialogues(targetLanguage);
+      } else {
+        alert(`❌ Lỗi OCR: ${data.error || 'Không thể trích xuất văn bản'}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Lỗi kết nối máy chủ OCR: ${err.message}`);
+    } finally {
+      setIsRunningOCR(false);
+    }
+  };
+
   const fontOptions: MangaFontFamily[] = [
     'Anime Ace',
     'CC Wild Words',
@@ -302,11 +335,12 @@ export const OCRView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             {/* Run OCR / Re-OCR */}
             <button
-              onClick={() => alert('✓ Đã chạy lại OCR & Vision Language Model trên toàn bộ các trang!')}
-              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+              onClick={handleRunRealOCR}
+              disabled={isRunningOCR}
+              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-cyan-300 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
-              <RotateCw className="w-3.5 h-3.5" />
-              <span>Chạy Lại OCR</span>
+              <RotateCw className={`w-3.5 h-3.5 ${isRunningOCR ? 'animate-spin text-cyan-400' : ''}`} />
+              <span>{isRunningOCR ? 'Đang Quét OCR Ảnh...' : 'Quét Chữ Thật OCR Trang Này'}</span>
             </button>
 
             {/* Translate All */}
