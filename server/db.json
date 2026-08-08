@@ -1,6 +1,36 @@
 {
   "projects": [
     {
+      "id": "proj-url-1786158760939",
+      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
+      "chapterNumber": 10,
+      "episodeTitle": "Chapter 10: Khởi Đầu Thức Tỉnh (65 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 260,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00585.webp%3Fv%3D5.90",
+      "updatedAt": "Vừa import từ ThuVienSach"
+    },
+    {
+      "id": "proj-url-1786158713832",
+      "seriesName": "Vũ Trang Siêu Nhiên - Dandadan!! -  Dandadan Chap 1 Next Chap 2 Tiếng Việt",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Khởi Đầu Thức Tỉnh (74 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 296,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fi138.truyenvua.com%2F11160%2Ffix-1%2F0.jpg%3Fd%3Ddfgd6546",
+      "updatedAt": "Vừa import từ ThuVienSach"
+    },
+    {
+      "id": "proj-url-1786158653649",
+      "seriesName": "Vũ Trang Siêu Nhiên chương mới nhất 242 - TruyenQQ",
+      "chapterNumber": 242,
+      "episodeTitle": "Chapter 242: Khởi Đầu Thức Tỉnh (7 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 28,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fi.hinhhinh.com%2Febook%2F190x247%2Fdandadan_1619356704.jpg%3Fgt%3Dhdfgdfg%26mobile%3D2",
+      "updatedAt": "Vừa import từ ThuVienSach"
+    },
+    {
       "id": "proj-url-1786158593925",
       "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
       "chapterNumber": 2,

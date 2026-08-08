@@ -1,6 +1,9 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { scraperManager } from './scraper/ScraperManager.js';
+import { storyMemoryEngine } from './story/StoryMemoryEngine.js';
+import { CapCutGenerator } from './story/CapCutGenerator.js';
 
 const PORT = 3001;
 const DB_FILE = path.join(process.cwd(), 'server', 'db.json');
@@ -416,7 +419,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. POST Scrape Live Manga Link (Dynamically scrapes ANY user-submitted link)
+  // 4. POST Scrape Manga Link with Modular Scraper Framework
   if (pathname === '/api/manga/fetch-url' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
@@ -431,7 +434,10 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const scrapedData = await scrapeLiveMangaUrl(mangaUrl);
+        const scrapedData = await scraperManager.scrape(mangaUrl);
+        db.projects = [scrapedData.project, ...db.projects.filter((p) => p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber)];
+        saveDB(db);
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, ...scrapedData }));
       } catch (err) {
@@ -469,7 +475,7 @@ const server = http.createServer(async (req, res) => {
             suggestedCameraEffect: 'pan_right',
             aiDescription: `Trang ${pIdx}: Cốt truyện mở rộng kịch tính.`,
             dialogues: [
-              { speaker: 'Dẫn Chuyện', text: `Cốt truyện bất ngờ chuyển biến ở phân đoạn ${pIdx}.`, emotion: 'neutral' },
+              { speaker: 'Dẫn Chuyện', text: `Diễn biến gay cấn tiếp tục diễn ra tại phân đoạn ${pIdx}.`, emotion: 'neutral' },
             ],
           },
         ];
@@ -484,7 +490,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 6. POST Dynamic AI Script Generator
+  // 6. POST Dynamic AI Script Generator with Story Context Memory
   if (pathname === '/api/ai/script' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
@@ -495,7 +501,7 @@ const server = http.createServer(async (req, res) => {
         const seriesName = payload.seriesName || 'Truyện Tranh Mới';
         const chapterNumber = payload.chapterNumber || 1;
 
-        const generatedScript = `# KỊCH BẢN REVIEW CHI TIẾT: ${seriesName.toUpperCase()} CHAPTER ${chapterNumber}\n\n## Phân Đoạn 1: Mở Đầu Diễn Biến\n[CẢNH 1: KHỞI ĐẦU CHƯƠNG ${chapterNumber}]\n**Giọng đọc**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${chapterNumber} của bộ truyện ${seriesName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## Phân Đoạn 2: Trận Chiến Cao Trào\n[CẢNH 2: TÌNH TIẾT ĐỈNH ĐIỂM]\n**Giọng đọc**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử. Diễn biến tiếp theo sẽ ra sao? Hãy cùng phân tích chi tiết từng khung tranh!"`;
+        const generatedScript = storyMemoryEngine.generateContextualScript(seriesName, chapterNumber, mode);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
@@ -514,15 +520,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 7. POST CapCut Export
+  // 7. POST CapCut Export (16:9 Longform & 9:16 Shorts)
   if (pathname === '/api/capcut/export' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
     req.on('end', () => {
       try {
         const payload = JSON.parse(body || '{}');
+        const draft = CapCutGenerator.createDraft({
+          title: payload.title || 'Manga Recap Video',
+          seriesName: payload.seriesName || 'Truyện Tranh',
+          chapterNumber: payload.chapterNumber || 1,
+          pages: payload.pages || [],
+          aspect: payload.aspect || '16:9',
+        });
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, capcutProject: payload }));
+        res.end(JSON.stringify({ success: true, capcutProject: draft }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
