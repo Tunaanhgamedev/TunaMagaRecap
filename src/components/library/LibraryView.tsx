@@ -45,8 +45,10 @@ export const LibraryView: React.FC = () => {
   };
 
   const quickLinks = [
-    { title: 'Solo Leveling (ThuVienSach Chap 1)', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
-    { title: 'Solo Leveling (ThuVienSach Trang Truyện)', url: 'https://thuviensach.vn/toi-thang-cap-mot-minh-solo-leveling-14806.html' },
+    { title: 'Solo Leveling (Chap 1)', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
+    { title: 'Đại Quản Gia Ma Hoàng', url: 'https://thuviensach.vn/truyen-tranh/dai-quan-gia-la-ma-hoang-chap-1.html' },
+    { title: 'One Piece (Đảo Hải Tặc)', url: 'https://thuviensach.vn/truyen-tranh/dao-hai-tac-one-piece-chap-1.html' },
+    { title: 'Chú Thuật Hồi Chiến', url: 'https://thuviensach.vn/truyen-tranh/chu-thuat-hoi-chien-jujutsu-kaisen-chap-1.html' },
     { title: 'Asura: Solo Leveling Chap 178', url: 'https://asuracomic.net/series/solo-leveling-chapter-178' },
   ];
 
