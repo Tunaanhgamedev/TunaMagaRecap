@@ -189,17 +189,48 @@ export function cleanOCRText(raw) {
 }
 
 /**
- * Real OCR extraction with true image dimensions and Tesseract v5/v6 structure traversal
+ * Fast low-cost pass to sniff actual script before committing to a full-language OCR run.
+ * Uses eng traineddata (reads Latin glyphs without Hangul-matching bias), PSM 6 (single uniform block).
+ * detectLanguageFromText() then checks the Unicode ranges of what eng actually read.
+ */
+async function sniffScript(imageBuffer, candidateLang) {
+  try {
+    const { data } = await Tesseract.recognize(imageBuffer, 'eng', {
+      logger: () => {}, // silent
+    });
+    const sample = (data.text || '').trim();
+    if (sample.length < 3) return candidateLang; // too little signal, trust caller
+    const detected = detectLanguageFromText(sample);
+    return detected;
+  } catch {
+    return candidateLang; // sniff failed, trust caller
+  }
+}
+
+/**
+ * Real OCR extraction with script-sniffing, true image dimensions, and Tesseract v5/v6 structure traversal.
+ *
+ * Pipeline:
+ *   1. Preprocess image (grayscale, normalize, sharpen) and read real dimensions via Sharp metadata.
+ *   2. Sniff actual script with a fast eng pass — if it disagrees with requestedLang, switch traineddata.
+ *   3. Run full OCR with the correct single-language model.
+ *   4. Traverse blocks/paragraphs/lines and build panels.
  */
 export async function ocrExtractText(imageSource, requestedLang = 'ko', pageIndex = 1) {
-  // Use pure single-language trained data to avoid diluted cross-script confusion
-  const tessLang = LANG_MAP[requestedLang] || 'kor';
-
-  console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with single-script model: ${tessLang}`);
-
   try {
     const { buffer: cleanedImage, width: imgWidth, height: imgHeight } =
       await inspectAndPreprocessMangaImage(imageSource);
+
+    // --- Sniff actual script before locking in the traineddata ---
+    const sniffed = await sniffScript(cleanedImage, requestedLang);
+    const effectiveLang = sniffed !== requestedLang ? sniffed : requestedLang;
+    const tessLang = LANG_MAP[effectiveLang] || 'kor';
+
+    if (effectiveLang !== requestedLang) {
+      console.log(`[MangaOCR] ⚠️ Requested ${requestedLang} but sniffed ${effectiveLang} — switching traineddata to ${tessLang} to avoid glyph-mismatch garbage`);
+    }
+
+    console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with single-script model: ${tessLang} (sniffed: ${sniffed}, requested: ${requestedLang})`);
 
     const result = await Tesseract.recognize(cleanedImage, tessLang, {
       logger: (m) => {
@@ -212,14 +243,14 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
     const { data } = result;
     const fullText = cleanOCRText(data.text || '');
     const avgConfidence = data.confidence || 0;
-    const detectedLang = detectLanguageFromText(data.text) || requestedLang;
+    // Post-OCR detection uses raw text (before cleaning) to catch diacritics that cleanOCRText might strip
+    const detectedLang = detectLanguageFromText(data.text) || effectiveLang;
 
     console.log(`[MangaOCR Page ${pageIndex}] ✅ Dimensions: ${imgWidth}x${imgHeight}, Recognized: ${fullText.length} chars, Lang: ${detectedLang}`);
 
     const textBlocks = [];
 
     // Traverse blocks -> paragraphs -> lines (compatible with all Tesseract.js versions)
-    const rawBlocks = data.blocks || [];
     const rawParagraphs = data.paragraphs || [];
     const rawLines = data.lines || [];
 
