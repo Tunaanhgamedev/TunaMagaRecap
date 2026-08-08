@@ -81,17 +81,28 @@ const server = http.createServer(async (req, res) => {
 
     try {
       let referer = customReferer || 'https://google.com/';
-      if (targetImageUrl.includes('truyenvua') || targetImageUrl.includes('truyenqq')) {
+      let fullTargetUrl = targetImageUrl;
+
+      if (targetImageUrl.startsWith('/')) {
+        try {
+          const baseOrigin = customReferer ? new URL(customReferer).origin : 'https://asuracomic.net';
+          fullTargetUrl = `${baseOrigin}${targetImageUrl}`;
+        } catch (e) {
+          fullTargetUrl = `https://asuracomic.net${targetImageUrl}`;
+        }
+      }
+
+      if (fullTargetUrl.includes('truyenvua') || fullTargetUrl.includes('truyenqq')) {
         referer = 'https://truyenqqko.com/';
-      } else if (targetImageUrl.includes('thuviensach')) {
+      } else if (fullTargetUrl.includes('thuviensach')) {
         referer = 'https://thuviensach.vn/';
-      } else if (targetImageUrl.includes('nettruyen') || targetImageUrl.includes('nhattruyen')) {
+      } else if (fullTargetUrl.includes('nettruyen') || fullTargetUrl.includes('nhattruyen')) {
         referer = 'https://nettruyenco.com/';
-      } else if (targetImageUrl.includes('asura')) {
+      } else if (fullTargetUrl.includes('asura')) {
         referer = 'https://asuracomic.net/';
       }
 
-      const imgRes = await fetch(targetImageUrl, {
+      const imgRes = await fetch(fullTargetUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
           'Referer': referer,

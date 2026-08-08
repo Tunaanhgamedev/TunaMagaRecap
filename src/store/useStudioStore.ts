@@ -1312,7 +1312,11 @@ export const useStudioStore = create<StudioState>()(
       }
     } catch (err) {}
 
-    const fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## 📌 Phân Đoạn 1: Mở Đầu Diễn Biến (Hook 5s)\n**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## 📌 Phân Đoạn 2: Trận Chiến Cao Trào\n${dialogues.length > 0 ? dialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n') : '**[Dẫn Chuyện]**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử."`}\n\n## 📌 Phân Đoạn 3: Hồi Kết & Kêu Gọi Đăng Ký\n**[Dẫn Chuyện]**: "Trận chiến tạm khép lại với nhiều bí ẩn cho chapter tiếp theo. Đừng quên Like & Subscribe kênh để đón xem video mới nhất nhé!"`;
+    const dialogueSummary = dialogues.length > 0
+      ? dialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n')
+      : '**[Dẫn Chuyện]**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử."';
+
+    const fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## 📌 Phân Đoạn 1: Mở Đầu Diễn Biến (Hook 5s)\n**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## 📌 Phân Đoạn 2: Trận Chiến Cao Trào\n${dialogueSummary}\n\n## 📌 Phân Đoạn 3: Hồi Kết & Kêu Gọi Đăng Ký\n**[Dẫn Chuyện]**: "Trận chiến tạm khép lại với nhiều bí ẩn cho chapter tiếp theo. Đừng quên Like & Subscribe kênh để đón xem video mới nhất nhé!"`;
     set({
       scriptData: {
         mode,
