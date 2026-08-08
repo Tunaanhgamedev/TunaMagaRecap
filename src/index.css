@@ -63,10 +63,22 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #22293a;
-  border-radius: 3px;
+  background: #2a3147;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333d56;
+  background: #3e4866;
 }
+
+/* Manga Typography Font Mapping & Fallbacks */
+.font-manga-ace { font-family: 'Anime Ace', 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif; }
+.font-manga-wild { font-family: 'CC Wild Words', 'Bangers', 'Impact', sans-serif; }
+.font-manga-komika { font-family: 'Komika Axis', 'Bangers', 'Impact', sans-serif; }
+.font-manga-bangers { font-family: 'Bangers', cursive, Impact, sans-serif; }
+.font-manga-patrick { font-family: 'Patrick Hand', cursive; }
+.font-manga-kalam { font-family: 'Kalam', cursive; }
+.font-manga-montserrat { font-family: 'Montserrat', sans-serif; }
+.font-manga-merriweather { font-family: 'Merriweather', serif; }
+.font-manga-roboto { font-family: 'Roboto', sans-serif; }
+.font-manga-inter { font-family: 'Inter', sans-serif; }

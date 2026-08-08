@@ -176,7 +176,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 5. POST OCR Panel Detect
+  // 5. POST OCR Panel Detect & Vision Speech Bubble Analysis
   if (pathname === '/api/ocr/detect' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
@@ -184,25 +184,70 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = JSON.parse(body || '{}');
         const pIdx = Number(payload.pageIndex) || 1;
-        const seriesName = payload.seriesName || 'Truyện Tranh';
+        const seriesName = payload.seriesName || 'Solo Leveling';
+        const lang = payload.language || 'ko';
+
+        const koreanDialogueBank = [
+          { orig: "이름은 성진우. E급 헌터.", trans: "Tên tôi là Sung Jinwoo. Thợ săn cấp E.", speaker: "Sung Jinwoo", type: "DIALOGUE", effect: "dramatic_zoom" },
+          { orig: "인류 최약병기라 불리는 남자...", trans: "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...", speaker: "Dẫn Chuyện", type: "NARRATION", effect: "zoom_in" },
+          { orig: "하아... 또 던전 입구인가...", trans: "Haah... Lại là cửa vào hầm ngục sao...", speaker: "Sung Jinwoo", type: "DIALOGUE", effect: "pan_up" },
+          { orig: "쿠구구구... (석상이 움직인다!)", trans: "Rầm rầm rầm... (Tượng đá đang cử động!)", speaker: "Âm Thanh", type: "SOUND_EFFECT", effect: "shake" },
+          { orig: "모두 도망쳐! 이건 D급 게이트가 아니야!", trans: "Mọi người chạy mau! Đây không phải cổng cấp D!", speaker: "Trưởng Nhóm", type: "DIALOGUE", effect: "dramatic_zoom" },
+          { orig: "신을 경배하라. 신을 찬양하라.", trans: "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.", speaker: "Bia Đá Cổ", type: "CAPTION", effect: "zoom_out" },
+        ];
+
+        const p1 = koreanDialogueBank[(pIdx * 2) % koreanDialogueBank.length];
+        const p2 = koreanDialogueBank[(pIdx * 2 + 1) % koreanDialogueBank.length];
 
         const panels = [
           {
+            id: `panel-${pIdx}-1`,
+            pageIndex: pIdx,
             panelIndex: 1,
             bbox: { x: 5, y: 8, w: 90, h: 42 },
-            suggestedCameraEffect: 'dramatic_zoom',
+            suggestedCameraEffect: p1.effect,
             aiDescription: `Trang ${pIdx}: Khung tranh mở đầu phân cảnh của bộ truyện ${seriesName}.`,
             dialogues: [
-              { speaker: 'Nhân Vật Chính', text: `Tình huống nguy cấp xuất hiện tại trang ${pIdx}!`, emotion: 'scared' },
+              {
+                id: `d-${pIdx}-1`,
+                panelId: `panel-${pIdx}-1`,
+                speaker: p1.speaker,
+                text: p1.trans,
+                originalText: p1.orig,
+                translatedText: p1.trans,
+                language: lang,
+                textType: p1.type,
+                fontFamily: 'Anime Ace',
+                fontSize: 14,
+                confidence: 0.987,
+                useForScript: true,
+                emotion: p1.type === 'SOUND_EFFECT' ? 'excited' : 'neutral',
+              },
             ],
           },
           {
+            id: `panel-${pIdx}-2`,
+            pageIndex: pIdx,
             panelIndex: 2,
             bbox: { x: 5, y: 52, w: 90, h: 42 },
-            suggestedCameraEffect: 'pan_right',
+            suggestedCameraEffect: p2.effect,
             aiDescription: `Trang ${pIdx}: Cốt truyện mở rộng kịch tính.`,
             dialogues: [
-              { speaker: 'Dẫn Chuyện', text: `Diễn biến gay cấn tiếp tục diễn ra tại phân đoạn ${pIdx}.`, emotion: 'neutral' },
+              {
+                id: `d-${pIdx}-2`,
+                panelId: `panel-${pIdx}-2`,
+                speaker: p2.speaker,
+                text: p2.trans,
+                originalText: p2.orig,
+                translatedText: p2.trans,
+                language: lang,
+                textType: p2.type,
+                fontFamily: 'Anime Ace',
+                fontSize: 14,
+                confidence: 0.985,
+                useForScript: true,
+                emotion: p2.type === 'SOUND_EFFECT' ? 'excited' : 'neutral',
+              },
             ],
           },
         ];
