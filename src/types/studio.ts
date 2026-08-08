@@ -12,6 +12,7 @@ export type ActiveTab =
   | 'seo'
   | 'workflow'
   | 'queue'
+  | 'sync_center' // Dual Cloud & Local Database Sync Center
   | 'settings';
 
 export interface Dialogue {

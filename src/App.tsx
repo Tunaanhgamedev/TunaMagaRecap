@@ -15,6 +15,7 @@ import { ThumbnailView } from './components/thumbnail/ThumbnailView';
 import { SEOView } from './components/seo/SEOView';
 import { WorkflowView } from './components/workflow/WorkflowView';
 import { QueueView } from './components/queue/QueueView';
+import { SyncCenterView } from './components/sync/SyncCenterView';
 import { SettingsView } from './components/settings/SettingsView';
 
 export function App() {
@@ -48,6 +49,8 @@ export function App() {
         return <WorkflowView />;
       case 'queue':
         return <QueueView />;
+      case 'sync_center':
+        return <SyncCenterView />;
       case 'settings':
         return <SettingsView />;
       default:

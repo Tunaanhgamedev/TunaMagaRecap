@@ -17,6 +17,7 @@ import {
   Layers,
   Settings,
   Sparkles,
+  Database,
 } from 'lucide-react';
 
 interface NavItem {
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'seo', label: 'YouTube SEO Coach', icon: Globe },
   { id: 'workflow', label: 'Workflow Engine', icon: GitFork, badge: 'Auto' },
   { id: 'queue', label: 'Batch Queue Runner', icon: Layers, badge: 'Active' },
+  { id: 'sync_center', label: 'Cloud & Local DB Sync', icon: Database, badge: 'Git Sync' },
   { id: 'settings', label: 'Plugin & API Keys', icon: Settings },
 ];
 

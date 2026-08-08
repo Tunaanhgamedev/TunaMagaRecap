@@ -7,59 +7,108 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ==========================================
+// 1. USER & AUTHENTICATION
+// ==========================================
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String    @id @default(uuid())
+  email        String    @unique
   name         String
   passwordHash String
-  createdAt    DateTime @default(now())
+  role         String    @default("creator") // creator, admin, enterprise
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  projects     Project[]
+  apiKeys      APIKey[]
+  channels     YoutubeChannel[]
 }
 
+model APIKey {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String   // gemini, claude, openai, deepseek, elevenlabs
+  keyHash   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// 2. PROJECT & SERIES (DUAL CLOUD/LOCAL)
+// ==========================================
 model Project {
-  id            String   @id @default(uuid())
+  id            String          @id @default(uuid())
+  userId        String?
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   seriesName    String
-  chapterNumber Int
-  episodeTitle  String
-  status        String   @default("idle")
-  durationEst   Float    @default(0)
-  coverUrl      String   @default("")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  chapterNumber Int             @default(1)
+  episodeTitle  String          @default("Untitled Chapter")
+  status        String          @default("idle") // idle, scraping, ocr_done, scripted, rendering, completed
+  durationEst   Float           @default(0)
+  coverUrl      String          @default("")
+  storageMode   String          @default("local") // local (./projects), cloud (s3/r2)
+  storagePrefix String          @default("projects/")
+  version       Int             @default(1) // Git-style versioning
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
   chapters      Chapter[]
   scripts       ScriptData[]
+  assets        Asset[]
+  jobs          Job[]
+  syncCommits   SyncCommit[]
+}
+
+model Series {
+  id          String    @id @default(uuid())
+  name        String
+  author      String?
+  genre       String?
+  sourceUrl   String?
+  coverUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Chapter {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   number    Int
   title     String
-  createdAt DateTime @default(now())
+  sourceUrl String?
+  status    String      @default("ready")
+  createdAt DateTime    @default(now())
   pages     MangaPage[]
 }
 
+// ==========================================
+// 3. PAGE & PANEL WITH STORAGE KEY (NOT BINARY)
+// ==========================================
 model MangaPage {
-  id        String   @id @default(uuid())
-  chapterId String
-  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  pageIndex Int
-  imageUrl  String
-  panels    Panel[]
+  id         String   @id @default(uuid())
+  chapterId  String
+  chapter    Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  pageIndex  Int
+  imageUrl   String   // Proxy stream or HTTP URL
+  storageKey String   @default("") // e.g., projects/proj-1/chap-1/001.jpg (S3/R2 or local path)
+  fileSize   Int      @default(0)
+  mimeType   String   @default("image/jpeg")
+  panels     Panel[]
 }
 
 model Panel {
-  id                   String     @id @default(uuid())
-  pageId               String
-  page                 MangaPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  panelIndex           Int
-  bboxX                Float
-  bboxY                Float
-  bboxW                Float
-  bboxH                Float
+  id                    String     @id @default(uuid())
+  pageId                String
+  page                  MangaPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  panelIndex            Int
+  bboxX                 Float
+  bboxY                 Float
+  bboxW                 Float
+  bboxH                 Float
   suggestedCameraEffect String     @default("zoom_in")
-  aiDescription        String     @default("")
-  dialogues            Dialogue[]
+  aiDescription         String     @default("")
+  dialogues             Dialogue[]
 }
 
 model Dialogue {
@@ -69,27 +118,93 @@ model Dialogue {
   speaker        String
   text           String
   translatedText String  @default("")
-  emotion        String  @default("neutral")
+  emotion        String  @default("neutral") // neutral, shouting, scared, excited, sad
 }
 
+// ==========================================
+// 4. SCRIPT & NARRATION
+// ==========================================
 model ScriptData {
   id        String   @id @default(uuid())
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  mode      String
+  mode      String   @default("review") // recap, review, lore, shorts
   title     String
   content   String
   wordCount Int      @default(0)
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 5. ASSETS & MEDIA STORAGE
+// ==========================================
+model Asset {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String   // image, audio, subtitle, video, thumbnail
+  fileName  String
+  storageKey String  // S3 / R2 / Local Path
+  fileSize  Int      @default(0)
+  mimeType  String
   createdAt DateTime @default(now())
 }
 
-model QueueTask {
-  id           String   @id @default(uuid())
-  seriesName   String
-  chapterTitle String
-  progress     Int      @default(0)
-  currentStep  String
-  status       String   @default("queued")
-  startedAt    DateTime @default(now())
-  logs         String   @default("[]")
+// ==========================================
+// 6. ASYNC JOB QUEUE (REDIS / LOCAL WORKER)
+// ==========================================
+model Job {
+  id          String    @id @default(uuid())
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String    // IMPORT_CHAPTER, OCR, AI_SCRIPT, TTS, SUBTITLE, RENDER
+  status      String    @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  progress    Int       @default(0)
+  step        String    @default("Initializing")
+  payload     String    @default("{}")
+  result      String    @default("{}")
+  error       String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  logs        JobLog[]
+}
+
+model JobLog {
+  id        String   @id @default(uuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  level     String   @default("INFO") // INFO, WARN, ERROR
+  message   String
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// 7. GIT-STYLE CLOUD ↔ LOCAL SYNC ENGINE
+// ==========================================
+model SyncCommit {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version     Int
+  sourceNode  String   @default("desktop-local") // desktop-local, cloud-web
+  changeType  String   // CREATE, UPDATE_SCRIPT, UPDATE_PANELS, MEDIA_UPLOAD
+  metadata    String   @default("{}")
+  isMerged    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==========================================
+// 8. YOUTUBE AUTOMATION & ANALYTICS
+// ==========================================
+model YoutubeChannel {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId   String   @unique
+  title       String
+  thumbnail   String?
+  credentials String   @default("{}")
+  createdAt   DateTime @default(now())
 }
