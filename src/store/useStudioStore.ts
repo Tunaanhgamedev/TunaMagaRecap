@@ -1303,14 +1303,6 @@ export const useStudioStore = create<StudioState>()(
       },
     });
   },
-        chunks: [
-          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
-        ],
-        wordCount: 450,
-        estReadTimeMinutes: 2,
-      },
-    });
-  },
   updateScriptContent: (content) =>
     set((state) =>
       state.scriptData
