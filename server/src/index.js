@@ -601,14 +601,24 @@ async function resolveAndFetchImageBuffer(imageUrl) {
   if (pathname === '/api/ai/script' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const payload = JSON.parse(body || '{}');
         const mode = payload.mode || 'review';
         const seriesName = payload.seriesName || 'Truyện Tranh Mới';
         const chapterNumber = payload.chapterNumber || 1;
+        const dialogues = payload.dialogues || [];
+        const customPrompt = payload.customPrompt || '';
+        const apiKey = payload.apiKey || '';
 
-        const generatedScript = storyMemoryEngine.generateContextualScript(seriesName, chapterNumber, mode);
+        const generatedScript = await AIVisionEngine.generateMangaRecapScript({
+          seriesName,
+          chapterNumber,
+          mode,
+          dialogues,
+          customPrompt,
+          apiKey,
+        });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(

@@ -37,8 +37,35 @@ const MODES: ModeOption[] = [
 ];
 
 export const ScriptView: React.FC = () => {
-  const { scriptData, setScriptMode, generateAIScript, updateScriptContent, setActiveTab, selectedProject } =
-    useStudioStore();
+  const {
+    scriptData,
+    setScriptMode,
+    generateAIScript,
+    updateScriptContent,
+    setActiveTab,
+    selectedProject,
+    customScriptPrompt,
+    setCustomScriptPrompt,
+  } = useStudioStore();
+
+  const promptPresets = [
+    {
+      title: '🎯 Hook Triệu View (5s Đầu)',
+      prompt: 'Viết kịch bản giật gân, mở đầu với câu hook gây tò mò cao trào trong 5s đầu, phân vai lời thoại kịch tính và kêu gọi đăng ký kênh.',
+    },
+    {
+      title: '🎭 Phân Vai Đa Nhân Vật',
+      prompt: 'Phân tách rõ ràng giữa giọng [Dẫn Chuyện] và các nhân vật chính/phụ, thể hiện rõ cảm xúc giận dữ, bất ngờ, tự tin.',
+    },
+    {
+      title: '⚡ TikTok / Shorts 60s Siêu Nhanh',
+      prompt: 'Viết kịch bản ngắn gọn dồn dập, nhịp nhanh 60 giây, tập trung vào đòn đánh quyết định và cú twist bất ngờ.',
+    },
+    {
+      title: '😂 Hài Hước & Bắt Trend GenZ',
+      prompt: 'Kịch bản theo phong cách review hài hước, dí dỏm, châm biếm nhẹ nhàng, chèn thuật ngữ vui nhộn và meme.',
+    },
+  ];
 
   if (!scriptData) {
     return (
@@ -71,26 +98,73 @@ export const ScriptView: React.FC = () => {
             <span>AI Director Script Studio ({selectedProject?.seriesName} - Chap {selectedProject?.chapterNumber})</span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Soạn thảo kịch bản review đa phong cách với trí tuệ nhân tạo (Gemini / Claude / GPT).
+            Huấn luyện AI kịch bản dựa trên toàn bộ dữ liệu thoại OCR thực tế kết hợp với Custom Prompt Tuning.
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           <button
             onClick={() => generateAIScript(scriptData.mode)}
-            className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95"
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-spin" />
-            <span>Sinh Kịch Bản ({scriptData.mode})</span>
+            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Sinh Kịch Bản Ngay ({scriptData.mode})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('voice')}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
             <Volume2 className="w-3.5 h-3.5" />
             <span>Studio Voice TTS</span>
             <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* AI Prompt Training Box */}
+      <div className="glass-panel p-3.5 rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/30 via-slate-900/60 to-cyan-950/30 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1.5">
+            <Wand2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span>🧠 Huấn Luyện AI Viết Kịch Bản (Custom Prompt Tuning)</span>
+          </span>
+          <span className="text-[10px] font-mono text-slate-400">
+            Dữ liệu OCR: Tự động nạp toàn bộ thoại từ các trang truyện
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {promptPresets.map((p, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                setCustomScriptPrompt(p.prompt);
+                generateAIScript(scriptData.mode);
+              }}
+              className="text-[10.5px] bg-slate-950/80 hover:bg-violet-900/40 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-800 hover:border-violet-500/50 transition-all cursor-pointer flex items-center space-x-1"
+            >
+              <span>{p.title}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={customScriptPrompt}
+            onChange={(e) => setCustomScriptPrompt(e.target.value)}
+            placeholder="Nhập yêu cầu huấn luyện AI (VD: Viết phong cách giật gân, nhiều câu cảm thán, phân vai rõ rệt)..."
+            className="flex-1 bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-400 font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => generateAIScript(scriptData.mode)}
+            className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center space-x-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+            <span>Áp Dụng & Sinh Kịch Bản</span>
           </button>
         </div>
       </div>
@@ -108,7 +182,7 @@ export const ScriptView: React.FC = () => {
                 setScriptMode(m.id);
                 generateAIScript(m.id);
               }}
-              className={`p-2 rounded-lg border text-left flex flex-col justify-between transition-all ${
+              className={`p-2 rounded-lg border text-left flex flex-col justify-between transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-violet-600/30 border-violet-500/60 shadow-sm text-white'
                   : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'

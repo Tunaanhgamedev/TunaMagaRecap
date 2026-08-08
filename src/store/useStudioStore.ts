@@ -84,6 +84,8 @@ interface StudioState {
 
   // AI Script Director
   scriptData: ScriptData | null;
+  customScriptPrompt: string;
+  setCustomScriptPrompt: (prompt: string) => void;
   setScriptMode: (mode: ScriptMode) => void;
   generateAIScript: (mode: ScriptMode) => Promise<void>;
   updateScriptContent: (content: string) => void;
@@ -1256,12 +1258,26 @@ export const useStudioStore = create<StudioState>()(
   },
 
   scriptData: null,
+  customScriptPrompt: 'Tập trung vào cảm xúc nhân vật, mở đầu giật gân 5s đầu, lồng ghép phân vai Dẫn chuyện và Lời thoại kịch tính chuẩn YouTube triệu view.',
+  setCustomScriptPrompt: (customScriptPrompt) => set({ customScriptPrompt }),
   setScriptMode: (mode) =>
     set((state) => (state.scriptData ? { scriptData: { ...state.scriptData, mode } } : {})),
   generateAIScript: async (mode) => {
     const proj = get().selectedProject;
-    const sName = proj?.seriesName || 'Tôi Thăng Cấp Một Mình - Solo Leveling';
+    const sName = proj?.seriesName || 'Tôi Thăng Cấp Một Minh - Solo Leveling';
     const cNum = proj?.chapterNumber || 1;
+    const customPrompt = get().customScriptPrompt || '';
+
+    // Collect all real dialogues extracted from OCR pages
+    const dialogues = get().pages.flatMap((p) =>
+      p.panels.flatMap((panel) =>
+        panel.dialogues.map((d) => ({
+          pageIndex: p.pageIndex,
+          speaker: d.speaker || 'Nhân vật',
+          text: d.translatedText || d.text,
+        }))
+      )
+    );
 
     try {
       const res = await fetch(`${API_BASE_URL}/ai/script`, {
@@ -1271,6 +1287,8 @@ export const useStudioStore = create<StudioState>()(
           mode,
           seriesName: sName,
           chapterNumber: cNum,
+          dialogues,
+          customPrompt,
         }),
       });
       if (!res.ok) throw new Error('Script fetch error');
@@ -1279,12 +1297,12 @@ export const useStudioStore = create<StudioState>()(
         set({
           scriptData: {
             mode,
-            title: `Kịch Bản: ${sName} Chapter ${cNum}`,
+            title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
             content: data.script,
             chunks: [
               { id: 'sc-1', speaker: 'Dẫn Chuyện', text: data.script.slice(0, 100), emotion: 'excited', estDurationSec: 5.0 },
             ],
-            wordCount: data.wordCount || 850,
+            wordCount: data.wordCount || data.script.split(/\s+/).length,
             estReadTimeMinutes: Math.ceil((data.wordCount || 850) / 250),
           },
         });
@@ -1292,12 +1310,20 @@ export const useStudioStore = create<StudioState>()(
       }
     } catch (err) {}
 
-    const fallbackScript = `# KỊCH BẢN REVIEW: ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## Phân Đoạn 1: Mở Đầu Diễn Biến\n**Giọng đọc**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## Phân Đoạn 2: Trận Chiến Cao Trào\n**Giọng đọc**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử. Diễn biến tiếp theo sẽ ra sao? Hãy cùng phân tích chi tiết từng khung tranh!"`;
+    const fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## 📌 Phân Đoạn 1: Mở Đầu Diễn Biến (Hook 5s)\n**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## 📌 Phân Đoạn 2: Trận Chiến Cao Trào\n${dialogues.length > 0 ? dialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n') : '**[Dẫn Chuyện]**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử."`}\n\n## 📌 Phân Đoạn 3: Hồi Kết & Kêu Gọi Đăng Ký\n**[Dẫn Chuyện]**: "Trận chiến tạm khép lại với nhiều bí ẩn cho chapter tiếp theo. Đừng quên Like & Subscribe kênh để đón xem video mới nhất nhé!"`;
     set({
       scriptData: {
         mode,
-        title: `Kịch Bản: ${sName} Chapter ${cNum}`,
+        title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
         content: fallbackScript,
+        chunks: [
+          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
+        ],
+        wordCount: fallbackScript.split(/\s+/).length,
+        estReadTimeMinutes: 2,
+      },
+    });
+  },
         chunks: [
           { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
         ],

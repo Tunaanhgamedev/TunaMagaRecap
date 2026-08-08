@@ -236,7 +236,84 @@ ${JSON.stringify(payloadItems, null, 2)}
   return translatedDialogues;
 }
 
+/**
+ * Generate high-converting Manga Recap Script (YouTube / TikTok / Review)
+ * using full OCR dialogue context and custom system prompt training!
+ */
+export async function generateMangaRecapScript({
+  seriesName = '',
+  chapterNumber = 1,
+  mode = 'review',
+  dialogues = [],
+  customPrompt = '',
+  apiKey = '',
+}) {
+  const key = apiKey || process.env.GEMINI_API_KEY || '';
+
+  const dialoguesFormatted = dialogues.length > 0
+    ? dialogues.map((d, i) => `[Trang ${d.pageIndex || 1} - ${d.speaker || 'Nhân vật'}]: "${d.text || d.translatedText || ''}"`).join('\n')
+    : `(Diễn biến Chapter ${chapterNumber} bộ ${seriesName})`;
+
+  const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok với triệu lượt xem.
+Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính dựa trên nội dung thoại thực tế từ Chapter ${chapterNumber} bộ truyện "${seriesName}".
+
+DANH SÁCH THOẠI OCR THỰC TẾ TỪ TRUYỆN:
+${dialoguesFormatted}
+
+PHONG CÁCH KỊCH BẢN YÊU CẦU (${mode.toUpperCase()}):
+${customPrompt ? `YÊU CẦU ĐẶC BIỆT TỪ ĐẠO DIỄN: "${customPrompt}"` : ''}
+
+QUY TẮC VIẾT KỊCH BẢN THU HÚT:
+1. **Hook 5s Đầu**: Mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
+2. **Triển Khai Mạch Truyện**: Tóm tắt mượt mà theo đúng thứ tự các trang truyện, lồng ghép phân vai nhân vật và lời dẫn kịch tính.
+3. **Phân Đoạn Rõ Ràng**: Đánh dấu rõ [CẢNH x], [Dẫn Chuyện], [Lời Thoại Nhân Vật], [Gợi Ý Nhạc/Hiệu Ứng].
+4. **Kết Đoạn (Cliffhanger)**: Kêu gọi Đăng ký kênh, Like và để lại Bình luận về diễn biến chapter tiếp theo.
+
+Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, hấp dẫn, dễ đọc thuyết minh!`;
+
+  if (key) {
+    for (const model of MODEL_CANDIDATES) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemInstruction }] }],
+          }),
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim()) {
+            return text.trim();
+          }
+        }
+      } catch (err) {
+        console.warn(`[Gemini Script] ${model} failed, trying next...`);
+      }
+    }
+  }
+
+  // Fallback Script generation based on actual dialogues
+  return `# 🎬 KỊCH BẢN RECAP TRUYỆN TRANH (STYLE: ${mode.toUpperCase()})
+## Bộ Truyện: ${seriesName.toUpperCase()} - CHAPTER ${chapterNumber}
+
+### 📌 Phân Đoạn 1: Mở Đầu (Hook 5s)
+**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Chapter ${chapterNumber} của ${seriesName} vừa ra mắt với những tình tiết bùng nổ vượt ngoài dự đoán! Đừng quên bấm Nút Đăng Ký Kênh để không bỏ lỡ những tập review mới nhất nhé!"
+
+### 📌 Phân Đoạn 2: Diễn Biến Chi Tiết
+${dialogues.length > 0
+  ? dialogues.slice(0, 10).map((d, i) => `**[Trang ${d.pageIndex || 1} - ${d.speaker}]**: "${d.text || d.translatedText}"`).join('\n\n')
+  : `**[Dẫn Chuyện]**: "Trận chiến nổ ra quyết liệt khi các nhân vật đối mặt với thử thách tối thượng..."`}
+
+### 📌 Phân Đoạn 3: Kết Cục & Cliffhanger
+**[Dẫn Chuyện]**: "Thế trận căng thẳng khép lại mở ra bí ẩn lớn cho chapter tiếp theo. Bạn nghĩ gì về diễn biến này? Hãy để lại ý kiến bên dưới phần bình luận nhé!"`;
+}
+
 export const AIVisionEngine = {
   analyzeMangaWithGeminiVision,
   translateMangaWithGemini,
+  generateMangaRecapScript,
 };
