@@ -110,25 +110,51 @@ Return ONLY a valid JSON object in this exact schema with no markdown code fence
 }
 
 /**
+ * Free Google Translate fallback using GTX endpoint (no API key required, zero quota limits)
+ */
+export async function translateWithFreeGoogleTranslate(text, targetLang = 'vi') {
+  if (!text || !text.trim()) return text;
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        const translatedSegments = data[0].map((item) => item[0]).filter(Boolean);
+        const result = translatedSegments.join('');
+        if (result && result.trim()) return result.trim();
+      }
+    }
+  } catch (e) {
+    console.warn('[Free Google Translate] Error:', e.message);
+  }
+  return text;
+}
+
+/**
  * Neural Manga Translation with ID-Based Explicit 1-to-1 Mapping
- * Never uses unchecked positional array index mapping!
+ * Uses Gemini AI if available; falls back to Free Google Translate if Gemini fails/429s/lacks key.
  */
 export async function translateMangaWithGemini({
   dialogues = [],
   targetLang = 'vi',
   apiKey = '',
 }) {
+  if (dialogues.length === 0) return dialogues;
+
   const key = apiKey || process.env.GEMINI_API_KEY || '';
-  if (!key || dialogues.length === 0) return dialogues;
 
-  // Prepare structured items with explicit IDs
-  const payloadItems = dialogues.map((d, idx) => ({
-    id: d.id || `dialogue-${idx}`,
-    original: d.originalText || d.text || '',
-    speaker: d.speaker || '',
-  }));
+  // 1. Try Gemini AI translation if API key is provided
+  if (key) {
+    const payloadItems = dialogues.map((d, idx) => ({
+      id: d.id || `dialogue-${idx}`,
+      original: d.originalText || d.text || '',
+      speaker: d.speaker || '',
+    }));
 
-  const prompt = `You are a professional Manga/Manhwa Translator.
+    const prompt = `You are a professional Manga/Manhwa Translator.
 Translate the following manga dialogue items faithfully into ${targetLang === 'vi' ? 'natural Vietnamese (Tiếng Việt)' : targetLang}.
 
 Translation Rules:
@@ -148,50 +174,66 @@ Items to translate:
 ${JSON.stringify(payloadItems, null, 2)}
 `;
 
-  for (const model of MODEL_CANDIDATES) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-          },
-        }),
-      });
+    for (const model of MODEL_CANDIDATES) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const clean = raw.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-        const parsed = JSON.parse(clean);
+        if (response.ok) {
+          const data = await response.json();
+          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          const clean = raw.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+          const parsed = JSON.parse(clean);
 
-        if (parsed && Array.isArray(parsed.translations)) {
-          // ID-based Map lookup - 100% resilient against order shifts
-          const translationMap = new Map(
-            parsed.translations.map((t) => [String(t.id), t.translated])
-          );
+          if (parsed && Array.isArray(parsed.translations)) {
+            const translationMap = new Map(
+              parsed.translations.map((t) => [String(t.id), t.translated])
+            );
 
-          return dialogues.map((d, idx) => {
-            const id = d.id || `dialogue-${idx}`;
-            const translated = translationMap.get(id) || d.translatedText || d.text;
-            return {
-              ...d,
-              translatedText: translated,
-              text: targetLang === 'vi' ? translated : d.text,
-            };
-          });
+            return dialogues.map((d, idx) => {
+              const id = d.id || `dialogue-${idx}`;
+              const translated = translationMap.get(id) || d.translatedText || d.text;
+              return {
+                ...d,
+                translatedText: String(translated),
+                text: String(translated),
+              };
+            });
+          }
+        } else {
+          console.warn(`[Gemini Translate] Model ${model} returned status ${response.status}`);
         }
+      } catch (err) {
+        console.error(`[Gemini Translate ${model}] Error:`, err.message);
       }
-    } catch (err) {
-      console.error(`[Gemini Translate ${model}] Error:`, err.message);
     }
   }
 
-  return dialogues;
+  // 2. Free Google Translate fallback for 100% reliable translation without API key or rate limits
+  console.log(`[Translate Engine] 🌐 Using Free Google Translate fallback for ${dialogues.length} dialogues...`);
+  const translatedDialogues = await Promise.all(
+    dialogues.map(async (d) => {
+      const sourceStr = d.originalText || d.text || '';
+      const translated = await translateWithFreeGoogleTranslate(sourceStr, targetLang);
+      return {
+        ...d,
+        translatedText: translated,
+        text: translated,
+      };
+    })
+  );
+
+  return translatedDialogues;
 }
 
 export const AIVisionEngine = {

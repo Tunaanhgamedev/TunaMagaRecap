@@ -44,14 +44,30 @@ export const TranslationView: React.FC = () => {
     );
   }
 
-  const handleTranslate = () => {
+  const handleTranslate = async () => {
+    if (!scriptData || !scriptData.content) return;
     setIsTranslating(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch('http://localhost:3001/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: scriptData.content,
+          targetLanguage: targetLang,
+          sourceLanguage: sourceLang,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.translatedText) {
+        setTranslatedText(data.translatedText);
+      } else {
+        setTranslatedText(`❌ Lỗi dịch thuật: ${data.error || 'Không thể dịch kịch bản.'}`);
+      }
+    } catch (err: any) {
+      setTranslatedText(`❌ Lỗi kết nối máy chủ dịch: ${err.message}`);
+    } finally {
       setIsTranslating(false);
-      setTranslatedText(
-        `[${targetLang.toUpperCase()} TRANSLATION]: The ultimate battle has reached its climax! Jin-Woo unleashes his monarch aura.`
-      );
-    }, 1500);
+    }
   };
 
   const handleCopy = () => {

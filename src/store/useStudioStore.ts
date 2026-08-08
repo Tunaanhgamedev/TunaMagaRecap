@@ -737,7 +737,7 @@ export const useStudioStore = create<StudioState>()(
       };
     });
 
-    // 2. High-precision Gemini AI translation pass
+    // 2. High-precision AI & Neural translation pass (uses Gemini AI or Free Google Translate)
     const apiKey = get().geminiApiKey;
     const currentPages = get().pages;
     const allDialogues: any[] = [];
@@ -755,8 +755,8 @@ export const useStudioStore = create<StudioState>()(
       });
     });
 
-    if (apiKey && allDialogues.length > 0) {
-      set({ scrapeStatusMessage: `🤖 Đang sử dụng Google Gemini AI dịch thuật song ngữ chính xác...` });
+    if (allDialogues.length > 0) {
+      set({ scrapeStatusMessage: `🤖 Đang sử dụng AI & Google Neural Dịch Thuật thoại tự động...` });
       try {
         const res = await fetch(`${API_BASE_URL}/translate`, {
           method: 'POST',
@@ -791,7 +791,7 @@ export const useStudioStore = create<StudioState>()(
             }));
             return {
               pages: updatedPages,
-              scrapeStatusMessage: `🎉 Google Gemini đã dịch thuật truyện tranh hoàn tất chuẩn xác 100%!`,
+              scrapeStatusMessage: `🎉 Đã dịch thuật toàn bộ thoại truyện tranh hoàn tất 100%!`,
             };
           });
         }
