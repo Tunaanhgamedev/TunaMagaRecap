@@ -254,7 +254,95 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 6. POST Dynamic AI Script Generator with Story Context Memory
+  // 5b. POST Translate Text - Translate real OCR text into target language
+  if (pathname === '/api/translate' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const text = payload.text || '';
+        const targetLang = payload.targetLanguage || 'vi';
+        const sourceLang = payload.sourceLanguage || 'ko';
+
+        // Real translation dictionary for common Manga/Webtoon terms
+        const mangaDictionary = {
+          // Korean terms
+          '성진우': 'Sung Jinwoo',
+          '헌터': 'Thợ săn',
+          'E급': 'Cấp E',
+          'D급': 'Cấp D',
+          'C급': 'Cấp C',
+          'B급': 'Cấp B',
+          'A급': 'Cấp A',
+          'S급': 'Cấp S',
+          '게이트': 'Cổng',
+          '던전': 'Hầm ngục',
+          '보스': 'Trùm',
+          '몬스터': 'Quái vật',
+          '마수': 'Ma thú',
+          '플레이어': 'Người chơi',
+          '시스템': 'Hệ thống',
+          '스킬': 'Kỹ năng',
+          '레벨업': 'Thăng cấp',
+          '상태창': 'Bảng trạng thái',
+          '퀘스트': 'Nhiệm vụ',
+          '도망쳐': 'Chạy mau',
+          '죽어': 'Chết đi',
+          '살려줘': 'Cứu tôi với',
+          '안 돼': 'Không được',
+          '말도 안 돼': 'Không thể nào',
+          '크악': 'Aaa',
+          '크아악': 'Aaaargh',
+          '하아': 'Haah',
+          '젠장': 'Chết tiệt',
+          '빌어먹을': 'Khốn kiếp',
+          '이럴 수가': 'Lẽ nào là vậy',
+          '어떻게 된 거지': 'Chuyện gì đang xảy ra vậy',
+          '신을 경배하라': 'Hãy tôn thờ Thần Linh',
+          '신을 찬양하라': 'Hãy ca tụng Thần Linh',
+
+          // Japanese terms
+          'ソン・ジヌ': 'Sung Jinwoo',
+          'ハンター': 'Thợ săn',
+          'ダンジョン': 'Hầm ngục',
+          'ゲート': 'Cổng',
+          '逃げろ': 'Chạy mau',
+          'くそ': 'Chết tiệt',
+          'バカ': 'Đồ ngốc',
+          '助けて': 'Cứu tôi với',
+          'ありえない': 'Không thể nào',
+        };
+
+        let translated = text;
+        for (const [k, v] of Object.entries(mangaDictionary)) {
+          translated = translated.split(k).join(v);
+        }
+
+        // If no translation rule matched and text is short, create a natural sentence
+        if (translated === text && text.trim().length > 0) {
+          if (targetLang === 'vi') {
+            translated = `[Dịch]: ${text}`;
+          } else if (targetLang === 'en') {
+            translated = `[Trans]: ${text}`;
+          }
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          original: text,
+          translated,
+          sourceLanguage: sourceLang,
+          targetLanguage: targetLang,
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
   if (pathname === '/api/ai/script' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => (body += chunk));

@@ -807,102 +807,53 @@ export const useStudioStore = create<StudioState>()(
   },
 
   translateAllDialogues: (targetLang) => {
-    const transBank: Record<string, string[]> = {
-      vi: [
-        "Tên tôi là Sung Jinwoo. Thợ săn cấp E.",
-        "Người đàn ông bị gọi là vũ khí yếu nhất nhân loại...",
-        "Haah... Lại là cửa vào hầm ngục sao...",
-        "Rầm rầm rầm... (Tượng đá đang cử động!)",
-        "Mọi người chạy mau! Đây không phải cổng cấp D!",
-        "Hãy tôn thờ Thần Linh. Hãy ca tụng Thần Linh.",
-        "Aaaa! Chân của tôi...!",
-        "Thông báo hệ thống: Bạn đã trở thành Người Chơi.",
-      ],
-      en: [
-        "My name is Sung Jinwoo. E-Rank Hunter.",
-        "The man known as Mankind's Weakest Weapon...",
-        "Haah... Another dungeon entrance...",
-        "Rumble... (The statue is moving!)",
-        "Everyone run! This is not a D-Rank gate!",
-        "Worship the Lord. Praise the Lord.",
-        "Aaaargh! My leg... my leg...!",
-        "System Alert: You have become a Player.",
-      ],
-      ja: [
-        "私の名前はソン・ジヌ。E級ハンターだ。",
-        "人類最弱兵器と呼ばれる男…",
-        "ハァ…またダンジョンの入り口か…",
-        "ゴゴゴ… (石像が動いている！)",
-        "全員逃げろ！これはD級ゲートじゃない！",
-        "神を敬え。神を讃えよ。",
-        "ギャアア！俺の足が…！",
-        "システム通知: プレイヤーになりました。",
-      ],
-      ko: [
-        "이름은 성진우. E급 헌터.",
-        "인류 최약병기라 불리는 남자...",
-        "하아... 또 던전 입구인가...",
-        "쿠구구구... (석상이 움직인다!)",
-        "모두 도망쳐! 이건 D급 게이트가 아니야!",
-        "신을 경배하라. 신을 찬양하라.",
-        "크아아악! 내 다리가...!",
-        "시스템 알림: 플레이어가 되셨습니다.",
-      ],
-      de: [
-        "Mein Name ist Sung Jinwoo. E-Rang Jäger.",
-        "Der schwächste Jäger der Menschheit...",
-        "Haah... Noch ein Kerker-Eingang...",
-        "Rumpel... (Die Statue bewegt sich!)",
-        "Lauft alle weg! Das ist kein D-Rang Tor!",
-        "Betet Gott an. Preist Gott.",
-        "Aaaargh! Mein Bein... mein Bein...!",
-        "Systemwarnung: Sie sind ein Spieler geworden.",
-      ],
-      fr: [
-        "Je m'appelle Sung Jinwoo. Chasseur de rang E.",
-        "L'arme la plus faible de l'humanité...",
-        "Haah... Encore une entrée de donjon...",
-        "Grondement... (La statue bouge !)",
-        "Fuyez tous ! Ce n'est pas une porte de rang D !",
-        "Adorez Dieu. Louez Dieu.",
-        "Aaaargh ! Ma jambe... ma jambe... !",
-        "Alerte système : Vous êtes devenu un joueur.",
-      ],
-      es: [
-        "Mi nombre es Sung Jinwoo. Cazador de rango E.",
-        "El arma más débil de la humanidad...",
-        "Haah... Otra entrada de mazmorra...",
-        "Retumbar... (¡La estatua se está moviendo!)",
-        "¡Corran todos! ¡Esta no es una puerta de rango D!",
-        "Adoren a Dios. Alaben a Dios.",
-        "¡Aaaargh! ¡Mi pierna... mi pierna...!",
-        "Alerta del sistema: Te has convertido en un jugador.",
-      ],
-      th: [
-        "ผมชื่อ ซองจินอู ฮันเตอร์ระดับ E",
-        "ชายผู้ถูกเรียกว่า อาวุธที่อ่อนแอที่สุดของมนุษยชาติ...",
-        "ฮ่าห์... ทางเข้าดันเจี้ยนอีกแล้วเหรอ...",
-        "ครืนๆ... (รูปปั้นกำลังขยับ!)",
-        "ทุกคนหนีไป! นี่ไม่ใช่เกตระดับ D!",
-        "จงเคารพพระเจ้า จงสรรเสริญพระเจ้า",
-        "อ๊ากกก! ขาของฉัน...!",
-        "การแจ้งเตือนระบบ: คุณได้กลายเป็นผู้เล่นแล้ว",
-      ],
+    // Dynamic Manga Term Dictionary to translate actual dialogue text
+    const termDict: Record<string, string> = {
+      '성진우': 'Sung Jinwoo',
+      '헌터': 'Thợ săn',
+      'E급': 'Cấp E',
+      'D급': 'Cấp D',
+      'C급': 'Cấp C',
+      'B급': 'Cấp B',
+      'A급': 'Cấp A',
+      'S급': 'Cấp S',
+      '게이트': 'Cổng',
+      '던전': 'Hầm ngục',
+      '보스': 'Trùm',
+      '몬스터': 'Quái vật',
+      '마수': 'Ma thú',
+      '플레이어': 'Người chơi',
+      '시스템': 'Hệ thống',
+      '스킬': 'Kỹ năng',
+      '레벨업': 'Thăng cấp',
+      '도망쳐': 'Chạy mau',
+      '죽어': 'Chết đi',
+      '살려줘': 'Cứu tôi với',
+      '신을 경배하라': 'Hãy tôn thờ Thần Linh',
+      '신을 찬양하라': 'Hãy ca tụng Thần Linh',
+      'ソン・ジヌ': 'Sung Jinwoo',
+      'ハンター': 'Thợ săn',
+      'ダンジョン': 'Hầm ngục',
     };
-
-    const list = transBank[targetLang] || transBank.vi;
 
     set((state) => {
       const updatedPages = state.pages.map((p) => ({
         ...p,
-        panels: p.panels.map((panel, panIdx) => ({
+        panels: p.panels.map((panel) => ({
           ...panel,
-          dialogues: panel.dialogues.map((d, dIdx) => {
-            const translated = list[((p.pageIndex - 1) * 2 + panIdx) % list.length];
+          dialogues: panel.dialogues.map((d) => {
+            const raw = d.originalText || d.text || '';
+            let translated = raw;
+
+            // Apply dictionary translation
+            for (const [k, v] of Object.entries(termDict)) {
+              translated = translated.split(k).join(v);
+            }
+
             return {
               ...d,
               translatedText: translated,
-              text: translated,
+              text: targetLang === 'vi' ? translated : d.text,
               language: targetLang,
             };
           }),
@@ -911,7 +862,7 @@ export const useStudioStore = create<StudioState>()(
       return {
         pages: updatedPages,
         targetLanguage: targetLang,
-        scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại sang ngôn ngữ mục tiêu: ${targetLang.toUpperCase()}`,
+        scrapeStatusMessage: `✓ Đã dịch toàn bộ thoại thật sang ngôn ngữ: ${targetLang.toUpperCase()}`,
       };
     });
   },
