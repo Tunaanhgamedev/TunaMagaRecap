@@ -299,7 +299,7 @@ export const OCRView: React.FC = () => {
       const data = await res.json();
       if (data.success && data.panels) {
         replacePagePanels(activePageIndex, data.panels);
-        translateAllDialogues(targetLanguage);
+        await translateAllDialogues(targetLanguage);
       } else {
         alert(`❌ Lỗi OCR: ${data.error || "Không thể trích xuất văn bản"}`);
       }
@@ -431,6 +431,16 @@ export const OCRView: React.FC = () => {
               </span>
             </button>
 
+            {/* Tách Panel Auto */}
+            <button
+              onClick={() => splitTwoPanelsMode(activePageIndex)}
+              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Tự động chia tách khung panel trên trang"
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Tách Panel Auto</span>
+            </button>
+
             {/* Run Batch OCR for ALL Chapter Pages */}
             <button
               onClick={() => batchOCRAllPages()}
@@ -447,13 +457,14 @@ export const OCRView: React.FC = () => {
               </span>
             </button>
 
-            {/* Translate All */}
+            {/* Dịch AI / Dịch Tự Động / Dịch Toàn Trang */}
             <button
               onClick={() => translateAllDialogues(targetLanguage)}
               className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
+              title="Dịch AI / Dịch Tự Động Toàn Trang"
             >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Dịch Toàn Bộ Thoại</span>
+              <Globe className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Dịch AI (Dịch Tự Động / Toàn Trang)</span>
             </button>
 
             {/* Add Panel */}

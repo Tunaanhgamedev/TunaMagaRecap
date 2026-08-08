@@ -724,7 +724,7 @@ export const useStudioStore = create<StudioState>()(
             return {
               ...d,
               translatedText: translated,
-              text: targetLang === 'vi' ? translated : d.text,
+              text: String(translated),
               language: targetLang,
             };
           }),
@@ -783,7 +783,7 @@ export const useStudioStore = create<StudioState>()(
                   return {
                     ...d,
                     translatedText: String(translated),
-                    text: targetLang === 'vi' ? String(translated) : d.text,
+                    text: String(translated),
                     language: targetLang,
                   };
                 }),

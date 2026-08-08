@@ -336,24 +336,32 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
 
     console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with single-script model: ${tessLang} (sniffed: ${sniffed}, requested: ${requestedLang})`);
 
-    const result = await Tesseract.recognize(cleanedImage, tessLang, {
+    // Ensure we pass langPath: process.cwd() so Tesseract uses local .traineddata files
+    const tessOptions = {
+      langPath: process.cwd(),
       logger: (m) => {
         if (m.status === 'recognizing text' && Math.round(m.progress * 100) % 50 === 0) {
           console.log(`[MangaOCR Page ${pageIndex}] 📊 Progress: ${Math.round(m.progress * 100)}%`);
         }
       },
-    });
+    };
 
-    const { data } = result;
-    const fullText = cleanOCRText(data.text || '');
-    const avgConfidence = data.confidence || 0;
-    // Post-OCR detection uses raw text (before cleaning) to catch diacritics that cleanOCRText might strip
-    const detectedLang = detectLanguageFromText(data.text) || effectiveLang;
+    let data = null;
+    if (Buffer.isBuffer(cleanedImage)) {
+      const result = await Tesseract.recognize(cleanedImage, tessLang, tessOptions);
+      data = result?.data;
+    } else {
+      console.warn(`[MangaOCR Page ${pageIndex}] ⚠️ Image source is not a Buffer, skipping Tesseract recognize to prevent crash.`);
+    }
+
+    const fullText = cleanOCRText(data?.text || '');
+    const avgConfidence = data?.confidence || 0;
+    const detectedLang = data?.text ? detectLanguageFromText(data.text) || effectiveLang : effectiveLang;
 
     console.log(`[MangaOCR Page ${pageIndex}] ✅ Dimensions: ${imgWidth}x${imgHeight}, Recognized: ${fullText.length} chars, Lang: ${detectedLang}`);
 
-    const rawLines = data.lines || [];
-    const rawParagraphs = data.paragraphs || [];
+    const rawLines = data?.lines || [];
+    const rawParagraphs = data?.paragraphs || [];
 
     // 1. First attempt tight line-clustering into distinct speech bubbles
     let textBlocks = clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidence);
