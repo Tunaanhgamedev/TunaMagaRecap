@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
 import {
   ScanText,
@@ -25,6 +25,12 @@ import {
   Sliders,
   Eye,
   Edit3,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Upload,
+  SplitSquareVertical,
+  Square,
 } from 'lucide-react';
 import {
   DetectedLanguage,
@@ -44,7 +50,10 @@ export const OCRView: React.FC = () => {
     updatePanelEffect,
     addPanel,
     deletePanel,
+    addPage,
     deletePage,
+    setSinglePanelMode,
+    splitTwoPanelsMode,
     addDialogueToPanel,
     deleteDialogue,
     setActiveTab,
@@ -68,8 +77,13 @@ export const OCRView: React.FC = () => {
   const [resizingPanelId, setResizingPanelId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showAddUrlModal, setShowAddUrlModal] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailStripRef = useRef<HTMLDivElement>(null);
+
   const dragStartRef = useRef<{
     mouseX: number;
     mouseY: number;
@@ -189,6 +203,23 @@ export const OCRView: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const localUrl = URL.createObjectURL(files[0]);
+      addPage(localUrl);
+    }
+  };
+
+  const scrollThumbnails = (direction: 'left' | 'right') => {
+    if (thumbnailStripRef.current) {
+      thumbnailStripRef.current.scrollBy({
+        left: direction === 'left' ? -300 : 300,
+        behavior: 'smooth',
+      });
+    }
   };
 
   const fontOptions: MangaFontFamily[] = [
@@ -399,26 +430,188 @@ export const OCRView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. MAIN WORKSPACE: CANVAS ON LEFT, PANEL & TEXTBLOCK INSPECTOR ON RIGHT */}
+      {/* 2. HORIZONTAL PAGE SCROLLER / THUMBNAIL STRIP (LƯỚT XEM TỪNG ẢNH & THÊM/XÓA ẢNH) */}
+      <div className="glass-panel p-3 rounded-xl border border-slate-800 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            <ImageIcon className="w-4 h-4 text-cyan-400" />
+            <span className="font-bold text-white">
+              Cuộn & Lướt Xem Từng Trang Manga ({pages.length} Trang Đã Nạp)
+            </span>
+            <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+              Đang chọn: Trang {activePageIndex + 1}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1.5">
+            {/* Prev Page Button */}
+            <button
+              onClick={() => setActivePageIndex(Math.max(0, activePageIndex - 1))}
+              disabled={activePageIndex === 0}
+              className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-700"
+              title="Trang trước"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Quick Page Jump Dropdown */}
+            <select
+              value={activePageIndex}
+              onChange={(e) => setActivePageIndex(Number(e.target.value))}
+              className="bg-slate-900 border border-slate-700 text-cyan-300 text-xs font-bold rounded px-2 py-1 focus:outline-none"
+            >
+              {pages.map((p, idx) => (
+                <option key={p.id} value={idx}>
+                  Trang {idx + 1} / {pages.length} ({p.panels?.length || 0} Panels)
+                </option>
+              ))}
+            </select>
+
+            {/* Next Page Button */}
+            <button
+              onClick={() => setActivePageIndex(Math.min(pages.length - 1, activePageIndex + 1))}
+              disabled={activePageIndex === pages.length - 1}
+              className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-700"
+              title="Trang tiếp"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Add New Page Button (Upload file or URL) */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center space-x-1 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow cursor-pointer transition-all active:scale-95"
+            >
+              <Upload className="w-3 h-3" />
+              <span>+ Tải Ảnh Lên</span>
+            </button>
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Scrollable Thumbnail Strip with Visual Cards */}
+        <div className="relative flex items-center">
+          <button
+            onClick={() => scrollThumbnails('left')}
+            className="absolute left-0 z-20 h-full px-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-300 rounded-l border-y border-l border-slate-800 flex items-center justify-center cursor-pointer backdrop-blur-sm"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div
+            ref={thumbnailStripRef}
+            className="flex items-center space-x-2.5 overflow-x-auto py-2 px-8 scrollbar-thin scrollbar-thumb-slate-700 w-full scroll-smooth"
+          >
+            {pages.map((p, idx) => {
+              const isActive = activePageIndex === idx;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setActivePageIndex(idx)}
+                  className={`group relative shrink-0 w-24 h-32 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
+                    isActive
+                      ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10'
+                      : 'border-slate-800 hover:border-violet-500 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
+                      (p as any).rawImageUrl || p.imageUrl
+                    )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`}
+                    alt={`Thumb ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = p.imageUrl;
+                    }}
+                  />
+
+                  {/* Top Badge: Page Number */}
+                  <div className="absolute top-1 left-1 bg-slate-950/90 border border-slate-700 text-cyan-300 text-[9px] font-black px-1.5 py-0.2 rounded">
+                    P{idx + 1}
+                  </div>
+
+                  {/* Bottom Badge: Panels Count */}
+                  <div className="absolute bottom-1 right-1 bg-violet-950/90 border border-violet-800 text-violet-300 text-[8.5px] font-mono px-1 rounded">
+                    {p.panels?.length || 0} pan
+                  </div>
+
+                  {/* Hover Delete Button on Thumbnail */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Bạn có chắc muốn xóa trang ${idx + 1}?`)) {
+                        deletePage(idx);
+                      }
+                    }}
+                    className="absolute top-1 right-1 bg-red-950/90 text-red-300 hover:bg-red-600 hover:text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
+                    title="Xóa trang này"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => scrollThumbnails('right')}
+            className="absolute right-0 z-20 h-full px-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-300 rounded-r border-y border-r border-slate-800 flex items-center justify-center cursor-pointer backdrop-blur-sm"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 3. MAIN WORKSPACE: CANVAS ON LEFT, PANEL & TEXTBLOCK INSPECTOR ON RIGHT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Interactive Manga Canvas */}
         <div className="lg:col-span-5 space-y-3">
           <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="font-bold flex items-center space-x-1.5">
-                <ScanText className="w-3.5 h-3.5 text-cyan-400" />
-                <span>
-                  Canvas Trang {currentPage.pageIndex} ({currentPage.panels?.length || 0} Panels)
-                </span>
+            {/* Canvas Header with Layout Preset Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-300 border-b border-slate-800 pb-2">
+              <span className="font-bold flex items-center space-x-1.5 text-cyan-300">
+                <ScanText className="w-3.5 h-3.5" />
+                <span>Canvas Trang {currentPage.pageIndex} ({currentPage.panels?.length || 0} Panels)</span>
               </span>
-              <div className="flex items-center space-x-1.5">
+
+              {/* Panel Layout Presets */}
+              <div className="flex items-center space-x-1">
+                {/* 1-Panel Preset */}
+                <button
+                  onClick={() => setSinglePanelMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Đặt 1 panel bao trọn 100% trang ảnh"
+                >
+                  <Square className="w-3 h-3 text-cyan-400" />
+                  <span>1 Panel Toàn Trang</span>
+                </button>
+
+                {/* 2-Panels Split Preset */}
+                <button
+                  onClick={() => splitTwoPanelsMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-violet-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Chia trang thành 2 panel trên dưới"
+                >
+                  <SplitSquareVertical className="w-3 h-3 text-violet-400" />
+                  <span>Chia Đôi Panel</span>
+                </button>
+
+                {/* Delete Page Button */}
                 <button
                   onClick={() => deletePage(activePageIndex)}
                   className="text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
                   title="Xóa trang này nếu là ảnh quảng cáo / credit thừa"
                 >
                   <Trash2 className="w-3 h-3" />
-                  <span>Xóa Trang Này</span>
+                  <span>Xóa Trang</span>
                 </button>
               </div>
             </div>

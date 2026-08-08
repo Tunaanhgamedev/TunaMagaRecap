@@ -60,7 +60,10 @@ interface StudioState {
   updatePanelEffect: (pageIdx: number, panelId: string, effect: string) => void;
   addPanel: (pageIdx: number) => void;
   deletePanel: (pageIdx: number, panelId: string) => void;
+  addPage: (imageUrl?: string) => void;
   deletePage: (pageIdx: number) => void;
+  setSinglePanelMode: (pageIdx: number) => void;
+  splitTwoPanelsMode: (pageIdx: number) => void;
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
 
@@ -518,6 +521,51 @@ export const useStudioStore = create<StudioState>()(
     });
   },
 
+  addPage: (imageUrl) => {
+    set((state) => {
+      const newPageIdx = state.pages.length + 1;
+      const newPage: MangaPage = {
+        id: `p-${Date.now()}`,
+        pageIndex: newPageIdx,
+        imageUrl:
+          imageUrl ||
+          'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=1000&auto=format&fit=crop&q=80',
+        panels: [
+          {
+            id: `pan-${Date.now()}-1`,
+            pageIndex: newPageIdx,
+            panelIndex: 1,
+            bbox: { x: 5, y: 5, w: 90, h: 42 },
+            suggestedCameraEffect: 'dramatic_zoom',
+            aiDescription: `Trang ${newPageIdx}: Phân cảnh truyện mới thêm.`,
+            dialogues: [
+              {
+                id: `d-${Date.now()}-1`,
+                panelId: `pan-${Date.now()}-1`,
+                speaker: 'Dẫn Chuyện',
+                text: `Phân cảnh trang ${newPageIdx} của bộ truyện.`,
+                originalText: `Trang ${newPageIdx} nguyên bản`,
+                translatedText: `Trang ${newPageIdx} bản dịch tiếng Việt`,
+                emotion: 'neutral',
+                language: 'ko',
+                textType: 'DIALOGUE',
+                fontFamily: 'Anime Ace',
+                fontSize: 14,
+                confidence: 0.985,
+                useForScript: true,
+              },
+            ],
+          },
+        ],
+      };
+      return {
+        pages: [...state.pages, newPage],
+        activePageIndex: state.pages.length,
+        scrapeStatusMessage: `✓ Đã thêm trang ${newPageIdx} mới thành công!`,
+      };
+    });
+  },
+
   deletePage: (pageIdx) => {
     set((state) => {
       const remainingPages = state.pages.filter((_, idx) => idx !== pageIdx);
@@ -531,6 +579,87 @@ export const useStudioStore = create<StudioState>()(
         activePageIndex: newActiveIdx,
         scrapeStatusMessage: `Đã xóa trang ${pageIdx + 1}. Còn lại ${reIndexed.length} trang.`,
       };
+    });
+  },
+
+  setSinglePanelMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        page.panels = [
+          {
+            id: `pan-single-${Date.now()}`,
+            pageIndex: page.pageIndex,
+            panelIndex: 1,
+            bbox: { x: 2, y: 2, w: 96, h: 96 },
+            suggestedCameraEffect: 'dramatic_zoom',
+            aiDescription: `Trang ${page.pageIndex}: Bao trọn toàn bộ ảnh trang.`,
+            dialogues:
+              page.panels[0]?.dialogues || [
+                {
+                  id: `d-single-${Date.now()}`,
+                  panelId: `pan-single-${Date.now()}`,
+                  speaker: 'Dẫn Chuyện',
+                  text: `Toàn cảnh trang ${page.pageIndex}.`,
+                  originalText: `Toàn cảnh trang ${page.pageIndex}`,
+                  translatedText: `Toàn cảnh trang ${page.pageIndex}`,
+                  emotion: 'neutral',
+                  useForScript: true,
+                },
+              ],
+          },
+        ];
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chuyển trang ${pageIdx + 1} sang chế độ 1 Panel toàn ảnh!` };
+    });
+  },
+
+  splitTwoPanelsMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        page.panels = [
+          {
+            id: `pan-split-${Date.now()}-1`,
+            pageIndex: page.pageIndex,
+            panelIndex: 1,
+            bbox: { x: 5, y: 3, w: 90, h: 45 },
+            suggestedCameraEffect: 'dramatic_zoom',
+            aiDescription: `Trang ${page.pageIndex}: Khung hình trên.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-1`,
+                panelId: `pan-split-${Date.now()}-1`,
+                speaker: 'Nhân Vật Chính',
+                text: `Phân đoạn trên của trang ${page.pageIndex}.`,
+                emotion: 'excited',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-2`,
+            pageIndex: page.pageIndex,
+            panelIndex: 2,
+            bbox: { x: 5, y: 51, w: 90, h: 45 },
+            suggestedCameraEffect: 'pan_right',
+            aiDescription: `Trang ${page.pageIndex}: Khung hình dưới.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-2`,
+                panelId: `pan-split-${Date.now()}-2`,
+                speaker: 'Dẫn Chuyện',
+                text: `Phân đoạn dưới của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+        ];
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 2 Panel cân xứng!` };
     });
   },
 
