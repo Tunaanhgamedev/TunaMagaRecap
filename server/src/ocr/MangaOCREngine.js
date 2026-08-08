@@ -5,6 +5,26 @@
  * ZERO MOCK DATA - 100% REAL IMAGE CHARACTER RECOGNITION.
  */
 import Tesseract from 'tesseract.js';
+import sharp from 'sharp';
+
+/**
+ * Preprocess manga image for maximum OCR accuracy:
+ * - Converts to grayscale to remove background screentones
+ * - Normalizes contrast to make text pop from speech bubbles
+ * - Sharpens character edges for clean OCR reading
+ */
+async function preprocessMangaImage(imageBuffer) {
+  try {
+    if (!Buffer.isBuffer(imageBuffer)) return imageBuffer;
+    return await sharp(imageBuffer)
+      .grayscale()
+      .normalize()
+      .sharpen({ sigma: 1.2 })
+      .toBuffer();
+  } catch (err) {
+    return imageBuffer;
+  }
+}
 
 // Map language codes to Tesseract traineddata identifiers
 const LANG_MAP = {
@@ -113,7 +133,8 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
   console.log(`[MangaOCR] 🔍 Analyzing real image characters on page ${pageIndex} with Tesseract lang: ${tessLang}`);
 
   try {
-    const result = await Tesseract.recognize(imageSource, tessLang, {
+    const cleanedImage = await preprocessMangaImage(imageSource);
+    const result = await Tesseract.recognize(cleanedImage, tessLang, {
       logger: (m) => {
         if (m.status === 'recognizing text' && Math.round(m.progress * 100) % 50 === 0) {
           console.log(`[MangaOCR Page ${pageIndex}] 📊 Progress: ${Math.round(m.progress * 100)}%`);
