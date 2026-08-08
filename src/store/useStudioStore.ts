@@ -446,17 +446,17 @@ export const useStudioStore = create<StudioState>()(
       }
     } catch (err) {}
 
-    const fallbackScript = `# KỊCH BẢN REVIEW: ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## Phân Đoạn 1: Mở Đầu Hầm Ngục Sinh Tử\n**Giọng đọc**: "Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}! Hôm nay chúng ta cùng theo chân thợ săn Sung Jin-Woo bước vào hầm ngục kép sinh tử. Giữa lằn ranh cái chết, một thông báo kỳ lạ đã xuất hiện: [Chúc mừng bạn đã trở thành người chơi]!"`;
+    const fallbackScript = `# KỊCH BẢN REVIEW: ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## Phân Đoạn 1: Mở Đầu Diễn Biến\n**Giọng đọc**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## Phân Đoạn 2: Trận Chiến Cao Trào\n**Giọng đọc**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử. Diễn biến tiếp theo sẽ ra sao? Hãy cùng phân tích chi tiết từng khung tranh!"`;
     set({
       scriptData: {
         mode,
         title: `Kịch Bản: ${sName} Chapter ${cNum}`,
         content: fallbackScript,
         chunks: [
-          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: fallbackScript.slice(0, 100), emotion: 'excited', estDurationSec: 5.0 },
+          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
         ],
-        wordCount: 850,
-        estReadTimeMinutes: 4,
+        wordCount: 450,
+        estReadTimeMinutes: 2,
       },
     });
   },
