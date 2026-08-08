@@ -1,11 +1,15 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { PrismaClient } from '@prisma/client';
 import { scraperManager } from './scraper/ScraperManager.js';
 import { storyMemoryEngine } from './story/StoryMemoryEngine.js';
 import { CapCutGenerator } from './story/CapCutGenerator.js';
 import { ocrExtractText } from './ocr/MangaOCREngine.js';
+import { AIVisionEngine } from './ocr/AIVisionEngine.js';
 
 const PORT = 3001;
 const prisma = new PrismaClient();
@@ -232,8 +236,95 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        console.log(`[Server] 🔍 Running REAL OCR on page ${pIdx}, lang=${lang}`);
-        const ocrResult = await ocrExtractText(imageSource, lang, pIdx);
+        console.log(`[Server] 🔍 Running OCR on page ${pIdx}, lang=${lang}`);
+
+        // 1. Try Gemini Vision AI if API key is configured or passed
+        const geminiKey = payload.apiKey || process.env.GEMINI_API_KEY || '';
+        let ocrResult = null;
+
+        if (geminiKey && Buffer.isBuffer(imageSource)) {
+          try {
+            console.log(`[Server] 🤖 Running Google Gemini Vision AI on page ${pIdx}...`);
+            const base64 = imageSource.toString('base64');
+            const aiData = await AIVisionEngine.analyzeMangaWithGeminiVision({
+              imageBase64: base64,
+              mimeType: 'image/jpeg',
+              targetLang: payload.targetLanguage || 'vi',
+              apiKey: geminiKey,
+            });
+
+            if (aiData && aiData.panels && aiData.panels.length > 0) {
+              const formattedPanels = aiData.panels.map((p, idx) => ({
+                id: `panel-${pIdx}-${idx + 1}`,
+                pageIndex: pIdx,
+                panelIndex: idx + 1,
+                bbox: p.bbox || { x: 10, y: 15, w: 80, h: 30 },
+                suggestedCameraEffect: idx === 0 ? 'dramatic_zoom' : 'pan_up',
+                aiDescription: `Trang ${pIdx}: ${p.speaker || 'Thoại'} (${p.textType || 'DIALOGUE'})`,
+                dialogues: [
+                  {
+                    id: `d-${pIdx}-${idx + 1}`,
+                    panelId: `panel-${pIdx}-${idx + 1}`,
+                    speaker: p.speaker || 'Nhân Vật',
+                    text: p.translatedText || p.originalText,
+                    originalText: p.originalText,
+                    translatedText: p.translatedText,
+                    language: aiData.detectedLanguage || lang,
+                    textType: p.textType || 'DIALOGUE',
+                    fontFamily: 'Anime Ace',
+                    fontSize: 14,
+                    confidence: 0.99,
+                    useForScript: p.textType !== 'SOUND_EFFECT',
+                    emotion: p.emotion || 'neutral',
+                  },
+                ],
+              }));
+
+              // Always append 1 Narration panel for AI video recap
+              formattedPanels.push({
+                id: `panel-${pIdx}-narr`,
+                pageIndex: pIdx,
+                panelIndex: formattedPanels.length + 1,
+                bbox: { x: 5, y: 75, w: 90, h: 20 },
+                suggestedCameraEffect: 'pan_down',
+                aiDescription: `Trang ${pIdx}: Lời dẫn chuyện Video Recap (AI Content)`,
+                dialogues: [
+                  {
+                    id: `d-${pIdx}-narr`,
+                    panelId: `panel-${pIdx}-narr`,
+                    speaker: 'Dẫn Chuyện',
+                    text: aiData.pageSummary || `[Dẫn truyện Trang ${pIdx}]: Diễn biến kịch tính tiếp theo...`,
+                    originalText: `[Dẫn truyện Trang ${pIdx}]`,
+                    translatedText: aiData.pageSummary || `[Dẫn truyện Trang ${pIdx}]: Diễn biến kịch tính tiếp theo...`,
+                    language: 'vi',
+                    textType: 'NARRATION',
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    confidence: 1.0,
+                    useForScript: true,
+                    emotion: 'excited',
+                  },
+                ],
+              });
+
+              ocrResult = {
+                panels: formattedPanels,
+                rawText: aiData.panels.map((p) => p.originalText).join(' '),
+                confidence: 0.99,
+                textBlockCount: formattedPanels.length,
+                language: aiData.detectedLanguage || lang,
+                isAIPowered: true,
+              };
+            }
+          } catch (aiErr) {
+            console.log('[Server] ⚠️ Gemini Vision error, falling back to local OCR:', aiErr.message);
+          }
+        }
+
+        // 2. Fallback to Local Tesseract + Sharp with Smart Noise Cleaning
+        if (!ocrResult) {
+          ocrResult = await ocrExtractText(imageSource, lang, pIdx);
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -244,6 +335,7 @@ const server = http.createServer(async (req, res) => {
           confidence: ocrResult.confidence,
           textBlockCount: ocrResult.textBlockCount,
           language: ocrResult.language,
+          isAIPowered: ocrResult.isAIPowered || false,
         }));
       } catch (err) {
         console.error('[Server] OCR Error:', err);
@@ -299,7 +391,88 @@ const server = http.createServer(async (req, res) => {
                 }
               }
 
-              const ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
+              let ocrRes = null;
+              const geminiKey = payload.apiKey || process.env.GEMINI_API_KEY || '';
+
+              if (geminiKey && Buffer.isBuffer(imageSource)) {
+                try {
+                  const base64 = imageSource.toString('base64');
+                  const aiData = await AIVisionEngine.analyzeMangaWithGeminiVision({
+                    imageBase64: base64,
+                    mimeType: 'image/jpeg',
+                    targetLang: requestedLang,
+                    apiKey: geminiKey,
+                  });
+
+                  if (aiData && aiData.panels && aiData.panels.length > 0) {
+                    const formattedPanels = aiData.panels.map((p, pIdx) => ({
+                      id: `panel-${pageIndex}-${pIdx + 1}`,
+                      pageIndex,
+                      panelIndex: pIdx + 1,
+                      bbox: p.bbox || { x: 10, y: 15, w: 80, h: 30 },
+                      suggestedCameraEffect: pIdx === 0 ? 'dramatic_zoom' : 'pan_up',
+                      aiDescription: `Trang ${pageIndex}: ${p.speaker || 'Thoại'}`,
+                      dialogues: [
+                        {
+                          id: `d-${pageIndex}-${pIdx + 1}`,
+                          panelId: `panel-${pageIndex}-${pIdx + 1}`,
+                          speaker: p.speaker || 'Nhân Vật',
+                          text: p.translatedText || p.originalText,
+                          originalText: p.originalText,
+                          translatedText: p.translatedText,
+                          language: aiData.detectedLanguage || requestedLang,
+                          textType: p.textType || 'DIALOGUE',
+                          fontFamily: 'Anime Ace',
+                          fontSize: 14,
+                          confidence: 0.99,
+                          useForScript: p.textType !== 'SOUND_EFFECT',
+                          emotion: p.emotion || 'neutral',
+                        },
+                      ],
+                    }));
+
+                    formattedPanels.push({
+                      id: `panel-${pageIndex}-narr`,
+                      pageIndex,
+                      panelIndex: formattedPanels.length + 1,
+                      bbox: { x: 5, y: 75, w: 90, h: 20 },
+                      suggestedCameraEffect: 'pan_down',
+                      aiDescription: `Trang ${pageIndex}: Lời dẫn chuyện Video Recap (AI Content)`,
+                      dialogues: [
+                        {
+                          id: `d-${pageIndex}-narr`,
+                          panelId: `panel-${pageIndex}-narr`,
+                          speaker: 'Dẫn Chuyện',
+                          text: aiData.pageSummary || `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt phân cảnh...`,
+                          originalText: `[Dẫn truyện Trang ${pageIndex}]`,
+                          translatedText: aiData.pageSummary || `[Dẫn truyện Trang ${pageIndex}]: Tóm tắt phân cảnh...`,
+                          language: 'vi',
+                          textType: 'NARRATION',
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          confidence: 1.0,
+                          useForScript: true,
+                          emotion: 'excited',
+                        },
+                      ],
+                    });
+
+                    ocrRes = {
+                      panels: formattedPanels,
+                      rawText: aiData.panels.map((p) => p.originalText).join(' '),
+                      confidence: 0.99,
+                      language: aiData.detectedLanguage || requestedLang,
+                    };
+                  }
+                } catch (e) {
+                  console.log(`[Batch OCR] Gemini Vision fallback on page ${pageIndex}:`, e.message);
+                }
+              }
+
+              if (!ocrRes) {
+                ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
+              }
+
               return {
                 pageIndex,
                 panels: ocrRes.panels,
@@ -318,6 +491,36 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ success: true, count: results.length, pages: results }));
       } catch (err) {
         console.error('[Server Batch OCR] Error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 5c. POST Save AI API Key Securely in .env
+  if (pathname === '/api/ai/config' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        if (payload.geminiApiKey) {
+          process.env.GEMINI_API_KEY = payload.geminiApiKey;
+          // Update .env file locally without exposing to git
+          const envPath = path.join(process.cwd(), '.env');
+          let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+          if (envContent.includes('GEMINI_API_KEY=')) {
+            envContent = envContent.replace(/GEMINI_API_KEY=.*/, `GEMINI_API_KEY=${payload.geminiApiKey}`);
+          } else {
+            envContent += `\nGEMINI_API_KEY=${payload.geminiApiKey}\n`;
+          }
+          fs.writeFileSync(envPath, envContent);
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Đã lưu cấu hình AI an toàn vào .env!' }));
+      } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }

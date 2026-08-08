@@ -73,6 +73,12 @@ interface StudioState {
   isBatchOCRLoading: boolean;
   batchOCRProgress: { current: number; total: number; percent: number };
 
+  // AI Vision & Translation API Key State
+  geminiApiKey: string;
+  setGeminiApiKey: (key: string) => void;
+  isAIConfigModalOpen: boolean;
+  setIsAIConfigModalOpen: (open: boolean) => void;
+
   // AI Script Director
   scriptData: ScriptData | null;
   setScriptMode: (mode: ScriptMode) => void;
@@ -1108,6 +1114,22 @@ export const useStudioStore = create<StudioState>()(
     });
   },
 
+  geminiApiKey: typeof window !== 'undefined' ? localStorage.getItem('tuna_gemini_key') || '' : '',
+  setGeminiApiKey: (key: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tuna_gemini_key', key);
+    }
+    set({ geminiApiKey: key });
+    // Also save securely to backend .env
+    fetch(`${API_BASE_URL}/ai/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ geminiApiKey: key }),
+    }).catch(() => {});
+  },
+  isAIConfigModalOpen: false,
+  setIsAIConfigModalOpen: (open: boolean) => set({ isAIConfigModalOpen: open }),
+
   isBatchOCRLoading: false,
   batchOCRProgress: { current: 0, total: 0, percent: 0 },
   batchOCRAllPages: async () => {
@@ -1117,7 +1139,7 @@ export const useStudioStore = create<StudioState>()(
     set({
       isBatchOCRLoading: true,
       batchOCRProgress: { current: 0, total: currentPages.length, percent: 0 },
-      scrapeStatusMessage: `⚡ Đang chạy song song 5 luồng quét OCR cho toàn bộ ${currentPages.length} trang...`,
+      scrapeStatusMessage: `⚡ Đang chạy song song quét OCR & AI Vision cho ${currentPages.length} trang...`,
     });
 
     try {
@@ -1127,6 +1149,7 @@ export const useStudioStore = create<StudioState>()(
         body: JSON.stringify({
           pages: currentPages,
           language: get().detectedLanguage,
+          apiKey: get().geminiApiKey,
         }),
       });
 

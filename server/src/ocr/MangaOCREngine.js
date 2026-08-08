@@ -262,6 +262,8 @@ export async function ocrExtractText(imageSource, requestedLang = 'vi', pageInde
             },
           ],
         });
+      }
+
       // Always append 1 dedicated Narration/Dẫn Truyện panel for AI Recap Content & Video Scriptwriting
       panels.push({
         id: `panel-${pageIndex}-narration`,
