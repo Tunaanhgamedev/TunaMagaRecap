@@ -24,6 +24,8 @@ async function inspectAndPreprocessMangaImage(imageBuffer) {
 
     // Upscale small images to help Tesseract read dense speech bubble glyphs
     const targetWidth = width < 1500 ? width * 2 : width;
+    const scale = targetWidth / width;
+    const targetHeight = Math.round(height * scale);
 
     // Grayscale, normalize contrast, and apply gentle sharpening (sigma 0.5 to prevent edge halos/diacritic distortion)
     const processedBuffer = await image
@@ -33,7 +35,7 @@ async function inspectAndPreprocessMangaImage(imageBuffer) {
       .sharpen({ sigma: 0.5 })
       .toBuffer();
 
-    return { buffer: processedBuffer, width, height };
+    return { buffer: processedBuffer, width: Math.round(targetWidth), height: targetHeight };
   } catch (err) {
     console.error('[MangaOCR] Preprocess error:', err.message);
     return { buffer: imageBuffer, width: 1000, height: 1500 };
@@ -262,7 +264,7 @@ function clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidenc
           const vertDist = Math.max(0, Math.max(member.y0, candidate.y0) - Math.min(member.y1, candidate.y1));
           const horizOverlap = Math.min(member.x1, candidate.x1) - Math.max(member.x0, candidate.x0);
           const maxW = Math.max(member.x1 - member.x0, candidate.x1 - candidate.x0);
-          return vertDist < imgHeight * 0.035 && horizOverlap > -maxW * 0.4;
+          return vertDist < imgHeight * 0.015 && horizOverlap > -maxW * 0.4;
         });
 
         if (isNear) {
@@ -294,15 +296,21 @@ function clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidenc
     const avgConf = cluster.reduce((sum, l) => sum + l.confidence, 0) / cluster.length;
 
     // Relative percentage coordinates padded tightly around text (+-1%)
-    const x = Math.max(0, Math.round((x0 / imgWidth) * 100) - 1);
-    const y = Math.max(0, Math.round((y0 / imgHeight) * 100) - 1);
-    const w = Math.min(100 - x, Math.round(((x1 - x0) / imgWidth) * 100) + 2);
-    const h = Math.min(100 - y, Math.round(((y1 - y0) / imgHeight) * 100) + 2);
+    let x = Math.max(0, Math.round((x0 / imgWidth) * 100) - 1);
+    let y = Math.max(0, Math.round((y0 / imgHeight) * 100) - 1);
+    let w = Math.round(((x1 - x0) / imgWidth) * 100) + 2;
+    let h = Math.round(((y1 - y0) / imgHeight) * 100) + 2;
+
+    // Strict boundary enforcement so no panel ever exceeds [0, 100]% canvas limits
+    x = Math.max(0, Math.min(92, x));
+    y = Math.max(0, Math.min(92, y));
+    w = Math.max(8, Math.min(100 - x, w));
+    h = Math.max(3, Math.min(100 - y, h));
 
     return {
       text: combinedText,
       confidence: Math.round(avgConf * 10) / 10,
-      bbox: { x, y, w: Math.max(w, 15), h: Math.max(h, 4) },
+      bbox: { x, y, w, h },
       textType: classifyTextType(combinedText),
       speaker: guessSpeaker(combinedText, cIdx),
     };
@@ -360,15 +368,20 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
         const ph = bbox.y1 - bbox.y0;
         if (ph > imgHeight * 0.6) continue; // Skip huge full-page merged paragraphs
 
-        const x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 1);
-        const y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 1);
-        const w = Math.min(100 - x, Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 2);
-        const h = Math.min(100 - y, Math.round(((bbox.y1 - bbox.y0) / imgHeight) * 100) + 2);
+        let x = Math.max(0, Math.round((bbox.x0 / imgWidth) * 100) - 1);
+        let y = Math.max(0, Math.round((bbox.y0 / imgHeight) * 100) - 1);
+        let w = Math.round(((bbox.x1 - bbox.x0) / imgWidth) * 100) + 2;
+        let h = Math.round(((bbox.y1 - bbox.y0) / imgHeight) * 100) + 2;
+
+        x = Math.max(0, Math.min(92, x));
+        y = Math.max(0, Math.min(92, y));
+        w = Math.max(8, Math.min(100 - x, w));
+        h = Math.max(3, Math.min(100 - y, h));
 
         textBlocks.push({
           text: cleaned,
           confidence: Math.round((para.confidence || avgConfidence) * 10) / 10,
-          bbox: { x, y, w: Math.max(w, 20), h: Math.max(h, 6) },
+          bbox: { x, y, w, h },
           textType: classifyTextType(cleaned),
           speaker: guessSpeaker(cleaned, textBlocks.length),
         });
@@ -378,12 +391,31 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
     // Construct panels from recognized blocks
     const panels = [];
 
-    // Filter out garbled noise blocks (e.g., blood drops or art strokes misrecognized as symbols)
-    function isNoiseText(text) {
+    // Filter out garbled noise blocks (e.g., blood drops, shadows or art strokes misrecognized as symbols)
+    function isNoiseText(text, conf) {
       if (!text || text.trim().length < 2) return true;
+      
+      const pureText = text.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー\s]/g, '').trim();
+      if (!pureText) return true;
+
+      const words = pureText.split(/\s+/).filter(Boolean);
+      if (words.length === 0) return true;
+
+      // Count gibberish words like 'zZ', 'vềvx', 'ĐAl-e', 'NÂv', 'jẤN', 'lRĩ', 's4'
+      const gibberishCount = words.filter((w) => {
+        if (w.length >= 2 && /^[a-z]+[A-Z]+|[A-Z]+[a-z]+[A-Z]+/.test(w)) return true;
+        if (w.length >= 2 && /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]{2,}/i.test(w) && !/^(hư|thương|được|người|hoàng|vương|mình|nghĩ|truyện|nhất|thấp|tiếng|tiến|hiện)$/i.test(w)) return true;
+        if (/^[a-z0-9]{1,2}$/i.test(w) && !/^(là|tôi|nó|và|có|anh|cô|bạn|gì|bị|ra|vào|lên|đi|ăn|xem|nói|mà|về|sẽ|đã|được|khi|đó|thì|như|với|tại|từ|bởi|vì|vẫn|lại|rồi|hay|cho|đến|theo|thêm|ít|nhiều|to|nhỏ)$/i.test(w)) return true;
+        return false;
+      }).length;
+
+      // If more than 30% of words in the block are gibberish, it's drawing noise!
+      if (gibberishCount / words.length > 0.30) return true;
+
       const letters = text.match(/[\p{L}\p{N}]/gu) || [];
-      // If fewer than 35% characters are letters/numbers and string is non-trivial, it's drawing noise
-      if (letters.length / text.length < 0.35 && text.length > 4) return true;
+      if (letters.length / text.length < 0.45 && text.length > 3) return true;
+      if (conf < 60 && letters.length < 10) return true;
+
       return false;
     }
 
@@ -418,8 +450,8 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
       let panelCount = 0;
       for (let i = 0; i < textBlocks.length; i++) {
         const block = textBlocks[i];
-        if (isNoiseText(block.text)) {
-          console.log(`[MangaOCR Page ${pageIndex}] 🧹 Filtered out art noise block: "${block.text}"`);
+        if (isNoiseText(block.text, block.confidence)) {
+          console.log(`[MangaOCR Page ${pageIndex}] 🧹 Filtered out art noise block: "${block.text}" (conf: ${block.confidence})`);
           continue;
         }
         panelCount++;
