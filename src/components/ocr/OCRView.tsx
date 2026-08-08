@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { useStudioStore } from '../../store/useStudioStore';
+import React, { useState, useRef } from "react";
+import { useStudioStore } from "../../store/useStudioStore";
 import {
   ScanText,
   Sparkles,
@@ -36,14 +36,14 @@ import {
   CaseSensitive,
   CaseUpper,
   CaseLower,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   DetectedLanguage,
   TargetLanguage,
   MangaFontFamily,
   TextType,
   TextCaseType,
-} from '../../types/studio';
+} from "../../types/studio";
 
 export const OCRView: React.FC = () => {
   const {
@@ -87,13 +87,14 @@ export const OCRView: React.FC = () => {
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
+    batchOCRProgress,
   } = useStudioStore();
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
   const [resizingPanelId, setResizingPanelId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [fontApplyScope, setFontApplyScope] = useState<'all' | 'single'>('all');
+  const [fontApplyScope, setFontApplyScope] = useState<"all" | "single">("all");
   const [isRunningOCR, setIsRunningOCR] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,12 +122,15 @@ export const OCRView: React.FC = () => {
       <div className="p-8 max-w-xl mx-auto text-center space-y-4">
         <div className="glass-panel p-8 rounded-2xl border border-slate-800 space-y-4">
           <ScanText className="w-12 h-12 text-slate-600 mx-auto" />
-          <h2 className="text-base font-bold text-white">Chưa Có Dữ Liệu Trang Truyện Nào Được Nạp</h2>
+          <h2 className="text-base font-bold text-white">
+            Chưa Có Dữ Liệu Trang Truyện Nào Được Nạp
+          </h2>
           <p className="text-xs text-slate-400">
-            Vui lòng dán đường link chapter truyện tại tab Thư Viện để tải ảnh thật và trải nghiệm OCR & Multi-Language Translation Workspace.
+            Vui lòng dán đường link chapter truyện tại tab Thư Viện để tải ảnh
+            thật và trải nghiệm OCR & Multi-Language Translation Workspace.
           </p>
           <button
-            onClick={() => setActiveTab('library')}
+            onClick={() => setActiveTab("library")}
             className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" />
@@ -143,7 +147,7 @@ export const OCRView: React.FC = () => {
   const handleMouseDownMove = (
     e: React.MouseEvent,
     panelId: string,
-    bbox: { x: number; y: number; w: number; h: number }
+    bbox: { x: number; y: number; w: number; h: number },
   ) => {
     e.stopPropagation();
     setDraggingPanelId(panelId);
@@ -162,7 +166,7 @@ export const OCRView: React.FC = () => {
   const handleMouseDownResize = (
     e: React.MouseEvent,
     panelId: string,
-    bbox: { x: number; y: number; w: number; h: number }
+    bbox: { x: number; y: number; w: number; h: number },
   ) => {
     e.stopPropagation();
     setResizingPanelId(panelId);
@@ -182,11 +186,25 @@ export const OCRView: React.FC = () => {
     const rect = containerRef.current.getBoundingClientRect();
 
     if (draggingPanelId) {
-      const deltaX = ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
-      const deltaY = ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
+      const deltaX =
+        ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
+      const deltaY =
+        ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
 
-      const newX = Math.max(0, Math.min(100 - dragStartRef.current.initialW, dragStartRef.current.initialX + deltaX));
-      const newY = Math.max(0, Math.min(100 - dragStartRef.current.initialH, dragStartRef.current.initialY + deltaY));
+      const newX = Math.max(
+        0,
+        Math.min(
+          100 - dragStartRef.current.initialW,
+          dragStartRef.current.initialX + deltaX,
+        ),
+      );
+      const newY = Math.max(
+        0,
+        Math.min(
+          100 - dragStartRef.current.initialH,
+          dragStartRef.current.initialY + deltaY,
+        ),
+      );
 
       updatePanelBBox(activePageIndex, draggingPanelId, {
         x: Math.round(newX * 10) / 10,
@@ -195,11 +213,25 @@ export const OCRView: React.FC = () => {
         h: dragStartRef.current.initialH,
       });
     } else if (resizingPanelId) {
-      const deltaW = ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
-      const deltaH = ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
+      const deltaW =
+        ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
+      const deltaH =
+        ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
 
-      const newW = Math.max(15, Math.min(100 - dragStartRef.current.initialX, dragStartRef.current.initialW + deltaW));
-      const newH = Math.max(10, Math.min(100 - dragStartRef.current.initialY, dragStartRef.current.initialH + deltaH));
+      const newW = Math.max(
+        15,
+        Math.min(
+          100 - dragStartRef.current.initialX,
+          dragStartRef.current.initialW + deltaW,
+        ),
+      );
+      const newH = Math.max(
+        10,
+        Math.min(
+          100 - dragStartRef.current.initialY,
+          dragStartRef.current.initialH + deltaH,
+        ),
+      );
 
       updatePanelBBox(activePageIndex, resizingPanelId, {
         x: dragStartRef.current.initialX,
@@ -229,11 +261,11 @@ export const OCRView: React.FC = () => {
     }
   };
 
-  const scrollThumbnails = (direction: 'left' | 'right') => {
+  const scrollThumbnails = (direction: "left" | "right") => {
     if (thumbnailStripRef.current) {
       thumbnailStripRef.current.scrollBy({
-        left: direction === 'left' ? -300 : 300,
-        behavior: 'smooth',
+        left: direction === "left" ? -300 : 300,
+        behavior: "smooth",
       });
     }
   };
@@ -243,11 +275,15 @@ export const OCRView: React.FC = () => {
     setIsRunningOCR(true);
     try {
       const imgUrl = (currentPage as any).rawImageUrl || currentPage.imageUrl;
-      const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? '/api' : 'http://localhost:3001/api';
+      const API_BASE_URL =
+        typeof window !== "undefined" &&
+        window.location.origin.includes("localhost")
+          ? "/api"
+          : "http://localhost:3001/api";
 
       const res = await fetch(`${API_BASE_URL}/ocr/detect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pageIndex: currentPage.pageIndex,
           imageUrl: imgUrl,
@@ -260,7 +296,7 @@ export const OCRView: React.FC = () => {
         replacePagePanels(activePageIndex, data.panels);
         translateAllDialogues(targetLanguage);
       } else {
-        alert(`❌ Lỗi OCR: ${data.error || 'Không thể trích xuất văn bản'}`);
+        alert(`❌ Lỗi OCR: ${data.error || "Không thể trích xuất văn bản"}`);
       }
     } catch (err: any) {
       alert(`❌ Lỗi kết nối máy chủ OCR: ${err.message}`);
@@ -270,44 +306,82 @@ export const OCRView: React.FC = () => {
   };
 
   const fontOptions: MangaFontFamily[] = [
-    'Anime Ace',
-    'CC Wild Words',
-    'Komika Axis',
-    'Bangers',
-    'Roboto',
-    'Inter',
-    'Montserrat',
-    'Patrick Hand',
-    'Kalam',
-    'Merriweather',
+    "Anime Ace",
+    "CC Wild Words",
+    "Komika Axis",
+    "Bangers",
+    "Roboto",
+    "Inter",
+    "Montserrat",
+    "Patrick Hand",
+    "Kalam",
+    "Merriweather",
   ];
 
   const detectedLanguageOptions = [
-    { code: 'ko', label: '🇰🇷 Korean (Tiếng Hàn)', flag: '🇰🇷', conf: '98.7%' },
-    { code: 'ja', label: '🇯🇵 Japanese (Tiếng Nhật)', flag: '🇯🇵', conf: '99.2%' },
-    { code: 'en', label: '🇬🇧 English (Tiếng Anh)', flag: '🇬🇧', conf: '97.5%' },
-    { code: 'zh', label: '🇨🇳 Chinese (Tiếng Trung)', flag: '🇨🇳', conf: '96.8%' },
-    { code: 'vi', label: '🇻🇳 Vietnamese (Tiếng Việt)', flag: '🇻🇳', conf: '99.5%' },
+    { code: "ko", label: "🇰🇷 Korean (Tiếng Hàn)", flag: "🇰🇷", conf: "98.7%" },
+    {
+      code: "ja",
+      label: "🇯🇵 Japanese (Tiếng Nhật)",
+      flag: "🇯🇵",
+      conf: "99.2%",
+    },
+    { code: "en", label: "🇬🇧 English (Tiếng Anh)", flag: "🇬🇧", conf: "97.5%" },
+    {
+      code: "zh",
+      label: "🇨🇳 Chinese (Tiếng Trung)",
+      flag: "🇨🇳",
+      conf: "96.8%",
+    },
+    {
+      code: "vi",
+      label: "🇻🇳 Vietnamese (Tiếng Việt)",
+      flag: "🇻🇳",
+      conf: "99.5%",
+    },
   ];
 
   const targetLanguageOptions = [
-    { code: 'vi', label: '🇻🇳 Tiếng Việt', flag: '🇻🇳' },
-    { code: 'en', label: '🇬🇧 English', flag: '🇬🇧' },
-    { code: 'ja', label: '🇯🇵 Japanese', flag: '🇯🇵' },
-    { code: 'ko', label: '🇰🇷 Korean', flag: '🇰🇷' },
-    { code: 'zh', label: '🇨🇳 Chinese', flag: '🇨🇳' },
-    { code: 'fr', label: '🇫🇷 French', flag: '🇫🇷' },
-    { code: 'de', label: '🇩🇪 German', flag: '🇩🇪' },
-    { code: 'es', label: '🇪🇸 Spanish', flag: '🇪🇸' },
-    { code: 'th', label: '🇹🇭 Thai', flag: '🇹🇭' },
+    { code: "vi", label: "🇻🇳 Tiếng Việt", flag: "🇻🇳" },
+    { code: "en", label: "🇬🇧 English", flag: "🇬🇧" },
+    { code: "ja", label: "🇯🇵 Japanese", flag: "🇯🇵" },
+    { code: "ko", label: "🇰🇷 Korean", flag: "🇰🇷" },
+    { code: "zh", label: "🇨🇳 Chinese", flag: "🇨🇳" },
+    { code: "fr", label: "🇫🇷 French", flag: "🇫🇷" },
+    { code: "de", label: "🇩🇪 German", flag: "🇩🇪" },
+    { code: "es", label: "🇪🇸 Spanish", flag: "🇪🇸" },
+    { code: "th", label: "🇹🇭 Thai", flag: "🇹🇭" },
   ];
 
-  const textTypeBadges: Record<TextType, { label: string; color: string; bg: string }> = {
-    DIALOGUE: { label: 'Dialogue (Thoại)', color: 'text-cyan-300', bg: 'bg-cyan-950 border-cyan-800' },
-    NARRATION: { label: 'Narration (Dẫn Truyện)', color: 'text-violet-300', bg: 'bg-violet-950 border-violet-800' },
-    SOUND_EFFECT: { label: 'SFX (Hiệu Ứng Âm Thanh)', color: 'text-amber-300', bg: 'bg-amber-950 border-amber-800' },
-    CAPTION: { label: 'Caption (Ghi Chú)', color: 'text-emerald-300', bg: 'bg-emerald-950 border-emerald-800' },
-    SCENE_DESC: { label: 'Scene Desc (Bối Cảnh)', color: 'text-pink-300', bg: 'bg-pink-950 border-pink-800' },
+  const textTypeBadges: Record<
+    TextType,
+    { label: string; color: string; bg: string }
+  > = {
+    DIALOGUE: {
+      label: "Dialogue (Thoại)",
+      color: "text-cyan-300",
+      bg: "bg-cyan-950 border-cyan-800",
+    },
+    NARRATION: {
+      label: "Narration (Dẫn Truyện)",
+      color: "text-violet-300",
+      bg: "bg-violet-950 border-violet-800",
+    },
+    SOUND_EFFECT: {
+      label: "SFX (Hiệu Ứng Âm Thanh)",
+      color: "text-amber-300",
+      bg: "bg-amber-950 border-amber-800",
+    },
+    CAPTION: {
+      label: "Caption (Ghi Chú)",
+      color: "text-emerald-300",
+      bg: "bg-emerald-950 border-emerald-800",
+    },
+    SCENE_DESC: {
+      label: "Scene Desc (Bối Cảnh)",
+      color: "text-pink-300",
+      bg: "bg-pink-950 border-pink-800",
+    },
   };
 
   return (
@@ -329,7 +403,8 @@ export const OCRView: React.FC = () => {
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400">
-                Nhận diện ngôn ngữ gốc • OCR trích xuất thoại • Đổi font chữ & Định dạng chữ (In hoa, Thường, Nghiêng, Đậm) • Dịch song ngữ.
+                Nhận diện ngôn ngữ gốc • OCR trích xuất thoại • Đổi font chữ &
+                Định dạng chữ (In hoa, Thường, Nghiêng, Đậm) • Dịch song ngữ.
               </p>
             </div>
           </div>
@@ -341,8 +416,14 @@ export const OCRView: React.FC = () => {
               disabled={isRunningOCR || isBatchOCRLoading}
               className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-cyan-300 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
-              <RotateCw className={`w-3.5 h-3.5 ${isRunningOCR ? 'animate-spin text-cyan-400' : ''}`} />
-              <span>{isRunningOCR ? 'Đang Quét OCR Ảnh...' : 'Quét Chữ Thật Trang Này'}</span>
+              <RotateCw
+                className={`w-3.5 h-3.5 ${isRunningOCR ? "animate-spin text-cyan-400" : ""}`}
+              />
+              <span>
+                {isRunningOCR
+                  ? "Đang Quét OCR Ảnh..."
+                  : "Quét Chữ Thật Trang Này"}
+              </span>
             </button>
 
             {/* Run Batch OCR for ALL Chapter Pages */}
@@ -351,8 +432,14 @@ export const OCRView: React.FC = () => {
               disabled={isRunningOCR || isBatchOCRLoading}
               className="flex items-center space-x-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
             >
-              <Zap className={`w-3.5 h-3.5 ${isBatchOCRLoading ? 'animate-spin text-amber-300' : ''}`} />
-              <span>{isBatchOCRLoading ? 'Đang Quét OCR Toàn Bộ...' : '⚡ Quét OCR Toàn Bộ Chapter'}</span>
+              <Zap
+                className={`w-3.5 h-3.5 ${isBatchOCRLoading ? "animate-spin text-amber-300" : ""}`}
+              />
+              <span>
+                {isBatchOCRLoading
+                  ? "Đang Quét OCR Toàn Bộ..."
+                  : "⚡ Quét OCR Toàn Bộ Chapter"}
+              </span>
             </button>
 
             {/* Translate All */}
@@ -370,10 +457,30 @@ export const OCRView: React.FC = () => {
               className="flex items-center space-x-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Thêm Panel Mới</span>
+              <span>Thêm Panel Mới</span>
             </button>
           </div>
         </div>
+
+        {/* Live Parallel OCR Progress Banner */}
+        {isBatchOCRLoading && (
+          <div className="bg-slate-900/90 border border-cyan-500/40 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse shadow-lg">
+            <div className="flex items-center space-x-2.5">
+              <Zap className="w-4 h-4 text-cyan-400 animate-spin" />
+              <div>
+                <p className="text-xs font-bold text-cyan-300">
+                  ⚡ Đang chạy song song 5 luồng quét OCR nhận diện chữ thật toàn bộ chapter...
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Xử lý siêu tốc đa nhân: ~15-20 giây cho toàn bộ 65+ trang ảnh!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 bg-cyan-950/80 px-3 py-1.5 rounded-md border border-cyan-800/80 text-[11px] font-mono text-cyan-300">
+              <span>Đang nhận diện ký tự...</span>
+            </div>
+          </div>
+        )}
 
         {/* Control Grid: Detected Language, Target Language, Font Family, AI Script Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
@@ -384,11 +491,15 @@ export const OCRView: React.FC = () => {
                 <Languages className="w-3 h-3 text-cyan-400" />
                 <span>Ngôn Ngữ Gốc Phát Hiện</span>
               </span>
-              <span className="text-[9px] font-mono text-emerald-400">98.7% Conf</span>
+              <span className="text-[9px] font-mono text-emerald-400">
+                98.7% Conf
+              </span>
             </label>
             <select
               value={detectedLanguage}
-              onChange={(e) => setDetectedLanguage(e.target.value as DetectedLanguage)}
+              onChange={(e) =>
+                setDetectedLanguage(e.target.value as DetectedLanguage)
+              }
               className="w-full bg-slate-900 border border-slate-700 text-white text-xs font-medium rounded p-1.5 focus:outline-none focus:border-cyan-400"
             >
               {detectedLanguageOptions.map((opt) => (
@@ -464,7 +575,9 @@ export const OCRView: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={includeDialogue}
-                  onChange={(e) => setScriptFilter('includeDialogue', e.target.checked)}
+                  onChange={(e) =>
+                    setScriptFilter("includeDialogue", e.target.checked)
+                  }
                   className="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0"
                 />
                 <span>Thoại</span>
@@ -473,7 +586,9 @@ export const OCRView: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={includeNarration}
-                  onChange={(e) => setScriptFilter('includeNarration', e.target.checked)}
+                  onChange={(e) =>
+                    setScriptFilter("includeNarration", e.target.checked)
+                  }
                   className="rounded bg-slate-900 border-slate-700 text-violet-500 focus:ring-0"
                 />
                 <span>Dẫn Truyện</span>
@@ -482,7 +597,9 @@ export const OCRView: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={includeSoundEffects}
-                  onChange={(e) => setScriptFilter('includeSoundEffects', e.target.checked)}
+                  onChange={(e) =>
+                    setScriptFilter("includeSoundEffects", e.target.checked)
+                  }
                   className="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0"
                 />
                 <span>SFX Âm Thanh</span>
@@ -491,7 +608,9 @@ export const OCRView: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={includeSceneDescription}
-                  onChange={(e) => setScriptFilter('includeSceneDescription', e.target.checked)}
+                  onChange={(e) =>
+                    setScriptFilter("includeSceneDescription", e.target.checked)
+                  }
                   className="rounded bg-slate-900 border-slate-700 text-pink-500 focus:ring-0"
                 />
                 <span>Bối Cảnh</span>
@@ -510,7 +629,7 @@ export const OCRView: React.FC = () => {
 
             {/* UPPERCASE */}
             <button
-              onClick={() => applyTextCaseToAll('upper')}
+              onClick={() => applyTextCaseToAll("upper")}
               className="bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-black cursor-pointer transition-all active:scale-95 shadow-sm"
               title="Chuyển toàn bộ thoại thành CHỮ IN HOA TẤT CẢ (Chuẩn Manga)"
             >
@@ -519,7 +638,7 @@ export const OCRView: React.FC = () => {
 
             {/* lowercase */}
             <button
-              onClick={() => applyTextCaseToAll('lower')}
+              onClick={() => applyTextCaseToAll("lower")}
               className="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-mono cursor-pointer transition-all active:scale-95 shadow-sm"
               title="Chuyển toàn bộ thoại thành chữ viết thường tất cả"
             >
@@ -528,7 +647,7 @@ export const OCRView: React.FC = () => {
 
             {/* Sentence case */}
             <button
-              onClick={() => applyTextCaseToAll('sentence')}
+              onClick={() => applyTextCaseToAll("sentence")}
               className="bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-all active:scale-95 shadow-sm"
               title="Viết hoa chữ cái đầu câu, còn lại viết thường"
             >
@@ -537,7 +656,7 @@ export const OCRView: React.FC = () => {
 
             {/* Title Case */}
             <button
-              onClick={() => applyTextCaseToAll('title')}
+              onClick={() => applyTextCaseToAll("title")}
               className="bg-slate-900 hover:bg-slate-800 text-violet-300 border border-slate-700 px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-all active:scale-95 shadow-sm"
               title="Viết hoa mỗi chữ cái đầu của từng từ"
             >
@@ -585,7 +704,9 @@ export const OCRView: React.FC = () => {
           <div className="flex items-center space-x-1.5">
             {/* Prev Page Button */}
             <button
-              onClick={() => setActivePageIndex(Math.max(0, activePageIndex - 1))}
+              onClick={() =>
+                setActivePageIndex(Math.max(0, activePageIndex - 1))
+              }
               disabled={activePageIndex === 0}
               className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-700"
               title="Trang trước"
@@ -601,14 +722,19 @@ export const OCRView: React.FC = () => {
             >
               {pages.map((p, idx) => (
                 <option key={p.id} value={idx}>
-                  Trang {idx + 1} / {pages.length} ({p.panels?.length || 0} Panels)
+                  Trang {idx + 1} / {pages.length} ({p.panels?.length || 0}{" "}
+                  Panels)
                 </option>
               ))}
             </select>
 
             {/* Next Page Button */}
             <button
-              onClick={() => setActivePageIndex(Math.min(pages.length - 1, activePageIndex + 1))}
+              onClick={() =>
+                setActivePageIndex(
+                  Math.min(pages.length - 1, activePageIndex + 1),
+                )
+              }
               disabled={activePageIndex === pages.length - 1}
               className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-700"
               title="Trang tiếp"
@@ -639,7 +765,7 @@ export const OCRView: React.FC = () => {
         {/* Scrollable Thumbnail Strip with Visual Cards */}
         <div className="relative flex items-center">
           <button
-            onClick={() => scrollThumbnails('left')}
+            onClick={() => scrollThumbnails("left")}
             className="absolute left-0 z-20 h-full px-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-300 rounded-l border-y border-l border-slate-800 flex items-center justify-center cursor-pointer backdrop-blur-sm"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -657,14 +783,14 @@ export const OCRView: React.FC = () => {
                   onClick={() => setActivePageIndex(idx)}
                   className={`group relative shrink-0 w-24 h-32 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
                     isActive
-                      ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10'
-                      : 'border-slate-800 hover:border-violet-500 opacity-70 hover:opacity-100'
+                      ? "border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10"
+                      : "border-slate-800 hover:border-violet-500 opacity-70 hover:opacity-100"
                   }`}
                 >
                   <img
                     src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-                      (p as any).rawImageUrl || p.imageUrl
-                    )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`}
+                      (p as any).rawImageUrl || p.imageUrl,
+                    )}&referer=${encodeURIComponent("https://truyenqqko.com/")}`}
                     alt={`Thumb ${idx + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -701,7 +827,7 @@ export const OCRView: React.FC = () => {
           </div>
 
           <button
-            onClick={() => scrollThumbnails('right')}
+            onClick={() => scrollThumbnails("right")}
             className="absolute right-0 z-20 h-full px-1.5 bg-slate-950/80 hover:bg-slate-900 text-slate-300 rounded-r border-y border-r border-slate-800 flex items-center justify-center cursor-pointer backdrop-blur-sm"
           >
             <ChevronRight className="w-4 h-4" />
@@ -718,7 +844,10 @@ export const OCRView: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-slate-300 border-b border-slate-800 pb-2">
               <span className="font-bold flex items-center space-x-1.5 text-cyan-300">
                 <ScanText className="w-3.5 h-3.5" />
-                <span>Canvas Trang {currentPage.pageIndex} ({currentPage.panels?.length || 0} Panels)</span>
+                <span>
+                  Canvas Trang {currentPage.pageIndex} (
+                  {currentPage.panels?.length || 0} Panels)
+                </span>
               </span>
 
               {/* Panel Layout Presets */}
@@ -763,12 +892,13 @@ export const OCRView: React.FC = () => {
               <div className="relative inline-block">
                 <img
                   src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-                    (currentPage as any).rawImageUrl || currentPage.imageUrl
-                  )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`}
+                    (currentPage as any).rawImageUrl || currentPage.imageUrl,
+                  )}&referer=${encodeURIComponent("https://truyenqqko.com/")}`}
                   alt={`Page ${currentPage.pageIndex}`}
                   className="block max-w-full max-h-[580px] w-auto h-auto object-contain rounded shadow-lg pointer-events-none"
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = currentPage.imageUrl;
+                    (e.currentTarget as HTMLImageElement).src =
+                      currentPage.imageUrl;
                   }}
                 />
 
@@ -790,19 +920,21 @@ export const OCRView: React.FC = () => {
                       }}
                       className={`absolute border-2 rounded transition-colors ${
                         isSelected
-                          ? 'border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/50 z-20'
-                          : 'border-violet-500/80 bg-violet-600/10 hover:border-violet-400 z-10'
+                          ? "border-cyan-400 bg-cyan-500/15 ring-2 ring-cyan-400/50 z-20"
+                          : "border-violet-500/80 bg-violet-600/10 hover:border-violet-400 z-10"
                       }`}
                     >
                       {/* Top Action Header of Bounding Box */}
                       <div
-                        onMouseDown={(e) => handleMouseDownMove(e, panel.id, panel.bbox)}
+                        onMouseDown={(e) =>
+                          handleMouseDownMove(e, panel.id, panel.bbox)
+                        }
                         className="absolute -top-7 left-0 bg-slate-900 border border-slate-700 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1.5 shadow cursor-move"
                       >
                         <Move className="w-2.5 h-2.5 text-cyan-400" />
                         <span>Panel {pIdx + 1}</span>
                         <span className="text-[9px] text-cyan-300 font-mono">
-                          {panel.suggestedCameraEffect || 'zoom_in'}
+                          {panel.suggestedCameraEffect || "zoom_in"}
                         </span>
                         <button
                           type="button"
@@ -818,7 +950,9 @@ export const OCRView: React.FC = () => {
 
                       {/* Resize Corner Handle */}
                       <div
-                        onMouseDown={(e) => handleMouseDownResize(e, panel.id, panel.bbox)}
+                        onMouseDown={(e) =>
+                          handleMouseDownResize(e, panel.id, panel.bbox)
+                        }
                         className="absolute bottom-0 right-0 w-4 h-4 bg-cyan-400 border border-slate-950 rounded-tl cursor-se-resize flex items-center justify-center shadow"
                       >
                         <Maximize2 className="w-2.5 h-2.5 text-slate-950" />
@@ -831,12 +965,16 @@ export const OCRView: React.FC = () => {
 
             {/* Bottom Quick Tips */}
             <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-              <span>💡 Kéo thanh tiêu đề để di chuyển • Kéo góc dưới phải để co giãn Panel.</span>
+              <span>
+                💡 Kéo thanh tiêu đề để di chuyển • Kéo góc dưới phải để co giãn
+                Panel.
+              </span>
               <button
                 onClick={() => addPanel(activePageIndex)}
                 className="text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer"
               >
-                + Thêm Panel
+                {" "}
+                Thêm Panel
               </button>
             </div>
           </div>
@@ -849,7 +987,10 @@ export const OCRView: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-bold text-white flex items-center space-x-1.5">
                   <FileText className="w-4 h-4 text-violet-400" />
-                  <span>Danh Sách Panel & Bảng Thoại Song Ngữ ({currentPage.panels?.length || 0} Panels)</span>
+                  <span>
+                    Danh Sách Panel & Bảng Thoại Song Ngữ (
+                    {currentPage.panels?.length || 0} Panels)
+                  </span>
                 </span>
               </div>
               <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
@@ -867,8 +1008,8 @@ export const OCRView: React.FC = () => {
                     onClick={() => setSelectedPanelId(panel.id)}
                     className={`p-3.5 rounded-xl border transition-all ${
                       isSelected
-                        ? 'bg-slate-900/90 border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-lg'
-                        : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                        ? "bg-slate-900/90 border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-lg"
+                        : "bg-slate-950/70 border-slate-800 hover:border-slate-700"
                     }`}
                   >
                     {/* Panel Header */}
@@ -885,9 +1026,13 @@ export const OCRView: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         {/* Camera Animation Selector */}
                         <select
-                          value={panel.suggestedCameraEffect || 'dramatic_zoom'}
+                          value={panel.suggestedCameraEffect || "dramatic_zoom"}
                           onChange={(e) =>
-                            updatePanelEffect(activePageIndex, panel.id, e.target.value as any)
+                            updatePanelEffect(
+                              activePageIndex,
+                              panel.id,
+                              e.target.value as any,
+                            )
                           }
                           className="bg-slate-900 border border-slate-700 text-violet-300 text-[10px] font-mono rounded px-2 py-0.5 focus:outline-none focus:border-violet-400"
                         >
@@ -932,33 +1077,45 @@ export const OCRView: React.FC = () => {
                       {panel.dialogues?.map((d, dIdx) => {
                         const original =
                           d.originalText ||
-                          (detectedLanguage === 'ko'
+                          (detectedLanguage === "ko"
                             ? `이름은 성진우 (Trang ${currentPage.pageIndex})`
-                            : detectedLanguage === 'ja'
-                            ? `第${currentPage.pageIndex}話のセリフ`
-                            : `Solo Leveling dialogue page ${currentPage.pageIndex}`);
+                            : detectedLanguage === "ja"
+                              ? `第${currentPage.pageIndex}話のセリフ`
+                              : `Solo Leveling dialogue page ${currentPage.pageIndex}`);
 
                         const translated = d.translatedText || d.text;
-                        const currentType = (d.textType as TextType) || 'DIALOGUE';
-                        const typeMeta = textTypeBadges[currentType] || textTypeBadges.DIALOGUE;
+                        const currentType =
+                          (d.textType as TextType) || "DIALOGUE";
+                        const typeMeta =
+                          textTypeBadges[currentType] ||
+                          textTypeBadges.DIALOGUE;
 
                         const fontFamilyMap: Record<string, string> = {
-                          'Anime Ace': "'Anime Ace', 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif",
-                          'CC Wild Words': "'CC Wild Words', 'Bangers', Impact, sans-serif",
-                          'Komika Axis': "'Komika Axis', 'Bangers', Impact, sans-serif",
-                          'Bangers': "'Bangers', cursive, Impact, sans-serif",
-                          'Patrick Hand': "'Patrick Hand', cursive",
-                          'Kalam': "'Kalam', cursive",
-                          'Montserrat': "'Montserrat', sans-serif",
-                          'Merriweather': "'Merriweather', serif",
-                          'Roboto': "'Roboto', sans-serif",
-                          'Inter': "'Inter', sans-serif",
+                          "Anime Ace":
+                            "'Anime Ace', 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif",
+                          "CC Wild Words":
+                            "'CC Wild Words', 'Bangers', Impact, sans-serif",
+                          "Komika Axis":
+                            "'Komika Axis', 'Bangers', Impact, sans-serif",
+                          Bangers: "'Bangers', cursive, Impact, sans-serif",
+                          "Patrick Hand": "'Patrick Hand', cursive",
+                          Kalam: "'Kalam', cursive",
+                          Montserrat: "'Montserrat', sans-serif",
+                          Merriweather: "'Merriweather', serif",
+                          Roboto: "'Roboto', sans-serif",
+                          Inter: "'Inter', sans-serif",
                         };
                         const activeFontName = d.fontFamily || globalFontFamily;
                         const fontStyle = {
-                          fontFamily: fontFamilyMap[activeFontName] || `'${activeFontName}', sans-serif`,
-                          fontWeight: d.isBold ? 'bold' as const : 'normal' as const,
-                          fontStyle: d.isItalic ? 'italic' as const : 'normal' as const,
+                          fontFamily:
+                            fontFamilyMap[activeFontName] ||
+                            `'${activeFontName}', sans-serif`,
+                          fontWeight: d.isBold
+                            ? ("bold" as const)
+                            : ("normal" as const),
+                          fontStyle: d.isItalic
+                            ? ("italic" as const)
+                            : ("normal" as const),
                         };
 
                         return (
@@ -974,9 +1131,14 @@ export const OCRView: React.FC = () => {
                                   type="text"
                                   value={d.speaker}
                                   onChange={(e) =>
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      speaker: e.target.value,
-                                    })
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        speaker: e.target.value,
+                                      },
+                                    )
                                   }
                                   className="w-28 bg-slate-900 border border-slate-700 text-white font-bold px-2 py-0.5 rounded focus:outline-none focus:border-cyan-400"
                                   placeholder="Tên nhân vật..."
@@ -986,17 +1148,32 @@ export const OCRView: React.FC = () => {
                                 <select
                                   value={currentType}
                                   onChange={(e) =>
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      textType: e.target.value as TextType,
-                                    })
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        textType: e.target.value as TextType,
+                                      },
+                                    )
                                   }
                                   className={`border text-[9.5px] font-bold rounded px-1.5 py-0.5 focus:outline-none ${typeMeta.bg} ${typeMeta.color}`}
                                 >
-                                  <option value="DIALOGUE">Dialogue (Thoại)</option>
-                                  <option value="NARRATION">Narration (Dẫn Truyện)</option>
-                                  <option value="SOUND_EFFECT">SFX (Âm Thanh)</option>
-                                  <option value="CAPTION">Caption (Ghi Chú)</option>
-                                  <option value="SCENE_DESC">Scene Desc (Bối Cảnh)</option>
+                                  <option value="DIALOGUE">
+                                    Dialogue (Thoại)
+                                  </option>
+                                  <option value="NARRATION">
+                                    Narration (Dẫn Truyện)
+                                  </option>
+                                  <option value="SOUND_EFFECT">
+                                    SFX (Âm Thanh)
+                                  </option>
+                                  <option value="CAPTION">
+                                    Caption (Ghi Chú)
+                                  </option>
+                                  <option value="SCENE_DESC">
+                                    Scene Desc (Bối Cảnh)
+                                  </option>
                                 </select>
                               </div>
 
@@ -1005,30 +1182,46 @@ export const OCRView: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      useForScript: d.useForScript === false ? true : false,
-                                    })
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        useForScript:
+                                          d.useForScript === false
+                                            ? true
+                                            : false,
+                                      },
+                                    )
                                   }
                                   className={`px-2 py-0.5 rounded text-[9.5px] font-bold flex items-center space-x-1 border transition-all cursor-pointer ${
                                     d.useForScript !== false
-                                      ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
-                                      : 'bg-slate-900 border-slate-700 text-slate-500'
+                                      ? "bg-emerald-950/80 border-emerald-700 text-emerald-300"
+                                      : "bg-slate-900 border-slate-700 text-slate-500"
                                   }`}
                                 >
                                   <Check className="w-2.5 h-2.5" />
                                   <span>
-                                    {d.useForScript !== false ? 'Dùng cho Script' : 'Bỏ qua Script'}
+                                    {d.useForScript !== false
+                                      ? "Dùng cho Script"
+                                      : "Bỏ qua Script"}
                                   </span>
                                 </button>
 
                                 {/* Copy Button */}
                                 <button
                                   type="button"
-                                  onClick={() => handleCopy(translated, d.id || `${panIdx}-${dIdx}`)}
+                                  onClick={() =>
+                                    handleCopy(
+                                      translated,
+                                      d.id || `${panIdx}-${dIdx}`,
+                                    )
+                                  }
                                   className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-900 transition-colors cursor-pointer"
                                   title="Sao chép"
                                 >
-                                  {copiedId === (d.id || `${panIdx}-${dIdx}`) ? (
+                                  {copiedId ===
+                                  (d.id || `${panIdx}-${dIdx}`) ? (
                                     <Check className="w-3 h-3 text-emerald-400" />
                                   ) : (
                                     <Copy className="w-3 h-3" />
@@ -1038,7 +1231,13 @@ export const OCRView: React.FC = () => {
                                 {/* Delete Dialogue Block */}
                                 <button
                                   type="button"
-                                  onClick={() => deleteDialogue(activePageIndex, panel.id, d.id)}
+                                  onClick={() =>
+                                    deleteDialogue(
+                                      activePageIndex,
+                                      panel.id,
+                                      d.id,
+                                    )
+                                  }
                                   className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-950/40 transition-colors cursor-pointer"
                                   title="Xóa câu thoại này"
                                 >
@@ -1053,27 +1252,34 @@ export const OCRView: React.FC = () => {
                               <div className="space-y-1">
                                 <label className="text-[9.5px] font-semibold text-slate-400 flex items-center justify-between">
                                   <span>
-                                    {detectedLanguage === 'ko'
-                                      ? '🇰🇷 Nguyên Bản (Korean)'
-                                      : detectedLanguage === 'ja'
-                                      ? '🇯🇵 Nguyên Bản (Japanese)'
-                                      : detectedLanguage === 'en'
-                                      ? '🇬🇧 Nguyên Bản (English)'
-                                      : detectedLanguage === 'zh'
-                                      ? '🇨🇳 Nguyên Bản (Chinese)'
-                                      : detectedLanguage === 'vi'
-                                      ? '🇻🇳 Nguyên Bản (Vietnamese)'
-                                      : '🌐 Văn Bản Gốc'}
+                                    {detectedLanguage === "ko"
+                                      ? "🇰🇷 Nguyên Bản (Korean)"
+                                      : detectedLanguage === "ja"
+                                        ? "🇯🇵 Nguyên Bản (Japanese)"
+                                        : detectedLanguage === "en"
+                                          ? "🇬🇧 Nguyên Bản (English)"
+                                          : detectedLanguage === "zh"
+                                            ? "🇨🇳 Nguyên Bản (Chinese)"
+                                            : detectedLanguage === "vi"
+                                              ? "🇻🇳 Nguyên Bản (Vietnamese)"
+                                              : "🌐 Văn Bản Gốc"}
                                   </span>
-                                  <span className="text-[8.5px] font-mono text-cyan-400">OCR Text</span>
+                                  <span className="text-[8.5px] font-mono text-cyan-400">
+                                    OCR Text
+                                  </span>
                                 </label>
                                 <textarea
                                   rows={2}
                                   value={original}
                                   onChange={(e) =>
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      originalText: e.target.value,
-                                    })
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        originalText: e.target.value,
+                                      },
+                                    )
                                   }
                                   style={fontStyle}
                                   className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded p-2 focus:outline-none focus:border-cyan-400 leading-relaxed resize-none"
@@ -1084,37 +1290,49 @@ export const OCRView: React.FC = () => {
                               <div className="space-y-1">
                                 <label className="text-[9.5px] font-semibold text-slate-400 flex items-center justify-between">
                                   <span>
-                                    {targetLanguage === 'vi'
-                                      ? '🇻🇳 Bản Dịch (Vietnamese)'
-                                      : targetLanguage === 'en'
-                                      ? '🇬🇧 Bản Dịch (English)'
-                                      : targetLanguage === 'ja'
-                                      ? '🇯🇵 Bản Dịch (Japanese)'
-                                      : targetLanguage === 'ko'
-                                      ? '🇰🇷 Bản Dịch (Korean)'
-                                      : targetLanguage === 'de'
-                                      ? '🇩🇪 Bản Dịch (German)'
-                                      : targetLanguage === 'fr'
-                                      ? '🇫🇷 Bản Dịch (French)'
-                                      : targetLanguage === 'es'
-                                      ? '🇪🇸 Bản Dịch (Spanish)'
-                                      : targetLanguage === 'th'
-                                      ? '🇹🇭 Bản Dịch (Thai)'
-                                      : targetLanguage === 'zh'
-                                      ? '🇨🇳 Bản Dịch (Chinese)'
-                                      : `🌐 Bản Dịch (${targetLanguage.toUpperCase()})`}
+                                    {targetLanguage === "vi"
+                                      ? "🇻🇳 Bản Dịch (Vietnamese)"
+                                      : targetLanguage === "en"
+                                        ? "🇬🇧 Bản Dịch (English)"
+                                        : targetLanguage === "ja"
+                                          ? "🇯🇵 Bản Dịch (Japanese)"
+                                          : targetLanguage === "ko"
+                                            ? "🇰🇷 Bản Dịch (Korean)"
+                                            : targetLanguage === "de"
+                                              ? "🇩🇪 Bản Dịch (German)"
+                                              : targetLanguage === "fr"
+                                                ? "🇫🇷 Bản Dịch (French)"
+                                                : targetLanguage === "es"
+                                                  ? "🇪🇸 Bản Dịch (Spanish)"
+                                                  : targetLanguage === "th"
+                                                    ? "🇹🇭 Bản Dịch (Thai)"
+                                                    : targetLanguage === "zh"
+                                                      ? "🇨🇳 Bản Dịch (Chinese)"
+                                                      : `🌐 Bản Dịch (${targetLanguage.toUpperCase()})`}
                                   </span>
-                                  <span className="text-[8.5px] font-mono text-emerald-400">Translated</span>
+                                  <span className="text-[8.5px] font-mono text-emerald-400">
+                                    Translated
+                                  </span>
                                 </label>
                                 <textarea
                                   rows={2}
                                   value={translated}
                                   onChange={(e) => {
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      text: e.target.value,
-                                      translatedText: e.target.value,
-                                    });
-                                    updateDialogueText(activePageIndex, panel.id, d.id, e.target.value);
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        text: e.target.value,
+                                        translatedText: e.target.value,
+                                      },
+                                    );
+                                    updateDialogueText(
+                                      activePageIndex,
+                                      panel.id,
+                                      d.id,
+                                      e.target.value,
+                                    );
                                   }}
                                   style={fontStyle}
                                   className="w-full bg-slate-900 border border-slate-800 text-amber-200 text-xs rounded p-2 focus:outline-none focus:border-violet-400 leading-relaxed resize-none"
@@ -1126,12 +1344,21 @@ export const OCRView: React.FC = () => {
                             <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-900 text-[9.5px] text-slate-400">
                               {/* Left: Quick Case & Bold/Italic Format Buttons for this block */}
                               <div className="flex items-center space-x-1">
-                                <span className="text-amber-400 font-bold">Chữ câu này:</span>
+                                <span className="text-amber-400 font-bold">
+                                  Chữ câu này:
+                                </span>
 
                                 {/* UPPERCASE */}
                                 <button
                                   type="button"
-                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'upper')}
+                                  onClick={() =>
+                                    applyTextCaseToDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      "upper",
+                                    )
+                                  }
                                   className="bg-slate-900 hover:bg-slate-800 text-cyan-300 px-1.5 py-0.5 rounded border border-slate-800 font-bold cursor-pointer"
                                   title="Viết hoa toàn bộ câu này"
                                 >
@@ -1141,7 +1368,14 @@ export const OCRView: React.FC = () => {
                                 {/* lowercase */}
                                 <button
                                   type="button"
-                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'lower')}
+                                  onClick={() =>
+                                    applyTextCaseToDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      "lower",
+                                    )
+                                  }
                                   className="bg-slate-900 hover:bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-800 font-mono cursor-pointer"
                                   title="Viết thường toàn bộ câu này"
                                 >
@@ -1151,7 +1385,14 @@ export const OCRView: React.FC = () => {
                                 {/* Sentence Case */}
                                 <button
                                   type="button"
-                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'sentence')}
+                                  onClick={() =>
+                                    applyTextCaseToDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      "sentence",
+                                    )
+                                  }
                                   className="bg-slate-900 hover:bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded border border-slate-800 cursor-pointer font-semibold"
                                   title="Viết hoa chữ cái đầu câu"
                                 >
@@ -1161,7 +1402,14 @@ export const OCRView: React.FC = () => {
                                 {/* Title Case */}
                                 <button
                                   type="button"
-                                  onClick={() => applyTextCaseToDialogue(activePageIndex, panIdx, dIdx, 'title')}
+                                  onClick={() =>
+                                    applyTextCaseToDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      "title",
+                                    )
+                                  }
                                   className="bg-slate-900 hover:bg-slate-800 text-violet-300 px-1.5 py-0.5 rounded border border-slate-800 cursor-pointer font-semibold"
                                   title="Viết hoa đầu mỗi từ"
                                 >
@@ -1171,11 +1419,17 @@ export const OCRView: React.FC = () => {
                                 {/* Bold */}
                                 <button
                                   type="button"
-                                  onClick={() => toggleBoldDialogue(activePageIndex, panIdx, dIdx)}
+                                  onClick={() =>
+                                    toggleBoldDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                    )
+                                  }
                                   className={`px-1.5 py-0.5 rounded border font-bold cursor-pointer transition-colors ${
                                     d.isBold
-                                      ? 'bg-amber-950 border-amber-600 text-amber-300'
-                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                      ? "bg-amber-950 border-amber-600 text-amber-300"
+                                      : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
                                   }`}
                                   title="In đậm câu này"
                                 >
@@ -1185,11 +1439,17 @@ export const OCRView: React.FC = () => {
                                 {/* Italic */}
                                 <button
                                   type="button"
-                                  onClick={() => toggleItalicDialogue(activePageIndex, panIdx, dIdx)}
+                                  onClick={() =>
+                                    toggleItalicDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                    )
+                                  }
                                   className={`px-1.5 py-0.5 rounded border italic cursor-pointer transition-colors ${
                                     d.isItalic
-                                      ? 'bg-pink-950 border-pink-600 text-pink-300'
-                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                      ? "bg-pink-950 border-pink-600 text-pink-300"
+                                      : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
                                   }`}
                                   title="In nghiêng câu này"
                                 >
@@ -1204,9 +1464,15 @@ export const OCRView: React.FC = () => {
                                 <select
                                   value={d.fontFamily || globalFontFamily}
                                   onChange={(e) =>
-                                    updateDialogue(activePageIndex, panIdx, dIdx, {
-                                      fontFamily: e.target.value as MangaFontFamily,
-                                    })
+                                    updateDialogue(
+                                      activePageIndex,
+                                      panIdx,
+                                      dIdx,
+                                      {
+                                        fontFamily: e.target
+                                          .value as MangaFontFamily,
+                                      },
+                                    )
                                   }
                                   className="bg-slate-900 border border-slate-800 text-amber-300 text-[9px] rounded px-1.5 py-0.5 focus:outline-none"
                                 >
@@ -1224,11 +1490,13 @@ export const OCRView: React.FC = () => {
 
                       {/* Add New Dialogue to Panel */}
                       <button
-                        onClick={() => addDialogueToPanel(activePageIndex, panel.id)}
+                        onClick={() =>
+                          addDialogueToPanel(activePageIndex, panel.id)
+                        }
                         className="w-full py-1.5 bg-slate-950 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-cyan-500/50 text-cyan-400 text-[11px] font-semibold rounded-lg flex items-center justify-center space-x-1 transition-all cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>+ Thêm Câu Thoại / Text Block</span>
+                        <span>Thêm Câu Thoại / Text Block</span>
                       </button>
                     </div>
                   </div>

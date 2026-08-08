@@ -70,6 +70,7 @@ interface StudioState {
   replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
   batchOCRAllPages: () => Promise<void>;
   isBatchOCRLoading: boolean;
+  batchOCRProgress: { current: number; total: number; percent: number };
 
   // AI Script Director
   scriptData: ScriptData | null;
@@ -1069,11 +1070,16 @@ export const useStudioStore = create<StudioState>()(
   },
 
   isBatchOCRLoading: false,
+  batchOCRProgress: { current: 0, total: 0, percent: 0 },
   batchOCRAllPages: async () => {
     const currentPages = get().pages;
     if (!currentPages || currentPages.length === 0) return;
 
-    set({ isBatchOCRLoading: true, scrapeStatusMessage: `⚡ Đang quét OCR thật cho toàn bộ ${currentPages.length} trang truyện...` });
+    set({
+      isBatchOCRLoading: true,
+      batchOCRProgress: { current: 0, total: currentPages.length, percent: 0 },
+      scrapeStatusMessage: `⚡ Đang chạy song song 5 luồng quét OCR cho toàn bộ ${currentPages.length} trang...`,
+    });
 
     try {
       const res = await fetch(`${API_BASE_URL}/ocr/batch`, {

@@ -263,41 +263,55 @@ const server = http.createServer(async (req, res) => {
         const pagesToProcess = payload.pages || [];
         const requestedLang = payload.language || 'vi';
 
-        console.log(`[Server] 🚀 Starting Batch OCR on ${pagesToProcess.length} pages (lang: ${requestedLang})`);
+        console.log(`[Server] 🚀 Starting Parallel Batch OCR on ${pagesToProcess.length} pages (lang: ${requestedLang})`);
 
         const results = [];
-        for (let i = 0; i < pagesToProcess.length; i++) {
-          const item = pagesToProcess[i];
-          const pageIndex = Number(item.pageIndex) || (i + 1);
-          const imageUrl = item.rawImageUrl || item.imageUrl || '';
+        const CHUNK_SIZE = 5; // Process 5 pages in parallel
 
-          if (!imageUrl) continue;
+        for (let i = 0; i < pagesToProcess.length; i += CHUNK_SIZE) {
+          const chunk = pagesToProcess.slice(i, i + CHUNK_SIZE);
 
-          let imageSource = imageUrl;
-          if (imageUrl.startsWith('/api/proxy-image')) {
-            const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
-            const realUrl = proxyUrl.searchParams.get('url');
-            if (realUrl) {
-              const referer = proxyUrl.searchParams.get('referer') || 'https://google.com';
-              const imgRes = await fetch(realUrl, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Referer': referer },
-              });
-              if (imgRes.ok) {
-                const arrayBuffer = await imgRes.arrayBuffer();
-                imageSource = Buffer.from(arrayBuffer);
+          const chunkResults = await Promise.all(
+            chunk.map(async (item, cIdx) => {
+              const globalIdx = i + cIdx;
+              const pageIndex = Number(item.pageIndex) || (globalIdx + 1);
+              const imageUrl = item.rawImageUrl || item.imageUrl || '';
+
+              if (!imageUrl) {
+                return { pageIndex, panels: [], rawText: '', confidence: 0, language: requestedLang };
               }
-            }
-          }
 
-          console.log(`[Server Batch OCR] Scanning page ${pageIndex} (${i + 1}/${pagesToProcess.length})...`);
-          const ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
-          results.push({
-            pageIndex,
-            panels: ocrRes.panels,
-            rawText: ocrRes.rawText,
-            confidence: ocrRes.confidence,
-            language: ocrRes.language,
-          });
+              let imageSource = imageUrl;
+              if (imageUrl.startsWith('/api/proxy-image')) {
+                const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
+                const realUrl = proxyUrl.searchParams.get('url');
+                if (realUrl) {
+                  const referer = proxyUrl.searchParams.get('referer') || 'https://google.com';
+                  try {
+                    const imgRes = await fetch(realUrl, {
+                      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Referer': referer },
+                    });
+                    if (imgRes.ok) {
+                      const arrayBuffer = await imgRes.arrayBuffer();
+                      imageSource = Buffer.from(arrayBuffer);
+                    }
+                  } catch (e) {}
+                }
+              }
+
+              const ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
+              return {
+                pageIndex,
+                panels: ocrRes.panels,
+                rawText: ocrRes.rawText,
+                confidence: ocrRes.confidence,
+                language: ocrRes.language,
+              };
+            })
+          );
+
+          results.push(...chunkResults);
+          console.log(`[Server Batch OCR] ⚡ Completed ${results.length}/${pagesToProcess.length} pages...`);
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
