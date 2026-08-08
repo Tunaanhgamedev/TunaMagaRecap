@@ -85,6 +85,8 @@ export const OCRView: React.FC = () => {
     highlightedDialogueId,
     setHighlightedDialogueId,
     replacePagePanels,
+    batchOCRAllPages,
+    isBatchOCRLoading,
   } = useStudioStore();
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -333,14 +335,24 @@ export const OCRView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Run OCR / Re-OCR */}
+            {/* Run Real OCR on Current Page */}
             <button
               onClick={handleRunRealOCR}
-              disabled={isRunningOCR}
+              disabled={isRunningOCR || isBatchOCRLoading}
               className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-cyan-300 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <RotateCw className={`w-3.5 h-3.5 ${isRunningOCR ? 'animate-spin text-cyan-400' : ''}`} />
-              <span>{isRunningOCR ? 'Đang Quét OCR Ảnh...' : 'Quét Chữ Thật OCR Trang Này'}</span>
+              <span>{isRunningOCR ? 'Đang Quét OCR Ảnh...' : 'Quét Chữ Thật Trang Này'}</span>
+            </button>
+
+            {/* Run Batch OCR for ALL Chapter Pages */}
+            <button
+              onClick={() => batchOCRAllPages()}
+              disabled={isRunningOCR || isBatchOCRLoading}
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <Zap className={`w-3.5 h-3.5 ${isBatchOCRLoading ? 'animate-spin text-amber-300' : ''}`} />
+              <span>{isBatchOCRLoading ? 'Đang Quét OCR Toàn Bộ...' : '⚡ Quét OCR Toàn Bộ Chapter'}</span>
             </button>
 
             {/* Translate All */}
@@ -355,7 +367,7 @@ export const OCRView: React.FC = () => {
             {/* Add Panel */}
             <button
               onClick={() => addPanel(activePageIndex)}
-              className="flex items-center space-x-1 bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+              className="flex items-center space-x-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>+ Thêm Panel Mới</span>

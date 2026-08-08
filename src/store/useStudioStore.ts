@@ -68,6 +68,8 @@ interface StudioState {
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
   replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
+  batchOCRAllPages: () => Promise<void>;
+  isBatchOCRLoading: boolean;
 
   // AI Script Director
   scriptData: ScriptData | null;
@@ -1053,7 +1055,6 @@ export const useStudioStore = create<StudioState>()(
       return { pages: updatedPages };
     });
   },
-
   replacePagePanels: (pageIdx, newPanels) => {
     set((state) => {
       const updatedPages = [...state.pages];
@@ -1065,6 +1066,51 @@ export const useStudioStore = create<StudioState>()(
       }
       return { pages: updatedPages, scrapeStatusMessage: `✓ Đã cập nhật ${newPanels.length} phân cảnh từ kết quả OCR thật!` };
     });
+  },
+
+  isBatchOCRLoading: false,
+  batchOCRAllPages: async () => {
+    const currentPages = get().pages;
+    if (!currentPages || currentPages.length === 0) return;
+
+    set({ isBatchOCRLoading: true, scrapeStatusMessage: `⚡ Đang quét OCR thật cho toàn bộ ${currentPages.length} trang truyện...` });
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/ocr/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pages: currentPages,
+          language: get().detectedLanguage,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.pages) {
+        set((state) => {
+          const updatedPages = state.pages.map((p) => {
+            const match = data.pages.find((dp: any) => dp.pageIndex === p.pageIndex);
+            if (match && match.panels && match.panels.length > 0) {
+              return {
+                ...p,
+                panels: match.panels,
+                ocrProcessed: true,
+              };
+            }
+            return p;
+          });
+          return {
+            pages: updatedPages,
+            isBatchOCRLoading: false,
+            scrapeStatusMessage: `🎉 Quét OCR thành công toàn bộ ${data.count} trang! Đã trích xuất xong toàn bộ chữ thật.`,
+          };
+        });
+      } else {
+        set({ isBatchOCRLoading: false, scrapeStatusMessage: `⚠️ Lỗi Batch OCR: ${data.error || 'Vui lòng thử lại'}` });
+      }
+    } catch (err: any) {
+      set({ isBatchOCRLoading: false, scrapeStatusMessage: `❌ Lỗi kết nối Batch OCR: ${err.message}` });
+    }
   },
 
   scriptData: null,

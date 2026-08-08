@@ -253,6 +253,63 @@ const server = http.createServer(async (req, res) => {
     });
     return;
   }
+  // 5b. POST Real Batch OCR - Process multiple manga pages sequentially with real OCR
+  if (pathname === '/api/ocr/batch' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const pagesToProcess = payload.pages || [];
+        const requestedLang = payload.language || 'vi';
+
+        console.log(`[Server] 🚀 Starting Batch OCR on ${pagesToProcess.length} pages (lang: ${requestedLang})`);
+
+        const results = [];
+        for (let i = 0; i < pagesToProcess.length; i++) {
+          const item = pagesToProcess[i];
+          const pageIndex = Number(item.pageIndex) || (i + 1);
+          const imageUrl = item.rawImageUrl || item.imageUrl || '';
+
+          if (!imageUrl) continue;
+
+          let imageSource = imageUrl;
+          if (imageUrl.startsWith('/api/proxy-image')) {
+            const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
+            const realUrl = proxyUrl.searchParams.get('url');
+            if (realUrl) {
+              const referer = proxyUrl.searchParams.get('referer') || 'https://google.com';
+              const imgRes = await fetch(realUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Referer': referer },
+              });
+              if (imgRes.ok) {
+                const arrayBuffer = await imgRes.arrayBuffer();
+                imageSource = Buffer.from(arrayBuffer);
+              }
+            }
+          }
+
+          console.log(`[Server Batch OCR] Scanning page ${pageIndex} (${i + 1}/${pagesToProcess.length})...`);
+          const ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
+          results.push({
+            pageIndex,
+            panels: ocrRes.panels,
+            rawText: ocrRes.rawText,
+            confidence: ocrRes.confidence,
+            language: ocrRes.language,
+          });
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, count: results.length, pages: results }));
+      } catch (err) {
+        console.error('[Server Batch OCR] Error:', err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
 
   // 5b. POST Translate Text - Translate real OCR text into target language
   if (pathname === '/api/translate' && req.method === 'POST') {
