@@ -44,6 +44,7 @@ export const TimelineView: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activePanelInfo, setActivePanelInfo] = useState<{ pageIndex: number; panelIndex: number; effect: string; speaker: string; text: string } | null>(null);
+  const lastSpokenIdRef = useRef<string>('');
 
   // Flatten all panels from all pages into a continuous sequence of video timeline blocks
   const panelTimeline = React.useMemo(() => {
@@ -297,10 +298,13 @@ export const TimelineView: React.FC = () => {
         }
       };
 
-      if (img.complete) {
-        renderFrame();
-      } else {
-        img.onload = renderFrame;
+      // Trigger voice narration for the active panel dialogue
+      if (isPlaying && activeItem.dialogueText && lastSpokenIdRef.current !== activeItem.id) {
+        lastSpokenIdRef.current = activeItem.id;
+        playNarrationAudio(activeItem.dialogueText);
+      } else if (!isPlaying) {
+        lastSpokenIdRef.current = '';
+        stopNarrationAudio();
       }
     }
 

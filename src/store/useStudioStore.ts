@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { voiceAudioEngine } from '../utils/audioSynthesizer';
 import {
   ActiveTab,
   Project,
@@ -820,27 +821,12 @@ export const useStudioStore = create<StudioState>()(
   pipelineStep: 0,
 
   playNarrationAudio: (text: string) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-      utterance.lang = 'vi-VN';
-
-      const voices = window.speechSynthesis.getVoices();
-      const viVoice = voices.find((v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('vietnamese') || v.name.toLowerCase().includes('an') || v.name.toLowerCase().includes('nam'));
-      if (viVoice) {
-        utterance.voice = viVoice;
-      }
-
-      window.speechSynthesis.speak(utterance);
-    }
+    const assignedVoice = get().assignedVoiceId;
+    voiceAudioEngine.speak(text, assignedVoice);
   },
 
   stopNarrationAudio: () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    voiceAudioEngine.stop();
   },
 
   runFullPipeline: async (mangaUrl: string) => {

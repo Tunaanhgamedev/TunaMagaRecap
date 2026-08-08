@@ -1,6 +1,42 @@
 {
   "projects": [
     {
+      "id": "proj-1786162900732",
+      "seriesName": "Truyện Đảo Hải Tặc",
+      "chapterNumber": 3,
+      "episodeTitle": "Chapter 3: Truyện Đảo Hải Tặc (75 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 300,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimages%2Fkhtl.webp&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Fdao-hai-tac-one-piece-14728-chap-3.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/dao-hai-tac-one-piece-14728-chap-3.html",
+      "updatedAt": "11:21:40"
+    },
+    {
+      "id": "proj-1786162871687",
+      "seriesName": "Đảo Hải Tặc",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Đảo Hải Tặc (64 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 256,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimages%2Fkhtl.webp&referer=https%3A%2F%2Fdilib.vn%2Fdao-hai-tac-one-piece-14728.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/dao-hai-tac-one-piece-14728.html",
+      "updatedAt": "11:21:11"
+    },
+    {
+      "id": "proj-1786162843981",
+      "seriesName": "Truyện Đảo Hải Tặc",
+      "chapterNumber": 1194,
+      "episodeTitle": "Chapter 1194: Truyện Đảo Hải Tặc (57 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 228,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimages%2Fkhtl.webp&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Fdao-hai-tac-one-piece-14728-chap-1194.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/dao-hai-tac-one-piece-14728-chap-1194.html",
+      "updatedAt": "11:20:43"
+    },
+    {
       "id": "proj-1786159977764",
       "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
       "chapterNumber": 1,
