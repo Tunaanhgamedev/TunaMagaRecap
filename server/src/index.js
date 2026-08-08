@@ -120,17 +120,47 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 3. GET Projects (Syncs with Prisma SQLite Database)
-  if (pathname === '/api/projects' && req.method === 'GET') {
-    try {
-      const prismaProjects = await prisma.project.findMany({
-        orderBy: { updatedAt: 'desc' },
-      });
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, projects: prismaProjects.length > 0 ? prismaProjects : db.projects }));
-    } catch (err) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, projects: db.projects }));
+  if (pathname === '/api/projects' && req.method === 'POST' || (pathname === '/api/projects' && req.method === 'GET')) {
+    if (req.method === 'GET') {
+      try {
+        const prismaProjects = await prisma.project.findMany({
+          orderBy: { updatedAt: 'desc' },
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, projects: prismaProjects.length > 0 ? prismaProjects : db.projects }));
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, projects: db.projects }));
+      }
+      return;
     }
+  }
+
+  // 3b. POST Delete Project (Prisma SQLite & Local DB)
+  if ((pathname === '/api/projects/delete' || pathname === '/api/projects') && req.method === 'DELETE') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const projId = payload.id || '';
+
+        if (projId) {
+          try {
+            await prisma.project.delete({ where: { id: projId } });
+          } catch (e) {}
+
+          db.projects = db.projects.filter((p) => p.id !== projId);
+          saveDB(db);
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Đã xóa dự án thành công' }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
     return;
   }
 

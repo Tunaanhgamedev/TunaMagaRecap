@@ -47,6 +47,7 @@ interface StudioState {
   selectedChapter: Chapter | null;
   fetchProjectsFromBackend: () => Promise<void>;
   setSelectedProject: (p: Project) => void;
+  deleteProject: (projectId: string) => Promise<void>;
   setSelectedChapter: (c: Chapter) => void;
   addMangaPages: (chapterId: string, files: File[]) => void;
   clearCurrentProject: () => void;
@@ -314,6 +315,25 @@ export const useStudioStore = create<StudioState>()(
     } catch (err) {}
   },
   setSelectedProject: (p) => set({ selectedProject: p }),
+  deleteProject: async (projectId) => {
+    try {
+      await fetch(`${API_BASE_URL}/projects/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: projectId }),
+      });
+    } catch (e) {}
+
+    set((state) => {
+      const updated = state.projects.filter((p) => p.id !== projectId);
+      const newSelected = state.selectedProject?.id === projectId ? null : state.selectedProject;
+      return {
+        projects: updated,
+        selectedProject: newSelected,
+        scrapeStatusMessage: '✓ Đã xóa dự án thành công!',
+      };
+    });
+  },
   setSelectedChapter: (c) => set({ selectedChapter: c }),
   addMangaPages: (chapterId, files) => {
     const newPages: MangaPage[] = files.map((file, idx) => ({
