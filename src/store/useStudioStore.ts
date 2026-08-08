@@ -602,25 +602,88 @@ export const useStudioStore = create<StudioState>()(
 
   voiceActors: [
     {
-      id: 'v-eleven-1',
-      name: 'Adam (Quân Vương)',
+      id: 'v-vbee-manhdung',
+      name: 'Vbee - Mạnh Dũng (Hà Nội)',
       gender: 'male',
-      provider: 'elevenlabs',
-      voiceKey: 'adam_deep',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_manhdung_pro',
       avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      description: 'Giọng nam trầm ấm, uy lực.',
+      description: 'Giọng nam Hà Nội trầm ấm, truyền cảm, chuyên review truyện tranh & phim ảnh triệu view.',
     },
     {
-      id: 'v-azure-2',
-      name: 'Việt Nam (Hoài Nam)',
+      id: 'v-vbee-thaotrinh',
+      name: 'Vbee - Thảo Trinh (Hà Nội)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_thaotrinh_emotional',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+      description: 'Giọng nữ Hà Nội ngọt ngào, biểu cảm sâu sắc, chuyên thuyết minh manga & tiểu thuyết.',
+    },
+    {
+      id: 'v-vbee-quynhanh',
+      name: 'Vbee - Quỳnh Anh (TP.HCM)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_quynhanh_south',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      description: 'Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn người nghe trên TikTok / YouTube.',
+    },
+    {
+      id: 'v-vbee-bahung',
+      name: 'Vbee - Bá Hùng (TP.HCM)',
+      gender: 'male',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_bahung_action',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      description: 'Giọng nam miền Nam hào sảng, kịch tính, phù hợp các phân cảnh combat hành động gay cấn.',
+    },
+    {
+      id: 'v-vbee-phuongtrang',
+      name: 'Vbee - Phương Trang (Hà Nội)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_phuongtrang_anime',
+      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+      description: 'Giọng nữ trẻ trung, năng động, phong cách review manga/anime hot trend.',
+    },
+    {
+      id: 'v-vbee-huukien',
+      name: 'Vbee - Hữu Kiên (Trầm Hùng)',
+      gender: 'male',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_huukien_epic',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+      description: 'Giọng nam trầm hùng uy nghiêm, chuyên truyện tiên hiệp, huyền huyễn, vương giả.',
+    },
+    {
+      id: 'v-vbee-cloning',
+      name: 'Vbee - Voice Cloning AI',
+      gender: 'male',
+      provider: 'browser',
+      voiceKey: 'vbee_voice_cloning_custom',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      description: 'Công nghệ nhân bản giọng đọc Vbee (studio.vbee.vn/studio/voice-cloning/voices).',
+    },
+    {
+      id: 'v-azure-hoainam',
+      name: 'Azure - Hoài Nam Neural',
       gender: 'male',
       provider: 'azure',
       voiceKey: 'vi-VN-HoaiNamNeural',
       avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
-      description: 'Giọng đọc review truyện tiếng Việt chuyên nghiệp.',
+      description: 'Giọng nam chuẩn phát thanh viên truyền hình Việt Nam.',
+    },
+    {
+      id: 'v-eleven-adam',
+      name: 'ElevenLabs - Adam (Quân Vương)',
+      gender: 'male',
+      provider: 'elevenlabs',
+      voiceKey: 'adam_deep',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      description: 'Giọng nam trầm ấm, uy lực phong cách điện ảnh Hollywood.',
     },
   ],
-  assignedVoiceId: 'v-eleven-1',
+  assignedVoiceId: 'v-vbee-manhdung',
   setAssignedVoiceId: (id) => set({ assignedVoiceId: id }),
   isSynthesizingTTS: false,
   synthesizeVoiceAudio: () => {
@@ -763,6 +826,13 @@ export const useStudioStore = create<StudioState>()(
       utterance.rate = 1.05;
       utterance.pitch = 1.0;
       utterance.lang = 'vi-VN';
+
+      const voices = window.speechSynthesis.getVoices();
+      const viVoice = voices.find((v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('vietnamese') || v.name.toLowerCase().includes('an') || v.name.toLowerCase().includes('nam'));
+      if (viVoice) {
+        utterance.voice = viVoice;
+      }
+
       window.speechSynthesis.speak(utterance);
     }
   },

@@ -33,6 +33,9 @@ export const TimelineView: React.FC = () => {
     selectedProject,
     aspectRatio,
     setAspectRatio,
+    voiceActors,
+    assignedVoiceId,
+    setAssignedVoiceId,
     setActiveTab,
     playNarrationAudio,
     stopNarrationAudio,
@@ -382,7 +385,31 @@ export const TimelineView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Live In-Flight Voice Switcher (Vbee / Azure / ElevenLabs) */}
+          <div className="flex items-center space-x-1.5 bg-slate-900/95 px-2 py-1 rounded-lg border border-slate-800">
+            <Mic className="w-3.5 h-3.5 text-cyan-400" />
+            <select
+              value={assignedVoiceId}
+              onChange={(e) => setAssignedVoiceId(e.target.value)}
+              className="bg-slate-950 border border-slate-700 text-cyan-300 text-[11px] font-bold rounded px-2 py-1 focus:outline-none focus:border-cyan-400"
+            >
+              {voiceActors.map((v) => (
+                <option key={v.id} value={v.id}>
+                  🎙️ {v.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => playNarrationAudio(activePanelInfo?.text || 'Xin chào! Đây là giọng lồng tiếng AI Vbee chất lượng cao.')}
+              className="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow cursor-pointer flex items-center space-x-1 transition-all active:scale-95"
+            >
+              <span>🔊 Nghe Thử Voice</span>
+            </button>
+          </div>
+
           {/* Aspect Ratio Switcher */}
           <div className="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
             <button
