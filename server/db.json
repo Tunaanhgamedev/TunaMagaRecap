@@ -1,4 +1,41 @@
 {
-  "projects": [],
+  "projects": [
+    {
+      "id": "proj-1786214862450",
+      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Tôi Thăng Cấp Một Mình - Solo Leveling (65 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 260,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00000.webp%3Fv%3D5.90&referer=https%3A%2F%2Fthuviensach.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html",
+      "sourceName": "ThuVienSach Adapter",
+      "sourceUrl": "https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html",
+      "updatedAt": "01:47:42"
+    },
+    {
+      "id": "proj-1786214734649",
+      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
+      "chapterNumber": 10,
+      "episodeTitle": "Chapter 10: Tôi Thăng Cấp Một Mình - Solo Leveling (65 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 260,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00585.webp%3Fv%3D5.90&referer=https%3A%2F%2Fthuviensach.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-10.html",
+      "sourceName": "ThuVienSach Adapter",
+      "sourceUrl": "https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-10.html",
+      "updatedAt": "01:45:34"
+    },
+    {
+      "id": "proj-1786213011089",
+      "seriesName": "Asura Scans - Read Manga, Manhwa &amp; Manhua Online",
+      "chapterNumber": 178,
+      "episodeTitle": "Chapter 178: Asura Scans - Read Manga, Manhwa &amp; Manhua Online (56 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 224,
+      "coverUrl": "/api/proxy-image?url=%2Fimages%2Fdefault-pp.webp&referer=https%3A%2F%2Fasuracomic.net%2Fseries%2Fsolo-leveling-chapter-178",
+      "sourceName": "AsuraScans Adapter",
+      "sourceUrl": "https://asuracomic.net/series/solo-leveling-chapter-178",
+      "updatedAt": "01:16:51"
+    }
+  ],
   "queue": []
 }
