@@ -49,6 +49,7 @@ interface StudioState {
   setSelectedProject: (p: Project) => void;
   deleteProject: (projectId: string) => Promise<void>;
   clearAllProjects: () => Promise<void>;
+  resetAllStoreState: () => void;
   setSelectedChapter: (c: Chapter) => void;
   addMangaPages: (chapterId: string, files: File[]) => void;
   clearCurrentProject: () => void;
@@ -373,6 +374,28 @@ export const useStudioStore = create<StudioState>()(
       thumbnail: null,
       mangaUrlInput: '',
       scrapeStatusMessage: null,
+    });
+  },
+  resetAllStoreState: () => {
+    try {
+      localStorage.removeItem('manga-studio-storage');
+      localStorage.removeItem('manga-studio-storage-v1');
+      localStorage.removeItem('manga-studio-storage-v2');
+      localStorage.removeItem('manga-studio-storage-v3');
+    } catch (e) {}
+
+    set({
+      projects: [],
+      selectedProject: null,
+      pages: [],
+      clips: [],
+      subtitles: [],
+      scriptData: null,
+      seo: null,
+      thumbnail: null,
+      activeTab: 'dashboard',
+      mangaUrlInput: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html',
+      scrapeStatusMessage: '✓ Đã dọn dẹp sạch toàn bộ cache và làm mới hệ thống!',
     });
   },
 
@@ -1584,7 +1607,7 @@ export const useStudioStore = create<StudioState>()(
   },
 }),
     {
-      name: 'manga-studio-storage',
+      name: 'manga-studio-storage-v3',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         pages: state.pages,

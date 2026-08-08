@@ -7,6 +7,7 @@ import {
   Play,
   Settings,
   Bell,
+  RotateCcw,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -70,10 +71,23 @@ export const Header: React.FC = () => {
         {/* Timeline Action */}
         <button
           onClick={() => setActiveTab('timeline')}
-          className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors"
+          className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md transition-colors cursor-pointer"
         >
           <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
           <span className="hidden sm:inline">Timeline</span>
+        </button>
+
+        {/* Reset Cache & Clean State Action */}
+        <button
+          onClick={() => {
+            useStudioStore.getState().resetAllStoreState();
+            alert('✓ Đã dọn dẹp sạch toàn bộ cache trình duyệt và đưa hệ thống về trạng thái nhẹ nhất!');
+          }}
+          title="Dọn dẹp sạch toàn bộ cache và làm mới hệ thống"
+          className="hidden sm:flex items-center space-x-1 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-[10.5px] font-semibold px-2 py-1 rounded-md transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-3 h-3 text-rose-400" />
+          <span>Dọn Cache</span>
         </button>
 
         {/* Icons */}
