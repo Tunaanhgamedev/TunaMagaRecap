@@ -29,6 +29,8 @@ export const LibraryView: React.FC = () => {
     isAutoPipelineRunning,
     pipelineStep,
     runFullPipeline,
+    setActivePageIndex,
+    deletePage,
   } = useStudioStore();
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,11 +204,14 @@ export const LibraryView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {pages.map((page) => (
+            {pages.map((page, pIdx) => (
               <div
                 key={page.id}
-                onClick={() => setActiveTab('ocr')}
-                className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group shadow-lg"
+                onClick={() => {
+                  setActivePageIndex(pIdx);
+                  setActiveTab('ocr');
+                }}
+                className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group shadow-lg relative"
               >
                 <div className="relative h-56 bg-slate-950 overflow-hidden flex items-center justify-center">
                   <img
@@ -229,6 +234,19 @@ export const LibraryView: React.FC = () => {
                   <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-violet-600/90 text-[9px] font-semibold text-white shadow">
                     {page.panels.length} Panels
                   </span>
+
+                  {/* Delete unwanted page button on hover */}
+                  <button
+                    type="button"
+                    title="Xóa trang không cần thiết này"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePage(pIdx);
+                    }}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 bg-rose-600/90 hover:bg-rose-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow text-xs"
+                  >
+                    ×
+                  </button>
                 </div>
 
                 <div className="p-2 flex items-center justify-between text-[10px] bg-slate-950/80 border-t border-slate-900">

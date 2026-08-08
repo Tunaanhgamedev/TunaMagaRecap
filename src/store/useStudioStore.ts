@@ -49,6 +49,13 @@ interface StudioState {
   setActivePageIndex: (idx: number) => void;
   autoDetectPanels: (pageIdx: number) => Promise<void>;
   updateDialogueText: (pageIdx: number, panelId: string, dialogueId: string, text: string) => void;
+  updatePanelBBox: (pageIdx: number, panelId: string, bbox: Partial<{ x: number; y: number; w: number; h: number }>) => void;
+  updatePanelEffect: (pageIdx: number, panelId: string, effect: string) => void;
+  addPanel: (pageIdx: number) => void;
+  deletePanel: (pageIdx: number, panelId: string) => void;
+  deletePage: (pageIdx: number) => void;
+  addDialogueToPanel: (pageIdx: number, panelId: string) => void;
+  deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
 
   // AI Script Director
   scriptData: ScriptData | null;
@@ -392,6 +399,34 @@ export const useStudioStore = create<StudioState>()(
       }
     } catch (err) {}
   },
+  updatePanelBBox: (pageIdx, panelId, bbox) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const panel = page.panels.find((p) => p.id === panelId);
+        if (panel) {
+          panel.bbox = { ...panel.bbox, ...bbox };
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  updatePanelEffect: (pageIdx, panelId, effect) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const panel = page.panels.find((p) => p.id === panelId);
+        if (panel) {
+          panel.suggestedCameraEffect = effect as any;
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
   updateDialogueText: (pageIdx, panelId, dialogueId, text) => {
     set((state) => {
       const updatedPages = [...state.pages];
@@ -403,6 +438,96 @@ export const useStudioStore = create<StudioState>()(
           if (dialogue) {
             dialogue.text = text;
           }
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  addPanel: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const newIndex = page.panels.length + 1;
+        const newPanel: Panel = {
+          id: `panel-${pageIdx + 1}-${Date.now()}`,
+          pageIndex: pageIdx + 1,
+          panelIndex: newIndex,
+          bbox: { x: 10, y: 15 * newIndex, w: 80, h: 30 },
+          suggestedCameraEffect: 'dramatic_zoom',
+          aiDescription: `Trang ${pageIdx + 1}: Panel tùy chỉnh ${newIndex}.`,
+          dialogues: [
+            {
+              id: `d-${Date.now()}-1`,
+              panelId: `panel-${pageIdx + 1}-${Date.now()}`,
+              speaker: 'Nhân Vật Chính',
+              text: `Thoại trong Panel ${newIndex} mới được thêm.`,
+              emotion: 'neutral',
+            },
+          ],
+        };
+        page.panels.push(newPanel);
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  deletePanel: (pageIdx, panelId) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        page.panels = page.panels.filter((p) => p.id !== panelId);
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  deletePage: (pageIdx) => {
+    set((state) => {
+      const remainingPages = state.pages.filter((_, idx) => idx !== pageIdx);
+      const reIndexed = remainingPages.map((p, idx) => ({
+        ...p,
+        pageIndex: idx + 1,
+      }));
+      const newActiveIdx = Math.min(state.activePageIndex, Math.max(0, reIndexed.length - 1));
+      return {
+        pages: reIndexed,
+        activePageIndex: newActiveIdx,
+        scrapeStatusMessage: `Đã xóa trang ${pageIdx + 1}. Còn lại ${reIndexed.length} trang.`,
+      };
+    });
+  },
+
+  addDialogueToPanel: (pageIdx, panelId) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const panel = page.panels.find((p) => p.id === panelId);
+        if (panel) {
+          panel.dialogues.push({
+            id: `d-${Date.now()}-${panel.dialogues.length + 1}`,
+            panelId,
+            speaker: 'Dẫn Chuyện',
+            text: 'Thêm dòng thoại mới...',
+            emotion: 'neutral',
+          });
+        }
+      }
+      return { pages: updatedPages };
+    });
+  },
+
+  deleteDialogue: (pageIdx, panelId, dialogueId) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const panel = page.panels.find((p) => p.id === panelId);
+        if (panel) {
+          panel.dialogues = panel.dialogues.filter((d) => d.id !== dialogueId);
         }
       }
       return { pages: updatedPages };

@@ -1,6 +1,54 @@
 {
   "projects": [
     {
+      "id": "proj-1786159977764",
+      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Tôi Thăng Cấp Một Mình - Solo Leveling (65 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 260,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00000.webp%3Fv%3D5.90&referer=https%3A%2F%2Fthuviensach.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html",
+      "sourceName": "ThuVienSach Adapter",
+      "sourceUrl": "https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html",
+      "updatedAt": "10:32:57"
+    },
+    {
+      "id": "proj-1786159914184",
+      "seriesName": "Giáo Dục Chân Chính",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1: Giáo Dục Chân Chính (194 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 776,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fmanhuavn2.com%2Fimages%2Fmanhua.png&referer=https%3A%2F%2Fmanhuavn2.com%2Fdoc-truyen%2Fgiao-duc-chan-chinh-chapter-1.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://manhuavn2.com/doc-truyen/giao-duc-chan-chinh-chapter-1.html",
+      "updatedAt": "10:31:54"
+    },
+    {
+      "id": "proj-1786159883153",
+      "seriesName": "Giáo Dục Chân Chính",
+      "chapterNumber": 257,
+      "episodeTitle": "Chapter 257: Giáo Dục Chân Chính (31 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 124,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fmanhuavn2.com%2Fimages%2Fmanhua.png&referer=https%3A%2F%2Fmanhuavn2.com%2Fgiao-duc-chan-chinh-0.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://manhuavn2.com/giao-duc-chan-chinh-0.html",
+      "updatedAt": "10:31:23"
+    },
+    {
+      "id": "proj-1786159797632",
+      "seriesName": "Vũ Trang Siêu Nhiên - Dandadan!! -  Dandadan",
+      "chapterNumber": 2,
+      "episodeTitle": "Chapter 2: Vũ Trang Siêu Nhiên - Dandadan!! -  Dandadan (54 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 216,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fi138.truyenvua.com%2F11160%2F2%2F0.jpg%3Fd%3Ddfgd6546&referer=https%3A%2F%2Ftruyenqqko.com%2Ftruyen-tranh%2Fvu-trang-sieu-nhien-1-11160-chap-2",
+      "sourceName": "TruyenQQ Adapter",
+      "sourceUrl": "https://truyenqqko.com/truyen-tranh/vu-trang-sieu-nhien-1-11160-chap-2",
+      "updatedAt": "10:29:57"
+    },
+    {
       "id": "proj-url-1786159393885",
       "seriesName": "Vũ Trang Siêu Nhiên - Dandadan!! -  Dandadan Chap 1 Next Chap 2 Tiếng Việt",
       "chapterNumber": 1,
@@ -48,16 +96,6 @@
       "status": "ready",
       "durationEst": 260,
       "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00065.webp%3Fv%3D5.90",
-      "updatedAt": "Vừa import từ ThuVienSach"
-    },
-    {
-      "id": "proj-url-1786158576935",
-      "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
-      "chapterNumber": 1,
-      "episodeTitle": "Chapter 1: Khởi Đầu Thức Tỉnh (65 trang ảnh thật)",
-      "status": "ready",
-      "durationEst": 260,
-      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fthuviensach.vn%2Fimg%2Fcomic%2FSolo-Leveling%2Fimg_00000.webp%3Fv%3D5.90",
       "updatedAt": "Vừa import từ ThuVienSach"
     },
     {
