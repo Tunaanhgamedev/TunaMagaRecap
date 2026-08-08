@@ -1535,15 +1535,98 @@ export const useStudioStore = create<StudioState>()(
     set((state) => ({ thumbnail: state.thumbnail ? { ...state.thumbnail, ...config } : null })),
   generateAISEO: () => {
     const proj = get().selectedProject;
+    const series = proj?.seriesName || 'Tôi Thăng Cấp Một Mình - Solo Leveling';
+    const chap = proj?.chapterNumber || 1;
+
+    const altTitles = [
+      `🔥 ${series} Chapter ${chap}: SỨC MẠNH THỨC TỈNH BÙNG NỔ! (Tóm Tắt Recap Cực Cuốn)`,
+      `😱 KHÔNG THỂ TIN NỔI! Bí Mật Khủng Khiếp Trong ${series} Chap ${chap}`,
+      `⚡ ${series} Tập ${chap}: Trận Chiến Sinh Tử Khiến Cả Thế Giới Kinh Ngạc!`,
+      `👑 Sự Trỗi Dậy Của Bá Vương! Review Chi Tiết ${series} Chapter ${chap}`,
+      `💥 Đỉnh Cao Thức Tỉnh! Diễn Biến Bùng Nổ Nhất Trong ${series} Chapter ${chap}`,
+      `🎬 Toàn Bộ Sự Thật Về Sức Mạnh Bí Ẩn Trong ${series} Chap ${chap} (Recap Manga)`,
+      `🗡️ ${series} Chap ${chap}: Đối Đầu Trùm Cuối Và Cú Lội Ngược Dòng Ngoạn Mục!`,
+      `🤯 Cú Twist Cực Sốc! ${series} Chapter ${chap} Vừa Ra Mắt Có Gì HOT?`,
+      `🚀 Tóm Tắt Nhanh ${series} Chapter ${chap} Trong 5 Phút (Bản Đẹp 60FPS)`,
+      `🌟 ${series} Chap ${chap} Full HD Thuyết Minh Tiếng Việt Review Đỉnh Cao`,
+    ];
+
+    const description = `🎬 Tóm Tắt & Review Manga: ${series.toUpperCase()} - CHAPTER ${chap}
+🔥 Đón xem những diễn biến kịch tính, mãn nhãn và bùng nổ nhất trong Chapter ${chap} của siêu phẩm manhwa/manga ${series}!
+
+⏱️ TIMECODES / MỤC LỤC VIDEO:
+00:00 - Hook Mở Đầu & Tóm Tắt Nhanh
+00:15 - Diễn Biến Trang 1 Đến Trang 15 (Khởi Đầu Trận Chiến)
+01:30 - Cao Trào Trận Đánh & Thức Tỉnh Sức Mạnh
+03:00 - Cú Lật Kèo Bất Ngờ & Tiêu Diệt Kẻ Địch
+04:15 - Kết Cục Chapter ${chap} & Dự Đoán Chapter ${chap + 1}
+04:45 - Kêu Gọi Like & Đăng Ký Kênh
+
+📌 TÓM TẮT CỐT TRUYỆN:
+Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhân vật chính phải đối mặt với kẻ thù nguy hiểm. Bằng trí tuệ và sự thức tỉnh ngoạn mục, những bí mật đen tối của thế giới ngầm dần được hé lộ...
+
+⭐ ĐỪNG QUÊN:
+👉 LIKE & BẤM CHUÔNG THÔNG BÁO 🔔 để không bỏ lỡ Chapter tiếp theo!
+👉 Để lại BÌNH LUẬN cảm nghĩ của bạn về sức mạnh của nhân vật chính nhé!
+
+#${series.replace(/\s+/g, '')} #MangaRecap #AnimeReview #SoloLeveling #ManhwaRecap #TomTatTruyen #ReviewTruyenTranh`;
+
+    const tags = [
+      series,
+      `${series} Chapter ${chap}`,
+      `${series} Chap ${chap}`,
+      `Review ${series}`,
+      `Tóm tắt ${series}`,
+      'Manga Recap',
+      'Manhwa Recap',
+      'Tóm tắt truyện tranh',
+      'Review truyện tranh hay',
+      'Solo Leveling Recap',
+      'Anime 2026',
+      'Thức tỉnh sức mạnh',
+      'Manga Review 4K',
+      'Truyện tranh mới nhất',
+      'Manhwa siêu hay',
+      'Thuyết minh truyện tranh',
+      'MagaRecap Studio',
+      'CapCut Manga Video',
+    ];
+
+    const hashtags = [
+      `#${series.replace(/[^a-zA-Z0-9]/g, '')}`,
+      '#MangaRecap',
+      '#ManhwaReview',
+      '#TomTatTruyen',
+      '#AnimeVN',
+      '#SoloLeveling',
+      '#ReviewTruyen',
+    ];
+
+    const pinnedComment = `🔥 Cảm ơn mọi người đã theo dõi video recap ${series} Chapter ${chap}!\n❓ Bạn nghĩ sao về sức mạnh thức tỉnh trong tập này? Liệu trong Chapter ${chap + 1} nhân vật chính có tiếp tục bùng nổ không? Hãy cùng bình luận bên dưới nhé! 👇💬`;
+
+    const timecodes = [
+      { timestamp: '00:00', label: 'Hook Mở Đầu & Tóm Tắt Nhanh' },
+      { timestamp: '00:15', label: `Khởi Đầu Diễn Biến Chapter ${chap}` },
+      { timestamp: '01:30', label: 'Trận Chiến Cao Trào & Thức Tỉnh' },
+      { timestamp: '03:15', label: 'Cú Twist Đảo Chiều Thế Trận' },
+      { timestamp: '04:30', label: `Hồi Kết & Dự Đoán Chapter ${chap + 1}` },
+    ];
+
+    const tiktokCaption = `😱 SỨC MẠNH THỨC TỈNH BÙNG NỔ trong ${series} Chap ${chap}! Bạn đã xem chưa? 🚀 #manga #${series.replace(/[^a-zA-Z0-9]/g, '')} #mangarecap #tomtattruyen #fyp`;
+
     set({
       seo: {
-        title: `🔥 Review ${proj?.seriesName || 'Manga'} Chapter ${proj?.chapterNumber || 1} Mới Nhất!`,
-        description: `Xem video review ${proj?.seriesName} Chapter ${proj?.chapterNumber} cực cuốn.`,
-        tags: [`${proj?.seriesName}`, `Chapter ${proj?.chapterNumber}`, 'Manga Recap'],
-        hashtags: ['#MangaRecap', '#AnimeReview'],
-        playlist: 'Full Series Recap',
-        scheduleTime: '2026-08-08 19:00',
-        targetAudience: 'Manga & Anime Fans',
+        title: altTitles[0],
+        alternativeTitles: altTitles,
+        description,
+        tags,
+        hashtags,
+        pinnedComment,
+        timecodes,
+        tiktokCaption,
+        playlist: `Trọn Bộ ${series} (Full Recap 60FPS)`,
+        scheduleTime: '19:00 Hôm Nay (Giờ Vàng YouTube)',
+        targetAudience: 'Manga / Manhwa / Anime Fans & TikTok Creators',
       },
     });
   },

@@ -226,9 +226,13 @@ export interface QueueTask {
 
 export interface SEOMetadata {
   title: string;
+  alternativeTitles: string[];
   description: string;
   tags: string[];
   hashtags: string[];
+  pinnedComment: string;
+  timecodes: { timestamp: string; label: string }[];
+  tiktokCaption: string;
   playlist: string;
   scheduleTime: string;
   targetAudience: string;
