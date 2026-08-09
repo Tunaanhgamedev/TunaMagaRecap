@@ -9,6 +9,7 @@
  * - Robust JSON schema validation and truncation recovery
  */
 import dotenv from 'dotenv';
+import { generateSmartStoryScript, cleanRawDialogues } from './MangaStoryKnowledgeEngine.js';
 dotenv.config();
 
 const MODEL_CANDIDATES = [
@@ -238,7 +239,7 @@ ${JSON.stringify(payloadItems, null, 2)}
 
 /**
  * Generate high-converting Manga Recap Script (YouTube / TikTok / Review)
- * using full OCR dialogue context and custom system prompt training!
+ * using full OCR dialogue context, manga visual scenes, and custom system prompt training!
  */
 export async function generateMangaRecapScript({
   seriesName = '',
@@ -249,27 +250,29 @@ export async function generateMangaRecapScript({
   apiKey = '',
 }) {
   const key = apiKey || process.env.GEMINI_API_KEY || '';
+  const cleanDialogues = cleanRawDialogues(dialogues);
 
-  const dialoguesFormatted = dialogues.length > 0
-    ? dialogues.map((d, i) => `[Trang ${d.pageIndex || 1} - ${d.speaker || 'Nhân vật'}]: "${d.text || d.translatedText || ''}"`).join('\n')
-    : `(Diễn biến Chapter ${chapterNumber} bộ ${seriesName})`;
+  const dialoguesFormatted = cleanDialogues.length > 0
+    ? cleanDialogues.map((d, i) => `[Trang ${d.pageIndex || 1} - ${d.speaker || 'Nhân vật'}]: "${d.text || d.translatedText || ''}"`).join('\n')
+    : `(Diễn biến thực tế Chapter ${chapterNumber} bộ ${seriesName})`;
 
   const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok với triệu lượt xem.
-Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính dựa trên nội dung thoại thực tế từ Chapter ${chapterNumber} bộ truyện "${seriesName}".
+Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính dựa trên nội dung cốt truyện, hình ảnh và thoại thực tế từ Chapter ${chapterNumber} bộ truyện "${seriesName}".
 
-DANH SÁCH THOẠI OCR THỰC TẾ TỪ TRUYỆN:
+QUY TẮC BẮT BUỘC:
+1. **Dựa vào hình ảnh & cốt truyện thật**: Miêu tả trực quan bối cảnh, hành động của nhân vật, bầu không khí u tối/hào nhoáng của từng khung tranh.
+2. **Không đưa câu lệnh kỹ thuật vào kịch bản**: Tuyệt đối KHÔNG xuất hiện các câu như "Bấm quét chữ", "OCR", "trích xuất văn bản".
+3. **Phân vai rõ ràng**: [Dẫn Chuyện], [Tên Nhân Vật], [Gợi Ý Nhạc/SFX].
+4. **Hook 5s Đầu Triệu View**: Câu mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
+5. **Cliffhanger cuối video**: Kêu gọi Đăng ký kênh, Like và Bình luận.
+
+DANH SÁCH THOẠI TRÍCH XUẤT TỪ TRUYỆN:
 ${dialoguesFormatted}
 
 PHONG CÁCH KỊCH BẢN YÊU CẦU (${mode.toUpperCase()}):
 ${customPrompt ? `YÊU CẦU ĐẶC BIỆT TỪ ĐẠO DIỄN: "${customPrompt}"` : ''}
 
-QUY TẮC VIẾT KỊCH BẢN THU HÚT:
-1. **Hook 5s Đầu**: Mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
-2. **Triển Khai Mạch Truyện**: Tóm tắt mượt mà theo đúng thứ tự các trang truyện, lồng ghép phân vai nhân vật và lời dẫn kịch tính.
-3. **Phân Đoạn Rõ Ràng**: Đánh dấu rõ [CẢNH x], [Dẫn Chuyện], [Lời Thoại Nhân Vật], [Gợi Ý Nhạc/Hiệu Ứng].
-4. **Kết Đoạn (Cliffhanger)**: Kêu gọi Đăng ký kênh, Like và để lại Bình luận về diễn biến chapter tiếp theo.
-
-Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, hấp dẫn, dễ đọc thuyết minh!`;
+Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, văn phong cực cuốn!`;
 
   if (key) {
     for (const model of MODEL_CANDIDATES) {
@@ -296,20 +299,14 @@ Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO Y
     }
   }
 
-  // Fallback Script generation based on actual dialogues
-  return `# 🎬 KỊCH BẢN RECAP TRUYỆN TRANH (STYLE: ${mode.toUpperCase()})
-## Bộ Truyện: ${seriesName.toUpperCase()} - CHAPTER ${chapterNumber}
-
-### 📌 Phân Đoạn 1: Mở Đầu (Hook 5s)
-**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Chapter ${chapterNumber} của ${seriesName} vừa ra mắt với những tình tiết bùng nổ vượt ngoài dự đoán! Đừng quên bấm Nút Đăng Ký Kênh để không bỏ lỡ những tập review mới nhất nhé!"
-
-### 📌 Phân Đoạn 2: Diễn Biến Chi Tiết
-${dialogues.length > 0
-  ? dialogues.slice(0, 10).map((d, i) => `**[Trang ${d.pageIndex || 1} - ${d.speaker}]**: "${d.text || d.translatedText}"`).join('\n\n')
-  : `**[Dẫn Chuyện]**: "Trận chiến nổ ra quyết liệt khi các nhân vật đối mặt với thử thách tối thượng..."`}
-
-### 📌 Phân Đoạn 3: Kết Cục & Cliffhanger
-**[Dẫn Chuyện]**: "Thế trận căng thẳng khép lại mở ra bí ẩn lớn cho chapter tiếp theo. Bạn nghĩ gì về diễn biến này? Hãy để lại ý kiến bên dưới phần bình luận nhé!"`;
+  // Fallback to Deep Story & Visual Knowledge Script Generator
+  return generateSmartStoryScript({
+    seriesName,
+    chapterNumber,
+    mode,
+    dialogues: cleanDialogues,
+    customPrompt,
+  });
 }
 
 export const AIVisionEngine = {

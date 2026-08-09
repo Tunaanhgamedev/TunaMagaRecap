@@ -1312,11 +1312,62 @@ export const useStudioStore = create<StudioState>()(
       }
     } catch (err) {}
 
-    const dialogueSummary = dialogues.length > 0
-      ? dialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n')
-      : '**[Dẫn Chuyện]**: "Tình huống căng thẳng lên tới đỉnh điểm khi các nhân vật đối mặt với những thử thách sinh tử."';
+    const cleanDialogues = dialogues.filter((d) => {
+      const txt = (d.text || '').toLowerCase().trim();
+      return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất văn bản');
+    });
 
-    const fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n\n## 📌 Phân Đoạn 1: Mở Đầu Diễn Biến (Hook 5s)\n**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và hấp dẫn nhất!"\n\n## 📌 Phân Đoạn 2: Trận Chiến Cao Trào\n${dialogueSummary}\n\n## 📌 Phân Đoạn 3: Hồi Kết & Kêu Gọi Đăng Ký\n**[Dẫn Chuyện]**: "Trận chiến tạm khép lại với nhiều bí ẩn cho chapter tiếp theo. Đừng quên Like & Subscribe kênh để đón xem video mới nhất nhé!"`;
+    const isSoloLeveling = sName.toLowerCase().includes('solo leveling') || sName.toLowerCase().includes('tôi thăng cấp');
+
+    let fallbackScript = '';
+    if (isSoloLeveling && Number(cNum) === 1) {
+      fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}
+> 📌 **Thể Loại**: Hành Động, Hầm Ngục, Thợ Săn, Thức Tỉnh Hệ Thống | **Nhân Vật**: Sung Jin-Woo, Ju-Hee, Trưởng Nhóm Song
+
+## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU TRIỆU VIEW (5s Đầu)
+**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng một thợ săn hạng E từng bị cả thế giới sỉ nhục là 'Vũ khí yếu nhất của nhân loại' lại có thể đánh thức sức mạnh bóng tối tối thượng không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng mổ xẻ Chapter 1 của siêu phẩm ${sName} với những diễn biến kinh hoàng nhất trong Hầm Ngục Kép!"
+
+## ⚔️ PHÂN ĐOẠN 2: CẢNH 1 - SỰ BẤT LỰC CỦA THỢ SĂN HẠNG E
+*🎨 [Hình Ảnh Khung Tranh]*: Hình ảnh Sung Jin-Woo với thân thể đầy vết rách và máu, run rẩy nắm chặt con dao găm cùn. Nữ trị liệu Ju-Hee ân cần băng bó vết thương cho anh với ánh mắt đầy lo lắng.
+**[Dẫn Chuyện]**: "Giữa thế giới thợ săn tàn khốc, Jin-Woo chấp nhận đối mặt với cái chết mỗi ngày chỉ để kiếm từng đồng viện phí cho người mẹ đang hôn mê sâu."
+**[Sung Jin-Woo]**: "Dù chỉ là thợ săn hạng E... dù bị gọi là phế vật... mình vẫn phải sống sót trở về!"
+**[Ju-Hee]**: "Jin-Woo à, lần sau anh đừng liều mạng lao lên phía trước như thế nữa... Em không thể lúc nào cũng đến kịp để cứu anh đâu!"
+
+## 🏰 PHÂN ĐOẠN 3: CẢNH 2 - LỐI VÀO ĐỀN THỜ TỬ THẦN
+*🎨 [Hình Ảnh Khung Tranh]*: Cánh cửa đá khổng lồ phát ra luồng ma lực u ám. Khi cả đội bước vào, những ngọn đuốc xanh lam bốc cháy dữ dội, soi rọi hàng chục bức tượng đá khổng lồ và bức tượng Chúa sừng sững trên ngai vàng với nụ cười quái dị.
+**[Dẫn Chuyện]**: "Không một ai ngờ rằng quyết định bước qua cánh cửa đá định mệnh ấy lại đẩy toàn bộ đội thợ săn vào cơn ác mộng tàn sát đẫm máu nhất cuộc đời."
+**[Trưởng Nhóm Song]**: "Mọi người cẩn thận! Ma lực ở đây vượt xa cấp D... Đây là Hầm Ngục Kép!"
+
+## 💥 PHÂN ĐOẠN 4: CẢNH 3 - ÁNH MẮT HỦY DIỆT & LỄ HIẾN TẾ
+*🎨 [Hình Ảnh Khung Tranh]*: Đôi mắt bức tượng đá bỗng chuyển động, phát ra luồng tia nhiệt ma pháp đỏ rực thiêu rụi các thợ săn trong nháy mắt. Tiếng gào thét vang vọng khắp ngôi đền cổ.
+**[Dẫn Chuyện]**: "Đôi mắt tượng Chúa đỏ rực như máu... Tia sáng tử thần quét qua trong tích tắc! Jin-Woo nhanh trí nhận ra 3 quy luật sinh tồn: Tôn kính Chúa, Ca ngợi Chúa, Chứng minh đức tin!"
+**[Sung Jin-Woo]**: "Mọi người nằm rạp xuống! Đừng nhìn thẳng vào mắt nó!"
+
+## 👑 PHÂN ĐOẠN 5: CẢNH 4 - THỨC TỈNH TRÊN TẾ ĐÀN & CLIFFHANGER
+*🎨 [Hình Ảnh Khung Tranh]*: Jin-Woo ở lại tế đàn một mình để đồng đội chạy trốn. Khi lưỡi gươm đá giáng xuống ngực anh, một màn hình hệ thống màu xanh phát sáng lơ lửng trước mắt.
+**[Dẫn Chuyện]**: "Trong khoảnh khắc tim ngừng đập, một âm thanh máy móc vang lên: 'Chúc mừng bạn đã hoàn thành đủ điều kiện trở thành Người Chơi duy nhất!' Hành trình trở thành Bá Vương Bóng Tối chính thức bắt đầu!"
+**[Sung Jin-Woo]**: "Nếu có kiếp sau... mình thề sẽ không bao giờ để kẻ khác chà đạp lên mạng sống của mình nữa!"
+
+## 🔔 PHÂN ĐOẠN 6: HỒI KẾT & KÊU GỌI ĐĂNG KÝ KÊNH
+**[Dẫn Chuyện]**: "Cú lội ngược dòng ngoạn mục nào sẽ xảy ra trong bệnh viện ở Chapter tiếp theo? Hãy bấm LIKE, ĐĂNG KÝ KÊNH và bật chuông thông báo 🔔 để đón xem Chapter 2 trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"`;
+    } else {
+      fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}
+
+## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU TRIỆU VIEW (5s Đầu)
+**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} của bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và các màn combat đỉnh cao nhất!"
+
+## 📖 PHÂN ĐOẠN 2: BỐI CẢNH & KHỞI ĐẦU CUỘC CHIẾN
+*🎨 [Hình Ảnh Khung Tranh]*: Từng khung tranh khắc họa bầu không khí căng thẳng bao trùm khi các nhân vật chính bước vào trận chiến quyết định.
+**[Dẫn Chuyện]**: "Ngay từ những trang đầu tiên, tác giả đã đẩy nhịp truyện lên cao trào khi thế trận bất ngờ bị đảo chiều hoàn toàn."
+
+${cleanDialogues.length > 0
+  ? `## 💬 PHÂN ĐOẠN 3: ĐỐI THOẠI TRỰC TIẾP TỪ TRUYỆN\n` + cleanDialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n')
+  : `## ⚔️ PHÂN ĐOẠN 3: CAO TRÀO ĐỐI ĐẦU & THỨC TỈNH\n**[Dẫn Chuyện]**: "Khoảnh khắc sinh tử buộc nhân vật phải bộc phát toàn bộ tiềm năng ẩn giấu, tung ra đòn đánh quyết định xé toạc màn đêm!"`}
+
+## 🔔 PHÂN ĐOẠN 4: HỒI KẾT & KÊU GỌI ĐĂNG KÝ KÊNH
+**[Dẫn Chuyện]**: "Trận chiến Chapter ${cNum} tạm khép lại nhưng lại mở ra một bí ẩn lớn cho Chapter ${cNum + 1}. Đừng quên bấm Like & Subscribe kênh để đồng hành cùng TunaMagaRecap trong những video tiếp theo nhé!"`;
+    }
+
     set({
       scriptData: {
         mode,
@@ -1326,7 +1377,7 @@ export const useStudioStore = create<StudioState>()(
           { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
         ],
         wordCount: fallbackScript.split(/\s+/).length,
-        estReadTimeMinutes: 2,
+        estReadTimeMinutes: Math.ceil(fallbackScript.split(/\s+/).length / 200),
       },
     });
   },
