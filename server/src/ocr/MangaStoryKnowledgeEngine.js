@@ -269,7 +269,7 @@ export function generateUniversalMangaScript({
 
     // Dynamic narration introduction for the act
     const beatDesc = config.actionBeats[actIdx % config.actionBeats.length];
-    script += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? config.visualTrope : beatDesc}\n`;
+    script += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? `${config.visualTrope} ${config.combatStyle}` : beatDesc}\n`;
 
     // Iterate through EVERY page and panel in this act
     for (const page of actPages) {

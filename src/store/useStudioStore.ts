@@ -1517,7 +1517,7 @@ export const useStudioStore = create<StudioState>()(
 
       fallbackScript += `## 📜 ${actTitle}\n`;
       const beatDesc = curGenre.actionBeats[actIdx % curGenre.actionBeats.length];
-      fallbackScript += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? curGenre.trope : beatDesc}\n`;
+      fallbackScript += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? `${curGenre.trope} ${curGenre.combat}` : beatDesc}\n`;
 
       for (const page of actPages) {
         const pNum = page.pageIndex;
