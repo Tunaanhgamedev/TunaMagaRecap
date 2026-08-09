@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
-import { ScriptMode } from '../../types/studio';
+import { ScriptMode, MangaGenre } from '../../types/studio';
 import {
   FileText,
   Sparkles,
@@ -21,6 +21,9 @@ import {
   Radio,
   Share2,
   Sliders,
+  Compass,
+  User,
+  Shield,
 } from 'lucide-react';
 
 interface ModeOption {
@@ -42,6 +45,24 @@ const MODES: ModeOption[] = [
   { id: 'rewrite', label: 'AI Rewrite Pro', desc: 'Văn phong sắc bén', icon: Wand2, color: 'text-cyan-400' },
 ];
 
+interface GenreOption {
+  id: MangaGenre;
+  label: string;
+  icon: string;
+}
+
+const GENRES: GenreOption[] = [
+  { id: 'hunter_system', label: 'Thợ Săn / Hệ Thống', icon: '🗡️' },
+  { id: 'cultivation_wuxia', label: 'Tu Tiên / Huyền Huyễn', icon: '🐉' },
+  { id: 'isekai_fantasy', label: 'Isekai / Chuyển Sinh', icon: '🌀' },
+  { id: 'regression_revenge', label: 'Trùng Sinh / Báo Thù', icon: '⏳' },
+  { id: 'school_urban', label: 'Học Đường / Đô Thị', icon: '🏫' },
+  { id: 'horror_survival', label: 'Kinh Dị / Sinh Tồn', icon: '👻' },
+  { id: 'romance_drama', label: 'Ngôn Tình / Drama', icon: '👑' },
+  { id: 'mystery_mindgame', label: 'Trinh Thám / Đấu Trí', icon: '🕵️' },
+  { id: 'general_shonen', label: 'Shonen / Phiêu Lưu', icon: '⚡' },
+];
+
 export const ScriptView: React.FC = () => {
   const {
     scriptData,
@@ -52,6 +73,10 @@ export const ScriptView: React.FC = () => {
     selectedProject,
     customScriptPrompt,
     setCustomScriptPrompt,
+    mangaGenre,
+    setMangaGenre,
+    protagonistName,
+    setProtagonistName,
     playNarrationAudio,
     stopNarrationAudio,
     pages,
@@ -114,7 +139,7 @@ export const ScriptView: React.FC = () => {
           <FileText className="w-12 h-12 text-slate-600 mx-auto" />
           <h2 className="text-base font-bold text-white">Chưa Có Kịch Bản Review</h2>
           <p className="text-xs text-slate-400">
-            Hệ thống huấn luyện AI viết kịch bản dựa trên dữ liệu thoại OCR thật. Bấm nút dưới đây để tạo ngay kịch bản hoặc nạp chapter mới từ Thư Viện.
+            Hệ thống huấn luyện AI viết kịch bản đa thể loại (Hệ Thống, Tu Tiên, Isekai, Trùng Sinh, Đô Thị...). Bấm nút dưới đây để tạo ngay kịch bản hoặc nạp chapter mới từ Thư Viện.
           </p>
           <div className="flex items-center justify-center gap-2 pt-2">
             <button
@@ -122,7 +147,7 @@ export const ScriptView: React.FC = () => {
               className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-cyan-300" />
-              <span>Sinh Kịch Bản YouTube Mẫu Ngay</span>
+              <span>Sinh Kịch Bản Mẫu Ngay</span>
             </button>
             <button
               onClick={() => setActiveTab('library')}
@@ -137,7 +162,7 @@ export const ScriptView: React.FC = () => {
     );
   }
 
-  const sName = selectedProject?.seriesName || 'Tôi Thăng Cấp Một Mình - Solo Leveling';
+  const sName = selectedProject?.seriesName || 'Bộ Truyện Tuyệt Đỉnh';
   const cNum = selectedProject?.chapterNumber || 1;
 
   return (
@@ -147,10 +172,10 @@ export const ScriptView: React.FC = () => {
         <div>
           <h1 className="text-base font-extrabold text-white flex items-center space-x-2">
             <FileText className="w-5 h-5 text-violet-400" />
-            <span className="gradient-text">AI Script Director Studio ({sName} - Chap {cNum})</span>
+            <span className="gradient-text">Universal AI Script Director ({sName} - Chap {cNum})</span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Trình soạn thảo kịch bản review & tóm tắt truyện tranh chuyên nghiệp: Tự động tổng hợp thoại OCR thật, tối ưu nhịp kịch tính và xuất sang Voice TTS / CapCut.
+            Trình đạo diễn & tạo kịch bản tóm tắt đa thể loại: Tự động điều chỉnh văn phong theo từng dòng truyện (Tu Tiên, Isekai, Thợ Săn, Trùng Sinh, Học Đường...).
           </p>
         </div>
 
@@ -185,6 +210,50 @@ export const ScriptView: React.FC = () => {
         </div>
       </div>
 
+      {/* 9 Universal Manga Genre Selector */}
+      <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-2 bg-slate-950/90">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-white flex items-center space-x-1.5">
+            <Compass className="w-4 h-4 text-amber-400" />
+            <span>Chọn Thể Loại Truyện (AI Tự Động Thích Ứng Văn Phong & Hình Ảnh):</span>
+          </span>
+          <div className="flex items-center space-x-2">
+            <User className="w-3.5 h-3.5 text-cyan-400" />
+            <input
+              type="text"
+              value={protagonistName}
+              onChange={(e) => setProtagonistName(e.target.value)}
+              placeholder="Tên nhân vật chính (tùy chọn)..."
+              className="bg-slate-900 text-slate-100 text-[11px] px-2.5 py-1 rounded border border-slate-800 focus:outline-none focus:border-cyan-400 font-mono w-48"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {GENRES.map((g) => {
+            const isSelected = mangaGenre === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => {
+                  setMangaGenre(g.id);
+                  generateAIScript(scriptData.mode);
+                }}
+                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center space-x-1.5 ${
+                  isSelected
+                    ? 'bg-amber-500/20 border-amber-500/80 text-amber-300 font-bold shadow-sm'
+                    : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300 hover:bg-slate-900'
+                }`}
+              >
+                <span>{g.icon}</span>
+                <span>{g.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* AI Prompt Training Box */}
       <div className="glass-panel p-3.5 rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/30 via-slate-900/60 to-cyan-950/30 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -193,7 +262,7 @@ export const ScriptView: React.FC = () => {
             <span>🧠 Huấn Luyện AI Viết Kịch Bản (Custom Prompt Tuning)</span>
           </span>
           <span className="text-[10px] font-mono text-slate-400">
-            Tổng hợp dữ liệu từ {pages.length || 2} trang truyện tranh thực tế
+            Dữ liệu OCR: Tự động tổng hợp thoại từ {pages.length || 2} trang truyện
           </span>
         </div>
 
@@ -218,7 +287,7 @@ export const ScriptView: React.FC = () => {
             type="text"
             value={customScriptPrompt}
             onChange={(e) => setCustomScriptPrompt(e.target.value)}
-            placeholder="Nhập phong cách viết kịch bản (VD: Giọng hào hứng, thêm câu hỏi giữ chân người xem ở giây thứ 30)..."
+            placeholder="Nhập phong cách viết kịch bản (VD: Giọng hào hứng, tập trung vào pha thức tỉnh sức mạnh ở cao trào)..."
             className="flex-1 bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-400 font-mono"
           />
           <button
@@ -324,7 +393,7 @@ export const ScriptView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   appendScriptSection(
-                    '## ⚔️ PHÂN TÍCH SỨC MẠNH & KỸ NĂNG:\n**[Dẫn Chuyện]**: "Chiêu thức vừa rồi không chỉ đơn thuần là đòn tấn công vật lý, mà nó là sự kết hợp hoàn hảo giữa năng lượng ma lực bộc phát và tốc độ vượt qua giới hạn âm thanh!"'
+                    '## ⚔️ PHÂN TÍCH SỨC MẠNH & CHIẾN THUẬT:\n**[Dẫn Chuyện]**: "Chiêu thức vừa rồi không chỉ đơn thuần là đòn tấn công vật lý, mà nó là sự kết hợp hoàn hảo giữa năng lượng bộc phát và tốc độ vượt qua giới hạn âm thanh!"'
                   )
                 }
                 className="text-[10px] bg-slate-900 hover:bg-cyan-900/40 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-800 hover:border-cyan-500/40 cursor-pointer flex items-center space-x-1"
@@ -377,14 +446,14 @@ export const ScriptView: React.FC = () => {
           <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-2.5">
             <div className="flex items-center space-x-1.5 text-xs font-bold text-white border-b border-slate-800 pb-2">
               <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Ngữ Cảnh & Dữ Liệu Nhân Vật</span>
+              <span>Ngữ Cảnh & Dữ Liệu Truyện</span>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="glass-card p-2.5 rounded-lg border border-slate-800 space-y-1">
                 <span className="font-bold text-violet-300">{sName}</span>
                 <p className="text-[10.5px] text-slate-400">
-                  Dữ liệu kịch bản được liên kết trực tiếp với Chapter {cNum}.
+                  Chapter {cNum} • Thể loại: <span className="text-amber-300 font-semibold">{mangaGenre}</span>
                 </p>
                 <div className="flex items-center gap-1.5 pt-1">
                   <span className="text-[9.5px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">

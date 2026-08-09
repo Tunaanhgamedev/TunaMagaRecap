@@ -9,7 +9,7 @@
  * - Robust JSON schema validation and truncation recovery
  */
 import dotenv from 'dotenv';
-import { generateSmartStoryScript, cleanRawDialogues } from './MangaStoryKnowledgeEngine.js';
+import { generateUniversalMangaScript, cleanRawDialogues } from './MangaStoryKnowledgeEngine.js';
 dotenv.config();
 
 const MODEL_CANDIDATES = [
@@ -299,8 +299,8 @@ Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO Y
     }
   }
 
-  // Fallback to Deep Story & Visual Knowledge Script Generator
-  return generateSmartStoryScript({
+  // Fallback to Universal Multi-Genre Story & Visual Narrative Generator
+  return generateUniversalMangaScript({
     seriesName,
     chapterNumber,
     mode,

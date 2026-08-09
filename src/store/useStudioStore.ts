@@ -14,6 +14,7 @@ import {
   DetectedLanguage,
   TargetLanguage,
   MangaFontFamily,
+  MangaGenre,
   ScriptData,
   ScriptMode,
   VoiceActor,
@@ -86,6 +87,10 @@ interface StudioState {
 
   // AI Script Director
   scriptData: ScriptData | null;
+  mangaGenre: MangaGenre;
+  setMangaGenre: (genre: MangaGenre) => void;
+  protagonistName: string;
+  setProtagonistName: (name: string) => void;
   customScriptPrompt: string;
   setCustomScriptPrompt: (prompt: string) => void;
   setScriptMode: (mode: ScriptMode) => void;
@@ -1260,15 +1265,21 @@ export const useStudioStore = create<StudioState>()(
   },
 
   scriptData: null,
+  mangaGenre: 'hunter_system',
+  setMangaGenre: (mangaGenre) => set({ mangaGenre }),
+  protagonistName: '',
+  setProtagonistName: (protagonistName) => set({ protagonistName }),
   customScriptPrompt: 'Tập trung vào cảm xúc nhân vật, mở đầu giật gân 5s đầu, lồng ghép phân vai Dẫn chuyện và Lời thoại kịch tính chuẩn YouTube triệu view.',
   setCustomScriptPrompt: (customScriptPrompt) => set({ customScriptPrompt }),
   setScriptMode: (mode) =>
     set((state) => (state.scriptData ? { scriptData: { ...state.scriptData, mode } } : {})),
   generateAIScript: async (mode) => {
     const proj = get().selectedProject;
-    const sName = proj?.seriesName || 'Tôi Thăng Cấp Một Minh - Solo Leveling';
+    const sName = proj?.seriesName || 'Bộ Truyện Tuyệt Đỉnh';
     const cNum = proj?.chapterNumber || 1;
     const customPrompt = get().customScriptPrompt || '';
+    const genre = get().mangaGenre || 'hunter_system';
+    const protagonist = get().protagonistName || '';
 
     // Collect all real dialogues extracted from OCR pages
     const dialogues = get().pages.flatMap((p) =>
@@ -1291,6 +1302,8 @@ export const useStudioStore = create<StudioState>()(
           chapterNumber: cNum,
           dialogues,
           customPrompt,
+          genre,
+          protagonist,
         }),
       });
       if (!res.ok) throw new Error('Script fetch error');
@@ -1317,39 +1330,110 @@ export const useStudioStore = create<StudioState>()(
       return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất văn bản');
     });
 
-    const isSoloLeveling = sName.toLowerCase().includes('solo leveling') || sName.toLowerCase().includes('tôi thăng cấp');
+    const hero = protagonist || (cleanDialogues[0]?.speaker && cleanDialogues[0].speaker !== 'Nhân vật' ? cleanDialogues[0].speaker : 'Nhân Vật Chính');
 
-    let fallbackScript = '';
-    if (isSoloLeveling && Number(cNum) === 1) {
-      fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}
-> 📌 **Thể Loại**: Hành Động, Hầm Ngục, Thợ Săn, Thức Tỉnh Hệ Thống | **Nhân Vật**: Sung Jin-Woo, Ju-Hee, Trưởng Nhóm Song
+    const genreMeta: Record<string, { name: string; trope: string; combat: string; sfx: string }> = {
+      hunter_system: {
+        name: 'Thợ Săn / Hệ Thống / Thức Tỉnh',
+        trope: 'Hầm ngục u tối với làn sương ma pháp lơ lửng, quái vật hung tợn gầm thét, ánh sáng xanh lục từ cửa sổ hệ thống phát sáng trước mắt nhân vật chính.',
+        combat: 'Những đòn vung dao găm xé gió, ma lực đen tím bùng nổ bao phủ toàn thân, tốc độ di chuyển vượt qua giới hạn âm thanh.',
+        sfx: '[BGM: Nhạc điện tử dồn dập, tiếng bass đập mạnh theo từng bước chân]',
+      },
+      cultivation_wuxia: {
+        name: 'Tu Tiên / Huyền Huyễn / Kiếm Hiệp',
+        trope: 'Mây mù bao phủ đỉnh núi tông môn hùng vĩ, linh khí cuồn cuộn hóa rồng bay lượn, kiếm khí sắc bén rực rỡ cắt đứt cả bầu trời.',
+        combat: 'Tung kiếm xuất chiêu với vạn đạo kiếm quang, đan điền bộc phát chân khí cuồng bạo làm rung chuyển cả càn khôn đại địa.',
+        sfx: '[BGM: Nhạc cổ phong hùng tráng kết hợp sáo trúc và tiếng trống trận]',
+      },
+      isekai_fantasy: {
+        name: 'Isekai / Chuyển Sinh / Ma Pháp',
+        trope: 'Lục địa fantasy tráng lệ với các tòa lâu đài nguy nga, vòng tròn ma pháp phát sáng đa sắc dưới chân, những loài sinh vật huyền bí trong rừng sâu.',
+        combat: 'Niệm chú cổ ngữ kích hoạt đại ma pháp cấp cấm thuật, tia sét và ngọn lửa rực cháy thiêu rụi toàn bộ binh đoàn quái vật.',
+        sfx: '[BGM: Nhạc giao hưởng fantasy huyền ảo, đẩy dần nhịp độ kịch tính]',
+      },
+      regression_revenge: {
+        name: 'Trùng Sinh / Báo Thù / Vả Mặt',
+        trope: 'Khung tranh đối lập giữa cái chết thảm khốc của kiếp trước và ánh mắt lạnh lùng, sắc lẹm đầy sát khí khi mở mắt tỉnh lại ở quá khứ.',
+        combat: 'Ra tay quyết đoán, tính toán trước từng đường đi nước bước của kẻ địch khiến chúng rơi vào tuyệt vọng không kịp trở tay.',
+        sfx: '[BGM: Tiếng đàn cello u tối, nhịp tim đập nghẹt thở]',
+      },
+      school_urban: {
+        name: 'Bạo Lực Học Đường / Đô Thị / Hành Động',
+        trope: 'Góc phố đêm ẩm ướt hoặc hành lang trường học căng thẳng, ánh đèn đường le lói soi rọi ánh mắt kiên định của nhân vật chính.',
+        combat: 'Những cú đấm móc uy lực, đòn bẻ khớp chuẩn xác và kỹ năng cận chiến thực dụng mang lại cảm giác thỏa mãn tột cùng.',
+        sfx: '[BGM: Nhạc rock đường phố sôi động, tiếng va chạm kim loại đanh thép]',
+      },
+      horror_survival: {
+        name: 'Kinh Dị / Sinh Tồn / Thần Bí',
+        trope: 'Tông màu đen trắng tương phản u uất, bóng ma dị dạng rình rập sau lưng nhân vật, những vết máu loang lổ trên tường.',
+        combat: 'Cuộc rượt đuổi nghẹt thở trong không gian hẹp, những đòn phản kháng liều mạng giữa lằn ranh sự sống và cái chết.',
+        sfx: '[BGM: Tiếng thì thầm ma quái, hiệu ứng âm thanh rùng rợn bất ngờ]',
+      },
+      romance_drama: {
+        name: 'Ngôn Tình / Cung Đấu / Drama',
+        trope: 'Khung cảnh hoa lệ, ánh mắt chan chứa tình cảm hoặc giọt nước mắt rơi nghiêng của nhân vật nữ trong hoàng cung nguy nga.',
+        combat: 'Những màn đấu khẩu sắc sảo, vạch trần âm mưu thâm hiểm của kẻ gian và bảo vệ người mình yêu thương.',
+        sfx: '[BGM: Nhạc piano da diết, sâu lắng chạm đến cảm xúc]',
+      },
+      mystery_mindgame: {
+        name: 'Trinh Thám / Đấu Trí',
+        trope: 'Cận cảnh đôi mắt tập trung cao độ, các mảnh ghép manh mối xoay quanh tâm trí, ánh đèn bàn soi sáng hồ sơ vụ án.',
+        combat: 'Màn lật tẩy danh tính hung thủ với những lập luận sắc bén không tì vết, ép đối phương vào chân tường.',
+        sfx: '[BGM: Nhạc jazz trinh thám bí ẩn kết hợp tiếng gõ đồng hồ tích tắc]',
+      },
+      general_shonen: {
+        name: 'Shonen / Phiêu Lưu Hành Động',
+        trope: 'Bầu trời rộng mở rực rỡ ánh bình minh, nụ cười tự tin của nhân vật chính cùng những người đồng đội kề vai sát cánh.',
+        combat: 'Bộc phát toàn bộ sức mạnh ý chí, tung tuyệt kỹ tối thượng phá tan mọi rào cản và đánh bại kẻ thù.',
+        sfx: '[BGM: Nhạc anime hào hùng truyền cảm hứng mãnh liệt]',
+      },
+    };
 
-## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU TRIỆU VIEW (5s Đầu)
-**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng một thợ săn hạng E từng bị cả thế giới sỉ nhục là 'Vũ khí yếu nhất của nhân loại' lại có thể đánh thức sức mạnh bóng tối tối thượng không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng mổ xẻ Chapter 1 của siêu phẩm ${sName} với những diễn biến kinh hoàng nhất trong Hầm Ngục Kép!"
+    const curGenre = genreMeta[genre] || genreMeta.hunter_system;
 
-## ⚔️ PHÂN ĐOẠN 2: CẢNH 1 - SỰ BẤT LỰC CỦA THỢ SĂN HẠNG E
-*🎨 [Hình Ảnh Khung Tranh]*: Hình ảnh Sung Jin-Woo với thân thể đầy vết rách và máu, run rẩy nắm chặt con dao găm cùn. Nữ trị liệu Ju-Hee ân cần băng bó vết thương cho anh với ánh mắt đầy lo lắng.
-**[Dẫn Chuyện]**: "Giữa thế giới thợ săn tàn khốc, Jin-Woo chấp nhận đối mặt với cái chết mỗi ngày chỉ để kiếm từng đồng viện phí cho người mẹ đang hôn mê sâu."
-**[Sung Jin-Woo]**: "Dù chỉ là thợ săn hạng E... dù bị gọi là phế vật... mình vẫn phải sống sót trở về!"
-**[Ju-Hee]**: "Jin-Woo à, lần sau anh đừng liều mạng lao lên phía trước như thế nữa... Em không thể lúc nào cũng đến kịp để cứu anh đâu!"
+    let fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n`;
+    fallbackScript += `> 📌 **Thể Loại**: ${curGenre.name} | **Phong Cách**: Chuẩn YouTube / TikTok Triệu View\n`;
+    fallbackScript += `> 🎵 **Định Hướng Âm Thanh**: ${curGenre.sfx}\n\n`;
 
-## 🏰 PHÂN ĐOẠN 3: CẢNH 2 - LỐI VÀO ĐỀN THỜ TỬ THẦN
-*🎨 [Hình Ảnh Khung Tranh]*: Cánh cửa đá khổng lồ phát ra luồng ma lực u ám. Khi cả đội bước vào, những ngọn đuốc xanh lam bốc cháy dữ dội, soi rọi hàng chục bức tượng đá khổng lồ và bức tượng Chúa sừng sững trên ngai vàng với nụ cười quái dị.
-**[Dẫn Chuyện]**: "Không một ai ngờ rằng quyết định bước qua cánh cửa đá định mệnh ấy lại đẩy toàn bộ đội thợ săn vào cơn ác mộng tàn sát đẫm máu nhất cuộc đời."
-**[Trưởng Nhóm Song]**: "Mọi người cẩn thận! Ma lực ở đây vượt xa cấp D... Đây là Hầm Ngục Kép!"
+    fallbackScript += `## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU GIỮ CHÂN (5s Đầu)\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng chỉ trong Chapter ${cNum} này, một biến cố kinh hoàng đã làm đảo lộn hoàn toàn vận mệnh của ${hero} không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng thưởng thức siêu phẩm ${sName} với những tình tiết bùng nổ nhất!"\n\n`;
 
-## 💥 PHÂN ĐOẠN 4: CẢNH 3 - ÁNH MẮT HỦY DIỆT & LỄ HIẾN TẾ
-*🎨 [Hình Ảnh Khung Tranh]*: Đôi mắt bức tượng đá bỗng chuyển động, phát ra luồng tia nhiệt ma pháp đỏ rực thiêu rụi các thợ săn trong nháy mắt. Tiếng gào thét vang vọng khắp ngôi đền cổ.
-**[Dẫn Chuyện]**: "Đôi mắt tượng Chúa đỏ rực như máu... Tia sáng tử thần quét qua trong tích tắc! Jin-Woo nhanh trí nhận ra 3 quy luật sinh tồn: Tôn kính Chúa, Ca ngợi Chúa, Chứng minh đức tin!"
-**[Sung Jin-Woo]**: "Mọi người nằm rạp xuống! Đừng nhìn thẳng vào mắt nó!"
+    fallbackScript += `## 🏰 PHÂN ĐOẠN 2: BỐI CẢNH & KHỞI ĐẦU CUỘC CHẠM TRÁN\n`;
+    fallbackScript += `*🎨 [Hình Ảnh & Bối Cảnh]*: ${curGenre.trope} Từng khung tranh mở ra không gian tráng lệ nhưng cũng đầy căng thẳng, báo hiệu một cơn bão sắp ập tới.\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Mở đầu Chapter ${cNum}, nhịp truyện ngay lập tức được đẩy lên cao trào khi các nhân vật bước vào tình thế ngàn cân treo sợi tóc. Mọi ánh nhìn đều đổ dồn về phía ${hero}."\n\n`;
 
-## 👑 PHÂN ĐOẠN 5: CẢNH 4 - THỨC TỈNH TRÊN TẾ ĐÀN & CLIFFHANGER
-*🎨 [Hình Ảnh Khung Tranh]*: Jin-Woo ở lại tế đàn một mình để đồng đội chạy trốn. Khi lưỡi gươm đá giáng xuống ngực anh, một màn hình hệ thống màu xanh phát sáng lơ lửng trước mắt.
-**[Dẫn Chuyện]**: "Trong khoảnh khắc tim ngừng đập, một âm thanh máy móc vang lên: 'Chúc mừng bạn đã hoàn thành đủ điều kiện trở thành Người Chơi duy nhất!' Hành trình trở thành Bá Vương Bóng Tối chính thức bắt đầu!"
-**[Sung Jin-Woo]**: "Nếu có kiếp sau... mình thề sẽ không bao giờ để kẻ khác chà đạp lên mạng sống của mình nữa!"
+    fallbackScript += `## ⚔️ PHÂN ĐOẠN 3: DIỄN BIẾN CAO TRÀO & XUNG ĐỘT TỘT ĐỈNH\n`;
+    fallbackScript += `*🎨 [Hình Ảnh Hành Động]*: ${curGenre.combat}\n\n`;
 
-## 🔔 PHÂN ĐOẠN 6: HỒI KẾT & KÊU GỌI ĐĂNG KÝ KÊNH
-**[Dẫn Chuyện]**: "Cú lội ngược dòng ngoạn mục nào sẽ xảy ra trong bệnh viện ở Chapter tiếp theo? Hãy bấm LIKE, ĐĂNG KÝ KÊNH và bật chuông thông báo 🔔 để đón xem Chapter 2 trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"`;
+    if (cleanDialogues.length > 0) {
+      cleanDialogues.slice(0, 8).forEach((d) => {
+        const spk = d.speaker && d.speaker !== 'Nhân vật' ? d.speaker : hero;
+        fallbackScript += `**[Trang ${d.pageIndex || 1} - ${spk}]**: "${d.text || d.translatedText}"\n\n`;
+      });
+    } else {
+      fallbackScript += `**[${hero}]**: "Dù đối thủ có là ai đi chăng nữa, hôm nay ta tuyệt đối sẽ không lùi bước!"\n\n`;
+      fallbackScript += `**[Kẻ Địch]**: "Hừ! Ngươi nghĩ mình có đủ tư cách để đứng trước mặt ta sao? Hãy nếm thử sức mạnh thực sự đi!"\n\n`;
+    }
+
+    fallbackScript += `## 📊 PHÂN ĐOẠN 4: CÚ LẬT KÈO NGOẠN MỤC & PHÂN TÍCH CHIẾN THUẬT\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Chính vào khoảnh khắc kẻ thù tưởng chừng đã nắm chắc phần thắng, một biến số bất ngờ đã xuất hiện! Sự kết hợp hoàn hảo giữa ý chí sắt đá và khả năng phân tích nhạy bén đã giúp ${hero} xoay chuyển tình thế một cách ngoạn mục!"\n\n`;
+
+    fallbackScript += `## 🔔 PHÂN ĐOẠN 5: HỒI KẾT KỊCH TÍNH & KÊU GỌI ĐĂNG KÝ (CLIFFHANGER)\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Trận chiến Chapter ${cNum} tạm thời khép lại với nụ cười bí ẩn, nhưng một bí mật đen tối hơn đang chờ đón chúng ta ở Chapter ${cNum + 1}. Bạn dự đoán điều gì sẽ xảy ra tiếp theo? Hãy để lại BÌNH LUẬN bên dưới, bấm LIKE và ĐĂNG KÝ KÊNH 🔔 để không bỏ lỡ video recap mới nhất trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"\n`;
+
+    set({
+      scriptData: {
+        mode,
+        title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
+        content: fallbackScript,
+        chunks: [
+          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
+        ],
+        wordCount: fallbackScript.split(/\s+/).length,
+        estReadTimeMinutes: Math.ceil(fallbackScript.split(/\s+/).length / 200),
+      },
+    });
+  },🔔 để đón xem Chapter 2 trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"`;
     } else {
       fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}
 

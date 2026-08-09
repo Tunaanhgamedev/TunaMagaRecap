@@ -133,6 +133,17 @@ export interface Project {
   updatedAt: string;
 }
 
+export type MangaGenre =
+  | 'hunter_system' // Thợ Săn / Hệ Thống / Thức Tỉnh
+  | 'cultivation_wuxia' // Tu Tiên / Huyền Huyễn / Kiếm Hiệp
+  | 'isekai_fantasy' // Isekai / Chuyển Sinh / Ma Pháp
+  | 'regression_revenge' // Trùng Sinh / Báo Thù / Vả Mặt
+  | 'school_urban' // Bạo Lực Học Đường / Đô Thị / Hành Động
+  | 'horror_survival' // Kinh Dị / Sinh Tồn / Thần Bí
+  | 'romance_drama' // Ngôn Tình / Cung Đấu / Drama
+  | 'mystery_mindgame' // Trinh Thám / Đấu Trí
+  | 'general_shonen'; // Shonen / Phiêu Lưu Tổng Hợp
+
 export type ScriptMode =
   | 'summary'
   | 'review'
