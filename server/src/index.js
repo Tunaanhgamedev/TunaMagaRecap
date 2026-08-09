@@ -694,6 +694,14 @@ async function resolveAndFetchImageBuffer(imageUrl) {
   res.end(JSON.stringify({ success: false, error: 'Endpoint not found' }));
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`⚠️ Port ${PORT} dang duoc su dung boi mot tien trinh Backend khac. He thong dang hoat dong tai http://localhost:${PORT}`);
+  } else {
+    console.error('[Server Error]:', err);
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 TunaMagaRecap Server with Prisma SQLite listening on http://localhost:${PORT}`);
 });
