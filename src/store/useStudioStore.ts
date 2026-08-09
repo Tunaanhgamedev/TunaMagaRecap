@@ -124,6 +124,19 @@ interface StudioState {
   updateClipDuration: (id: string, duration: number) => void;
   exportToCapCut: () => Promise<void>;
 
+  // Audio Mixer & Volume Control
+  audioVolume: number;
+  setAudioVolume: (volume: number) => void;
+  isMuted: boolean;
+  setIsMuted: (isMuted: boolean) => void;
+  toggleMute: () => void;
+  isVoiceMuted: boolean;
+  setIsVoiceMuted: (isVoiceMuted: boolean) => void;
+  bgmVolume: number;
+  setBgmVolume: (volume: number) => void;
+  isBgmMuted: boolean;
+  setIsBgmMuted: (isBgmMuted: boolean) => void;
+
   // Workflow Graph
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
@@ -1898,12 +1911,52 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
       },
     })),
 
+  // Audio Mixer & Volume Control
+  audioVolume: 80,
+  setAudioVolume: (audioVolume) => {
+    set({ audioVolume });
+    if (audioVolume <= 0) {
+      voiceAudioEngine.stop();
+    }
+  },
+  isMuted: false,
+  setIsMuted: (isMuted) => {
+    set({ isMuted });
+    if (isMuted) {
+      voiceAudioEngine.stop();
+    }
+  },
+  toggleMute: () =>
+    set((state) => {
+      const nextMuted = !state.isMuted;
+      if (nextMuted) {
+        voiceAudioEngine.stop();
+      }
+      return { isMuted: nextMuted };
+    }),
+  isVoiceMuted: false,
+  setIsVoiceMuted: (isVoiceMuted) => {
+    set({ isVoiceMuted });
+    if (isVoiceMuted) {
+      voiceAudioEngine.stop();
+    }
+  },
+  bgmVolume: 50,
+  setBgmVolume: (bgmVolume) => set({ bgmVolume }),
+  isBgmMuted: false,
+  setIsBgmMuted: (isBgmMuted) => set({ isBgmMuted }),
+
   isAutoPipelineRunning: false,
   pipelineStep: 0,
 
   playNarrationAudio: (text: string) => {
-    const assignedVoice = get().assignedVoiceId;
-    voiceAudioEngine.speak(text, assignedVoice);
+    const { assignedVoiceId, audioVolume, isMuted, isVoiceMuted } = get();
+    if (isMuted || isVoiceMuted || audioVolume <= 0) {
+      voiceAudioEngine.stop();
+      return;
+    }
+    const vol = Math.max(0, Math.min(1, audioVolume / 100));
+    voiceAudioEngine.speak(text, assignedVoiceId, 1.05, 1.0, vol);
   },
 
   stopNarrationAudio: () => {

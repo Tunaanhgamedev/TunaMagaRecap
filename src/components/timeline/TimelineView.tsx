@@ -10,6 +10,7 @@ import {
   Camera,
   Music,
   Mic,
+  MicOff,
   Subtitles,
   Zap,
   Share2,
@@ -19,6 +20,9 @@ import {
   Maximize2,
   Sparkles,
   Volume2,
+  Volume1,
+  VolumeX,
+  Sliders,
 } from 'lucide-react';
 
 export const TimelineView: React.FC = () => {
@@ -40,6 +44,17 @@ export const TimelineView: React.FC = () => {
     setActiveTab,
     playNarrationAudio,
     stopNarrationAudio,
+    audioVolume,
+    setAudioVolume,
+    isMuted,
+    toggleMute,
+    setIsMuted,
+    isVoiceMuted,
+    setIsVoiceMuted,
+    bgmVolume,
+    setBgmVolume,
+    isBgmMuted,
+    setIsBgmMuted,
   } = useStudioStore();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -152,7 +167,6 @@ export const TimelineView: React.FC = () => {
           imageCacheRef.current.set(page.imageUrl, img);
         };
         img.onerror = () => {
-          // Fallback to direct URL if proxy fails
           const directImg = new Image();
           directImg.src = page.imageUrl;
           directImg.onload = () => {
@@ -239,7 +253,6 @@ export const TimelineView: React.FC = () => {
 
       const renderFrame = () => {
         if (!img || !img.naturalWidth || !img.naturalHeight) {
-          // Illustrated fallback card if image is loading
           const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
           grad.addColorStop(0, '#1e1b4b');
           grad.addColorStop(1, '#0f172a');
@@ -249,23 +262,17 @@ export const TimelineView: React.FC = () => {
           ctx.fillStyle = '#22d3ee';
           ctx.font = 'bold 24px system-ui';
           ctx.textAlign = 'center';
-          ctx.fillText(
-            `Trang ${activeItem.pageIndex} • Panel ${activeItem.panelIndex}`,
-            canvas.width / 2,
-            canvas.height / 2 - 20
-          );
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = '14px system-ui';
-          ctx.fillText(`"${activeItem.dialogueText}"`, canvas.width / 2, canvas.height / 2 + 20);
+          ctx.fillText(`🎬 Đang Tải Khung Hình Trang ${activeItem.pageIndex}...`, canvas.width / 2, canvas.height / 2);
           return;
         }
 
-        // Exact Bounding Box Crop Calculation
-        const bbox = activeItem.bbox;
-        const cropX = (bbox.x / 100) * img.naturalWidth;
-        const cropY = (bbox.y / 100) * img.naturalHeight;
-        const cropW = (bbox.w / 100) * img.naturalWidth;
-        const cropH = (bbox.h / 100) * img.naturalHeight;
+        const natW = img.naturalWidth;
+        const natH = img.naturalHeight;
+
+        const cropX = Math.max(0, (activeItem.bbox.x / 100) * natW);
+        const cropY = Math.max(0, (activeItem.bbox.y / 100) * natH);
+        const cropW = Math.min(natW - cropX, Math.max(50, (activeItem.bbox.w / 100) * natW));
+        const cropH = Math.min(natH - cropY, Math.max(50, (activeItem.bbox.h / 100) * natH));
 
         // Apply smooth camera effect on the Bounding Box
         let scale = 1.0;
@@ -273,7 +280,7 @@ export const TimelineView: React.FC = () => {
         let shiftY = 0;
 
         if (activeItem.cameraEffect === 'dramatic_zoom' || activeItem.cameraEffect === 'zoom_in') {
-          scale = 1.0 + progress * 0.18; // Smooth 18% zoom into focal point
+          scale = 1.0 + progress * 0.18;
         } else if (
           activeItem.cameraEffect === 'slow_zoom_out' ||
           activeItem.cameraEffect === 'zoom_out'
@@ -321,10 +328,17 @@ export const TimelineView: React.FC = () => {
 
       renderFrame();
 
-      // Trigger voice narration for the active panel dialogue
+      // Trigger voice narration only if Voice AI is NOT muted and Master Volume > 0
+      const canSpeak = !isMuted && !isVoiceMuted && audioVolume > 0;
       if (isPlaying && activeItem.dialogueText && lastSpokenPanelIdRef.current !== activeItem.id) {
         lastSpokenPanelIdRef.current = activeItem.id;
-        playNarrationAudio(activeItem.dialogueText);
+        if (canSpeak) {
+          playNarrationAudio(activeItem.dialogueText);
+        } else {
+          stopNarrationAudio();
+        }
+      } else if (!canSpeak) {
+        stopNarrationAudio();
       }
     }
 
@@ -345,7 +359,7 @@ export const TimelineView: React.FC = () => {
     } else {
       lastSpokenPanelIdRef.current = '';
     }
-  }, [currentTime, isPlaying, panelTimeline, aspectRatio, totalVideoDuration]);
+  }, [currentTime, isPlaying, panelTimeline, aspectRatio, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
 
   // CapCut 1-Click Export Function
   const handleExportCapCutDraft = () => {
@@ -358,15 +372,11 @@ export const TimelineView: React.FC = () => {
       },
       tracks: panelTimeline.map((item) => ({
         id: item.id,
-        type: 'image_panel',
         page: item.pageIndex,
         panel: item.panelIndex,
-        bbox: item.bbox,
         start_ms: item.startTime * 1000,
-        duration_ms: item.duration * 1000,
-        animation_effect: item.cameraEffect,
-        image_source: item.imageUrl,
-        speaker: item.speaker,
+        end_ms: (item.startTime + item.duration) * 1000,
+        effect: item.cameraEffect,
         dialogue: item.dialogueText,
       })),
       subtitles: panelTimeline.map((item) => ({
@@ -400,16 +410,13 @@ export const TimelineView: React.FC = () => {
 
     setIsExporting(true);
     try {
-      // 1. Reset timeline playback to start
       useStudioStore.setState({ currentTime: 0, isPlaying: true });
 
-      // 2. Capture canvas stream at 60 FPS
       const stream = (canvas as any).captureStream ? (canvas as any).captureStream(60) : null;
       if (!stream) {
         throw new Error('Trình duyệt không hỗ trợ HTML5 Canvas captureStream.');
       }
 
-      // Check supported MIME type
       let mimeType = 'video/webm';
       if (typeof MediaRecorder !== 'undefined') {
         if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
@@ -423,7 +430,7 @@ export const TimelineView: React.FC = () => {
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: mimeType.startsWith('video/') ? mimeType : undefined,
-        videoBitsPerSecond: 6000000, // High quality 6Mbps bitrate
+        videoBitsPerSecond: 6000000,
       });
 
       const chunks: Blob[] = [];
@@ -453,7 +460,6 @@ export const TimelineView: React.FC = () => {
 
       mediaRecorder.start();
 
-      // Record for the total duration of the timeline video + 500ms buffer
       const durationMs = Math.max(3000, Math.ceil(totalVideoDuration * 1000) + 500);
       setTimeout(() => {
         if (mediaRecorder.state !== 'inactive') {
@@ -465,6 +471,12 @@ export const TimelineView: React.FC = () => {
       alert(`❌ Lỗi xuất video: ${err.message}`);
       setIsExporting(false);
     }
+  };
+
+  const getVolumeIcon = () => {
+    if (isMuted || audioVolume === 0) return <VolumeX className="w-4 h-4 text-rose-400" />;
+    if (audioVolume < 50) return <Volume1 className="w-4 h-4 text-cyan-300" />;
+    return <Volume2 className="w-4 h-4 text-cyan-400" />;
   };
 
   return (
@@ -493,7 +505,9 @@ export const TimelineView: React.FC = () => {
               onChange={(e) => {
                 const newV = e.target.value;
                 setAssignedVoiceId(newV);
-                playNarrationAudio(activePanelInfo?.text || 'Đã chuyển sang giọng đọc Vbee mới!');
+                if (!isVoiceMuted && !isMuted) {
+                  playNarrationAudio(activePanelInfo?.text || 'Đã chuyển sang giọng đọc Vbee mới!');
+                }
               }}
               className="bg-slate-950 border border-slate-700 text-cyan-300 text-[11px] font-bold rounded px-2 py-1 focus:outline-none focus:border-cyan-400"
             >
@@ -506,11 +520,15 @@ export const TimelineView: React.FC = () => {
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                if (isVoiceMuted || isMuted) {
+                  setIsVoiceMuted(false);
+                  setIsMuted(false);
+                }
                 playNarrationAudio(
                   activePanelInfo?.text || 'Xin chào! Đây là giọng lồng tiếng AI Vbee chất lượng cao.'
-                )
-              }
+                );
+              }}
               className="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow cursor-pointer flex items-center space-x-1 transition-all active:scale-95"
             >
               <span>🔊 Nghe Thử Voice</span>
@@ -592,50 +610,132 @@ export const TimelineView: React.FC = () => {
               />
             </div>
 
-            {/* Playback Controls & Scrubber */}
-            <div className="flex items-center space-x-3 pt-1">
-              <button
-                onClick={togglePlay}
-                className="w-8 h-8 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center justify-center shadow transition-all active:scale-95 cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-              </button>
+            {/* Playback Controls & Scrubber with Volume Bar */}
+            <div className="space-y-2 pt-1">
+              {/* Row 1: Play, Reset, Time, Scrubber Bar */}
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={togglePlay}
+                  className="w-8 h-8 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center justify-center shadow transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+                </button>
 
-              <button
-                onClick={() => {
-                  setCurrentTime(0);
-                  stopNarrationAudio();
-                }}
-                className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors cursor-pointer"
-                title="Về đầu video"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
+                <button
+                  onClick={() => {
+                    setCurrentTime(0);
+                    stopNarrationAudio();
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors cursor-pointer shrink-0"
+                  title="Về đầu video"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
 
-              <div className="text-[11px] font-mono text-slate-300 font-bold shrink-0">
-                {currentTime.toFixed(1)}s / {totalVideoDuration.toFixed(1)}s
+                <div className="text-[11px] font-mono text-slate-300 font-bold shrink-0">
+                  {currentTime.toFixed(1)}s / {totalVideoDuration.toFixed(1)}s
+                </div>
+
+                {/* Scrubber Bar */}
+                <input
+                  type="range"
+                  min={0}
+                  max={totalVideoDuration}
+                  step={0.1}
+                  value={currentTime}
+                  onChange={(e) => {
+                    const t = parseFloat(e.target.value);
+                    setCurrentTime(t);
+                  }}
+                  className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
+                />
               </div>
 
-              {/* Scrubber Bar */}
-              <input
-                type="range"
-                min={0}
-                max={totalVideoDuration}
-                step={0.1}
-                value={currentTime}
-                onChange={(e) => {
-                  const t = parseFloat(e.target.value);
-                  setCurrentTime(t);
-                }}
-                className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
-              />
+              {/* Row 2: Comprehensive Audio & Volume Control Bar */}
+              <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-950/90 px-3 py-2 rounded-lg border border-slate-800 text-xs">
+                {/* Master Volume Controls */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className={`p-1.5 rounded transition-all cursor-pointer flex items-center space-x-1 ${
+                      isMuted || audioVolume === 0
+                        ? 'bg-rose-950/80 border border-rose-700/60 text-rose-300'
+                        : 'bg-slate-900 border border-slate-700 text-slate-200 hover:bg-slate-800'
+                    }`}
+                    title={isMuted ? 'Bật lại âm thanh' : 'Tắt tiếng (Mute)'}
+                  >
+                    {getVolumeIcon()}
+                    <span className="text-[10.5px] font-bold">
+                      {isMuted || audioVolume === 0 ? 'Đã Tắt Tiếng' : 'Âm Lượng'}
+                    </span>
+                  </button>
+
+                  {/* Volume Slider */}
+                  <div className="flex items-center space-x-1.5">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={isMuted ? 0 : audioVolume}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setAudioVolume(v);
+                        if (isMuted && v > 0) setIsMuted(false);
+                      }}
+                      className="w-24 accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
+                    />
+                    <span className="text-[10px] font-mono text-cyan-300 font-bold w-9 text-right">
+                      {isMuted ? '0%' : `${audioVolume}%`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Individual Track Toggles (Voice AI & BGM) */}
+                <div className="flex items-center space-x-2">
+                  {/* Voice AI Mute Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isVoiceMuted;
+                      setIsVoiceMuted(next);
+                      if (next) stopNarrationAudio();
+                    }}
+                    className={`px-2.5 py-1 rounded text-[10.5px] font-bold border transition-all cursor-pointer flex items-center space-x-1.5 ${
+                      isVoiceMuted
+                        ? 'bg-amber-950/70 border-amber-700/60 text-amber-300 shadow-inner'
+                        : 'bg-cyan-950/60 border-cyan-800/60 text-cyan-300 hover:bg-cyan-900/60'
+                    }`}
+                    title={isVoiceMuted ? 'Bật lại giọng đọc AI' : 'Tắt riêng giọng đọc AI (nếu voice bị lỗi hoặc chỉ muốn xem hình)'}
+                  >
+                    {isVoiceMuted ? <MicOff className="w-3 h-3 text-amber-400" /> : <Mic className="w-3 h-3 text-cyan-400" />}
+                    <span>{isVoiceMuted ? 'Voice AI: ĐÃ TẮT' : 'Voice AI: ĐANG BẬT'}</span>
+                  </button>
+
+                  {/* BGM Mute Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsBgmMuted(!isBgmMuted)}
+                    className={`px-2.5 py-1 rounded text-[10.5px] font-bold border transition-all cursor-pointer flex items-center space-x-1.5 ${
+                      isBgmMuted
+                        ? 'bg-slate-900/80 border-slate-800 text-slate-500'
+                        : 'bg-emerald-950/60 border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/60'
+                    }`}
+                  >
+                    <Music className="w-3 h-3" />
+                    <span>{isBgmMuted ? 'Nhạc Nền: Tắt' : 'Nhạc Nền: Bật'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Active Panel & Track Inspector */}
+        {/* Right: Active Panel & Audio Mixer Inspector */}
         <div className="lg:col-span-4 space-y-3">
-          <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-3">
+          {/* Active Panel Details */}
+          <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <h3 className="text-xs font-bold text-white">Khung Hình & Hiệu Ứng Đang Chiếu</h3>
               <span className="text-[9px] font-mono text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800">
@@ -643,9 +743,8 @@ export const TimelineView: React.FC = () => {
               </span>
             </div>
 
-            {/* Current Active Panel Details */}
             {activePanelInfo && (
-              <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+              <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="font-bold text-cyan-300">
                     Trang {activePanelInfo.pageIndex} • Panel {activePanelInfo.panelIndex}
@@ -665,41 +764,119 @@ export const TimelineView: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* 5-Tracks Overview List */}
-            <div className="space-y-2 pt-1 text-[11px]">
-              <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-violet-300 font-semibold">
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>1. Image Panel Track</span>
+          {/* Audio Mixer & Sound Settings */}
+          <div className="glass-panel p-3.5 rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-950/90 via-slate-900/60 to-cyan-950/20 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center space-x-1.5 text-xs font-bold text-cyan-300">
+                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                <span>🎚️ Bảng Điều Khiển Âm Lượng & Voice AI</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {isMuted ? 'Mute' : `${audioVolume}% Vol`}
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              {/* 1. Master Volume Control */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-slate-200 flex items-center space-x-1">
+                    {getVolumeIcon()}
+                    <span>Âm Lượng Tổng (Master)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="text-[10px] text-cyan-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    {isMuted ? 'Bật Tiếng' : 'Tắt Tiếng'}
+                  </button>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {panelTimeline.length} Panels
-                </span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={isMuted ? 0 : audioVolume}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setAudioVolume(v);
+                      if (isMuted && v > 0) setIsMuted(false);
+                    }}
+                    className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded appearance-none"
+                  />
+                  <span className="text-[10px] font-mono text-slate-300 w-8 text-right">
+                    {isMuted ? '0%' : `${audioVolume}%`}
+                  </span>
+                </div>
               </div>
 
-              <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-cyan-300 font-semibold">
-                  <Mic className="w-3.5 h-3.5" />
-                  <span>2. Voice TTS Track</span>
+              {/* 2. Voice AI Specific Control */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-cyan-300 flex items-center space-x-1">
+                    <Mic className="w-3 h-3 text-cyan-400" />
+                    <span>Giọng Đọc AI (Voice TTS)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isVoiceMuted;
+                      setIsVoiceMuted(next);
+                      if (next) stopNarrationAudio();
+                    }}
+                    className={`text-[10px] px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                      isVoiceMuted
+                        ? 'bg-amber-900/60 text-amber-300 border border-amber-700/60'
+                        : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                    }`}
+                  >
+                    {isVoiceMuted ? 'Đang Tắt' : 'Đang Bật'}
+                  </button>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">Vbee Studio / Azure</span>
+                <p className="text-[10px] text-slate-400">
+                  {isVoiceMuted
+                    ? '⚠️ Đã tắt giọng đọc AI (Video chạy im lặng hoặc chỉ phát nhạc).'
+                    : '✓ Đang lồng tiếng tự động đồng bộ theo từng khung hình.'}
+                </p>
               </div>
 
-              <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-yellow-300 font-semibold">
-                  <Subtitles className="w-3.5 h-3.5" />
-                  <span>3. Subtitle Track</span>
+              {/* 3. BGM Music Specific Control */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-emerald-300 flex items-center space-x-1">
+                    <Music className="w-3 h-3 text-emerald-400" />
+                    <span>Nhạc Nền Manga (BGM)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsBgmMuted(!isBgmMuted)}
+                    className="text-[10px] text-emerald-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    {isBgmMuted ? 'Bật Nhạc' : 'Tắt Nhạc'}
+                  </button>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">CapCut Yellow</span>
-              </div>
-
-              <div className="p-2 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-emerald-300 font-semibold">
-                  <Music className="w-3.5 h-3.5" />
-                  <span>4. Music Track</span>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={isBgmMuted ? 0 : bgmVolume}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setBgmVolume(v);
+                      if (isBgmMuted && v > 0) setIsBgmMuted(false);
+                    }}
+                    className="w-full accent-emerald-400 cursor-pointer h-1.5 bg-slate-800 rounded appearance-none"
+                  />
+                  <span className="text-[10px] font-mono text-slate-300 w-8 text-right">
+                    {isBgmMuted ? '0%' : `${bgmVolume}%`}
+                  </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">Epic Anime BGM</span>
               </div>
             </div>
           </div>
@@ -734,7 +911,9 @@ export const TimelineView: React.FC = () => {
                     key={item.id}
                     onClick={() => {
                       setCurrentTime(item.startTime);
-                      playNarrationAudio(item.dialogueText);
+                      if (!isMuted && !isVoiceMuted && audioVolume > 0) {
+                        playNarrationAudio(item.dialogueText);
+                      }
                     }}
                     className={`flex-1 py-1.5 px-1 rounded text-[10px] font-mono font-bold transition-all text-center truncate cursor-pointer ${
                       isActive
@@ -757,7 +936,7 @@ export const TimelineView: React.FC = () => {
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded py-1.5 px-2 flex items-center space-x-2">
               <div className="h-2 flex-1 bg-gradient-to-r from-cyan-500/40 via-violet-500/40 to-cyan-500/40 rounded animate-pulse" />
               <span className="text-[9px] font-mono text-cyan-300 shrink-0">
-                Giọng Vbee Lồng Tiếng Đồng Bộ
+                {isVoiceMuted ? '🔇 Voice AI Đã Tắt' : '🎙️ Giọng Vbee Lồng Tiếng Đồng Bộ'}
               </span>
             </div>
           </div>
@@ -783,7 +962,7 @@ export const TimelineView: React.FC = () => {
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded py-1.5 px-2 flex items-center space-x-2">
               <div className="h-2 flex-1 bg-emerald-500/20 rounded" />
               <span className="text-[9px] font-mono text-emerald-400 shrink-0">
-                BGM Nhạc Nền Anime
+                {isBgmMuted ? '🔇 BGM Đã Tắt' : '🎵 BGM Nhạc Nền Anime'}
               </span>
             </div>
           </div>

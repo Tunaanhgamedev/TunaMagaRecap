@@ -1,23 +1,35 @@
 /**
  * Production-Ready Voice & Speech Audio Synthesizer
  * Speaks pure, natural Vietnamese human narration with ZERO beep/chime artifacts.
+ * Supports dynamic volume scaling (0.0 to 1.0) and instant mute control.
  */
 
 class VoiceAudioEngine {
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private isSpeakingActive: boolean = false;
+  private currentVolume: number = 0.8;
 
   /**
-   * Speaks Vietnamese narration cleanly and naturally without any beep/chime sound
+   * Speaks Vietnamese narration cleanly and naturally with volume control
    */
   public speak(
     text: string,
     voiceId: string = 'v-vbee-manhdung',
     rate: number = 1.05,
     pitch: number = 1.0,
+    volume: number = 0.8,
     onEnd?: () => void
   ) {
     if (!text || typeof window === 'undefined') return;
+
+    this.currentVolume = Math.max(0, Math.min(1, volume));
+
+    // If muted or near zero volume, cancel and return immediately
+    if (this.currentVolume <= 0.01) {
+      this.stop();
+      if (onEnd) onEnd();
+      return;
+    }
 
     // Browser SpeechSynthesis Engine
     if ('speechSynthesis' in window) {
@@ -28,6 +40,7 @@ class VoiceAudioEngine {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = Math.max(0.85, Math.min(1.4, rate));
         utterance.pitch = Math.max(0.8, Math.min(1.3, pitch));
+        utterance.volume = this.currentVolume;
         utterance.lang = 'vi-VN';
 
         // Select suitable Vietnamese voice
@@ -74,8 +87,13 @@ class VoiceAudioEngine {
       try {
         window.speechSynthesis.cancel();
         this.isSpeakingActive = false;
+        this.currentUtterance = null;
       } catch (err) {}
     }
+  }
+
+  public getIsSpeaking(): boolean {
+    return this.isSpeakingActive;
   }
 }
 
