@@ -23,7 +23,8 @@ import {
   Sliders,
   Compass,
   User,
-  Shield,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface ModeOption {
@@ -132,6 +133,22 @@ export const ScriptView: React.FC = () => {
     updateScriptContent(`${scriptData.content}\n\n${textToAppend}`);
   };
 
+  const totalPanels = (pages || []).reduce((acc, p) => acc + (p.panels?.length || 2), 0);
+  const totalDialogues = (pages || []).reduce(
+    (acc, p) =>
+      acc +
+      (p.panels?.reduce(
+        (pAcc, pan) =>
+          pAcc +
+          (pan.dialogues?.filter((d) => {
+            const txt = (d.text || d.translatedText || '').toLowerCase().trim();
+            return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất');
+          }).length || 0),
+        0
+      ) || 0),
+    0
+  );
+
   if (!scriptData) {
     return (
       <div className="p-8 max-w-xl mx-auto text-center space-y-4">
@@ -139,7 +156,7 @@ export const ScriptView: React.FC = () => {
           <FileText className="w-12 h-12 text-slate-600 mx-auto" />
           <h2 className="text-base font-bold text-white">Chưa Có Kịch Bản Review</h2>
           <p className="text-xs text-slate-400">
-            Hệ thống huấn luyện AI viết kịch bản đa thể loại (Hệ Thống, Tu Tiên, Isekai, Trùng Sinh, Đô Thị...). Bấm nút dưới đây để tạo ngay kịch bản hoặc nạp chapter mới từ Thư Viện.
+            Hệ thống huấn luyện AI viết kịch bản đa thể loại (Hệ Thống, Tu Tiên, Isekai, Trùng Sinh, Đô Thị...) bao quát 100% toàn bộ {pages.length} trang truyện đã nạp. Bấm nút dưới đây để tạo kịch bản ngay.
           </p>
           <div className="flex items-center justify-center gap-2 pt-2">
             <button
@@ -147,7 +164,7 @@ export const ScriptView: React.FC = () => {
               className="inline-flex items-center space-x-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-cyan-300" />
-              <span>Sinh Kịch Bản Mẫu Ngay</span>
+              <span>Sinh Kịch Bản Mẫu Toàn Bộ {pages.length} Trang</span>
             </button>
             <button
               onClick={() => setActiveTab('library')}
@@ -175,7 +192,7 @@ export const ScriptView: React.FC = () => {
             <span className="gradient-text">Universal AI Script Director ({sName} - Chap {cNum})</span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Trình đạo diễn & tạo kịch bản tóm tắt đa thể loại: Tự động điều chỉnh văn phong theo từng dòng truyện (Tu Tiên, Isekai, Thợ Săn, Trùng Sinh, Học Đường...).
+            Thuật toán vòng lặp động bao quát 100% hình ảnh & panels từ Trang 1 đến Trang {pages.length || 1} cho mọi bộ truyện tranh.
           </p>
         </div>
 
@@ -197,7 +214,7 @@ export const ScriptView: React.FC = () => {
             className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-600 hover:opacity-90 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-            <span>Tạo Lại Kịch Bản ({scriptData.mode})</span>
+            <span>Tạo Lại Kịch Bản ({pages.length} Trang)</span>
           </button>
 
           <button
@@ -212,7 +229,7 @@ export const ScriptView: React.FC = () => {
 
       {/* 9 Universal Manga Genre Selector */}
       <div className="glass-panel p-3.5 rounded-xl border border-slate-800 space-y-2 bg-slate-950/90">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-xs font-bold text-white flex items-center space-x-1.5">
             <Compass className="w-4 h-4 text-amber-400" />
             <span>Chọn Thể Loại Truyện (AI Tự Động Thích Ứng Văn Phong & Hình Ảnh):</span>
@@ -254,6 +271,28 @@ export const ScriptView: React.FC = () => {
         </div>
       </div>
 
+      {/* Dynamic Page Coverage Live Stats Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs">
+        <div className="flex items-center space-x-2">
+          <Layers className="w-4 h-4 text-cyan-400" />
+          <span className="text-white font-bold">Quy Mô Chương Đang Xử Lý:</span>
+          <span className="bg-cyan-950/60 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800/60 font-mono font-bold">
+            {pages.length || 1} Trang Manga
+          </span>
+          <span className="bg-violet-950/60 text-violet-300 px-2 py-0.5 rounded border border-violet-800/60 font-mono font-bold">
+            {totalPanels} Khung Hình (Panels)
+          </span>
+          <span className="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800/60 font-mono font-bold">
+            {totalDialogues} Lời Thoại OCR
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 font-semibold">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Bao Quát 100% Tất Cả Trang & Khung Tranh (Vòng Lặp Động)</span>
+        </div>
+      </div>
+
       {/* AI Prompt Training Box */}
       <div className="glass-panel p-3.5 rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/30 via-slate-900/60 to-cyan-950/30 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -262,7 +301,7 @@ export const ScriptView: React.FC = () => {
             <span>🧠 Huấn Luyện AI Viết Kịch Bản (Custom Prompt Tuning)</span>
           </span>
           <span className="text-[10px] font-mono text-slate-400">
-            Dữ liệu OCR: Tự động tổng hợp thoại từ {pages.length || 2} trang truyện
+            Tự động thích ứng số lượng trang từ Chapter {cNum}
           </span>
         </div>
 
@@ -433,7 +472,7 @@ export const ScriptView: React.FC = () => {
             <textarea
               value={scriptData.content}
               onChange={(e) => updateScriptContent(e.target.value)}
-              rows={16}
+              rows={18}
               className="w-full bg-slate-950/90 text-slate-100 p-3.5 rounded-lg border border-slate-800 font-mono text-xs leading-relaxed focus:outline-none focus:border-violet-500/60 shadow-inner"
               placeholder="Nhập hoặc để AI sinh kịch bản tại đây..."
             />

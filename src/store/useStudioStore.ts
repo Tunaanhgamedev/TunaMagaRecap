@@ -1280,17 +1280,40 @@ export const useStudioStore = create<StudioState>()(
     const customPrompt = get().customScriptPrompt || '';
     const genre = get().mangaGenre || 'hunter_system';
     const protagonist = get().protagonistName || '';
+    const currentPages = get().pages || [];
 
     // Collect all real dialogues extracted from OCR pages
-    const dialogues = get().pages.flatMap((p) =>
+    const dialogues = currentPages.flatMap((p) =>
       p.panels.flatMap((panel) =>
         panel.dialogues.map((d) => ({
           pageIndex: p.pageIndex,
           speaker: d.speaker || 'Nhân vật',
           text: d.translatedText || d.text,
+          originalText: d.originalText,
+          translatedText: d.translatedText,
         }))
       )
     );
+
+    // Format structured pages for backend API
+    const pagesPayload = currentPages.map((p) => ({
+      pageIndex: p.pageIndex,
+      imageUrl: p.imageUrl,
+      ocrProcessed: p.ocrProcessed,
+      panels: p.panels.map((pan) => ({
+        panelIndex: pan.panelIndex,
+        suggestedCameraEffect: pan.suggestedCameraEffect || 'zoom_in',
+        aiDescription: pan.aiDescription || '',
+        dialogues: pan.dialogues.map((d) => ({
+          speaker: d.speaker || 'Nhân vật',
+          text: d.translatedText || d.text || '',
+          originalText: d.originalText || '',
+          translatedText: d.translatedText || '',
+          emotion: d.emotion || 'neutral',
+          textType: d.textType || 'DIALOGUE',
+        })),
+      })),
+    }));
 
     try {
       const res = await fetch(`${API_BASE_URL}/ai/script`, {
@@ -1301,6 +1324,7 @@ export const useStudioStore = create<StudioState>()(
           seriesName: sName,
           chapterNumber: cNum,
           dialogues,
+          pages: pagesPayload,
           customPrompt,
           genre,
           protagonist,
@@ -1318,7 +1342,7 @@ export const useStudioStore = create<StudioState>()(
               { id: 'sc-1', speaker: 'Dẫn Chuyện', text: data.script.slice(0, 100), emotion: 'excited', estDurationSec: 5.0 },
             ],
             wordCount: data.wordCount || data.script.split(/\s+/).length,
-            estReadTimeMinutes: Math.ceil((data.wordCount || 850) / 250),
+            estReadTimeMinutes: Math.ceil((data.wordCount || 850) / 200),
           },
         });
         return;
@@ -1327,99 +1351,227 @@ export const useStudioStore = create<StudioState>()(
 
     const cleanDialogues = dialogues.filter((d) => {
       const txt = (d.text || '').toLowerCase().trim();
-      return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất văn bản');
+      return (
+        txt &&
+        !txt.includes('quét chữ thật') &&
+        !txt.includes('quet chu that') &&
+        !txt.includes('trích xuất văn bản') &&
+        !txt.includes('chờ quét ocr')
+      );
     });
 
-    const hero = protagonist || (cleanDialogues[0]?.speaker && cleanDialogues[0].speaker !== 'Nhân vật' ? cleanDialogues[0].speaker : 'Nhân Vật Chính');
+    const hero =
+      protagonist ||
+      (cleanDialogues[0]?.speaker && cleanDialogues[0].speaker !== 'Nhân vật' && cleanDialogues[0].speaker !== 'Dẫn Chuyện'
+        ? cleanDialogues[0].speaker
+        : 'Nhân Vật Chính');
 
-    const genreMeta: Record<string, { name: string; trope: string; combat: string; sfx: string }> = {
+    const genreMeta: Record<
+      string,
+      { name: string; trope: string; combat: string; sfx: string; actionBeats: string[] }
+    > = {
       hunter_system: {
         name: 'Thợ Săn / Hệ Thống / Thức Tỉnh',
         trope: 'Hầm ngục u tối với làn sương ma pháp lơ lửng, quái vật hung tợn gầm thét, ánh sáng xanh lục từ cửa sổ hệ thống phát sáng trước mắt nhân vật chính.',
         combat: 'Những đòn vung dao găm xé gió, ma lực đen tím bùng nổ bao phủ toàn thân, tốc độ di chuyển vượt qua giới hạn âm thanh.',
         sfx: '[BGM: Nhạc điện tử dồn dập, tiếng bass đập mạnh theo từng bước chân]',
+        actionBeats: [
+          'Góc máy lia nhanh từ dưới lên, bắt trọn khoảnh khắc nhân vật chính né đòn vuốt quái vật trong gang tấc.',
+          'Hiệu ứng ma lực tím đen bùng nổ, từng đòn chém chuẩn xác phá hủy lõi ma thạch của quái vật.',
+          'Cửa sổ thông báo hệ thống nhấp nháy liên tục, các chỉ số sức mạnh tăng vọt ngoài tầm kiểm soát.',
+          'Đôi mắt nhân vật chính phát ra luồng sáng xanh sắc lạnh, áp lực ma lực đè bẹp toàn bộ đối thủ trong khu vực.',
+        ],
       },
       cultivation_wuxia: {
         name: 'Tu Tiên / Huyền Huyễn / Kiếm Hiệp',
         trope: 'Mây mù bao phủ đỉnh núi tông môn hùng vĩ, linh khí cuồn cuộn hóa rồng bay lượn, kiếm khí sắc bén rực rỡ cắt đứt cả bầu trời.',
         combat: 'Tung kiếm xuất chiêu với vạn đạo kiếm quang, đan điền bộc phát chân khí cuồng bạo làm rung chuyển cả càn khôn đại địa.',
         sfx: '[BGM: Nhạc cổ phong hùng tráng kết hợp sáo trúc và tiếng trống trận]',
+        actionBeats: [
+          'Vạn đạo kiếm quang xoay quanh thân thể, kiếm khí rạch nát không gian lao thẳng về phía kẻ thù.',
+          'Linh lực trong đan điền dâng trào như sóng thần, phá vỡ cảnh giới giam cầm bấy lâu nay.',
+          'Chưởng phong cuồng bạo giáng xuống từ chín tầng mây, chấn động cả sơn hà tông môn.',
+          'Ánh mắt uy nghiêm nhìn thấu hồng trần, chỉ một chỉ điểm ra đã dập tắt toàn bộ sát khí của địch nhân.',
+        ],
       },
       isekai_fantasy: {
         name: 'Isekai / Chuyển Sinh / Ma Pháp',
         trope: 'Lục địa fantasy tráng lệ với các tòa lâu đài nguy nga, vòng tròn ma pháp phát sáng đa sắc dưới chân, những loài sinh vật huyền bí trong rừng sâu.',
         combat: 'Niệm chú cổ ngữ kích hoạt đại ma pháp cấp cấm thuật, tia sét và ngọn lửa rực cháy thiêu rụi toàn bộ binh đoàn quái vật.',
         sfx: '[BGM: Nhạc giao hưởng fantasy huyền ảo, đẩy dần nhịp độ kịch tính]',
+        actionBeats: [
+          'Vòng tròn ma pháp nhiều tầng xoay chuyển dưới chân, ánh sáng rực rỡ soi sáng cả bầu trời đêm.',
+          'Niệm nhanh cổ ngữ, ngọn lửa cấm thuật bùng cháy dữ dội thiêu rụi toàn bộ hàng phòng ngự đối phương.',
+          'Các loại kỹ năng gian lận (cheat skills) kích hoạt đồng thời, thay đổi hoàn toàn quy luật của thế giới.',
+          'Nụ cười tự tin khi đối mặt với ma vương, đòn kết liễu mang sức mạnh vượt trội giải phóng lục địa.',
+        ],
       },
       regression_revenge: {
         name: 'Trùng Sinh / Báo Thù / Vả Mặt',
         trope: 'Khung tranh đối lập giữa cái chết thảm khốc của kiếp trước và ánh mắt lạnh lùng, sắc lẹm đầy sát khí khi mở mắt tỉnh lại ở quá khứ.',
         combat: 'Ra tay quyết đoán, tính toán trước từng đường đi nước bước của kẻ địch khiến chúng rơi vào tuyệt vọng không kịp trở tay.',
         sfx: '[BGM: Tiếng đàn cello u tối, nhịp tim đập nghẹt thở]',
+        actionBeats: [
+          'Ký ức kiếp trước ùa về trong tích tắc, từng bước đi của kẻ thù đều nằm trọn trong lòng bàn tay.',
+          'Ra đòn dứt khoát không một động tác thừa, tước đi toàn bộ lợi thế mà kẻ phản bội đang tự mãn.',
+          'Ánh mắt lạnh như băng giá nhìn kẻ thù ngã gục, từng món nợ máu năm xưa giờ đây được thanh toán sòng phẳng.',
+          'Cười khẩy trước sự giãy giụa vô vọng của địch thủ, màn lật kèo vả mặt khiến người xem thỏa mãn tột độ.',
+        ],
       },
       school_urban: {
         name: 'Bạo Lực Học Đường / Đô Thị / Hành Động',
         trope: 'Góc phố đêm ẩm ướt hoặc hành lang trường học căng thẳng, ánh đèn đường le lói soi rọi ánh mắt kiên định của nhân vật chính.',
         combat: 'Những cú đấm móc uy lực, đòn bẻ khớp chuẩn xác và kỹ năng cận chiến thực dụng mang lại cảm giác thỏa mãn tột cùng.',
         sfx: '[BGM: Nhạc rock đường phố sôi động, tiếng va chạm kim loại đanh thép]',
+        actionBeats: [
+          'Cú đấm thẳng đầy uy lực phá tan thế phòng thủ, tiếng va chạm đanh thép dội vang khắp hành lang.',
+          'Né đòn linh hoạt rồi bẻ khớp đối thủ trong chớp mắt, phong thái áp đảo của kẻ thống trị đường phố.',
+          'Ánh mắt kiên định không hề chớp trước đám đông bao vây, từng tên một lần lượt ngã gục dưới chân.',
+          'Đứng sừng sững giữa vòng vây kẻ địch, khẳng định uy quyền và trật tự mới cho toàn trường.',
+        ],
       },
       horror_survival: {
         name: 'Kinh Dị / Sinh Tồn / Thần Bí',
         trope: 'Tông màu đen trắng tương phản u uất, bóng ma dị dạng rình rập sau lưng nhân vật, những vết máu loang lổ trên tường.',
         combat: 'Cuộc rượt đuổi nghẹt thở trong không gian hẹp, những đòn phản kháng liều mạng giữa lằn ranh sự sống và cái chết.',
         sfx: '[BGM: Tiếng thì thầm ma quái, hiệu ứng âm thanh rùng rợn bất ngờ]',
+        actionBeats: [
+          'Bóng đen dị dạng trườn dọc theo hành lang, tiếng thở dốc nghẹt thở khi trốn sau góc khuất.',
+          'Khoảnh khắc giật mình kinh hãi khi quay đầu lại, đòn phản kháng trong vô thức xé toạc bóng tối.',
+          'Những mảnh ghép bí ẩn dần hé lộ nguồn gốc lời nguyền kinh hoàng đang nuốt chửng từng nạn nhân.',
+          'Chạy đua với thần chết từng giây từng phút để tìm ra lối thoát duy nhất còn sót lại.',
+        ],
       },
       romance_drama: {
         name: 'Ngôn Tình / Cung Đấu / Drama',
         trope: 'Khung cảnh hoa lệ, ánh mắt chan chứa tình cảm hoặc giọt nước mắt rơi nghiêng của nhân vật nữ trong hoàng cung nguy nga.',
         combat: 'Những màn đấu khẩu sắc sảo, vạch trần âm mưu thâm hiểm của kẻ gian và bảo vệ người mình yêu thương.',
         sfx: '[BGM: Nhạc piano da diết, sâu lắng chạm đến cảm xúc]',
+        actionBeats: [
+          'Ánh mắt giao nhau giữa vũ hội hoàng gia hoa lệ, rung động đầu tiên sau bao tháng ngày xa cách.',
+          'Vạch trần bức màn âm mưu hãm hại bằng những chứng cứ đanh thép không thể chối cãi.',
+          'Cái ôm siết chặt giữa cơn mưa giông, xóa tan mọi hiểu lầm và rào cản ngăn cách bấy lâu.',
+          'Khẳng định vị thế độc tôn, khiến kẻ ác phải trả giá cho những dã tâm đã gây ra.',
+        ],
       },
       mystery_mindgame: {
         name: 'Trinh Thám / Đấu Trí',
         trope: 'Cận cảnh đôi mắt tập trung cao độ, các mảnh ghép manh mối xoay quanh tâm trí, ánh đèn bàn soi sáng hồ sơ vụ án.',
         combat: 'Màn lật tẩy danh tính hung thủ với những lập luận sắc bén không tì vết, ép đối phương vào chân tường.',
         sfx: '[BGM: Nhạc jazz trinh thám bí ẩn kết hợp tiếng gõ đồng hồ tích tắc]',
+        actionBeats: [
+          'Từng chi tiết bất thường kết nối lại thành một chuỗi sự kiện hoàn chỉnh đến rùng mình.',
+          'Ánh mắt bối rối của nghi phạm khi bị dồn vào góc tường bởi một câu hỏi mấu chốt.',
+          'Màn giăng bẫy tâm lý đỉnh cao khiến thủ phạm tự để lộ sơ hở chí mạng mà không hề hay biết.',
+          'Lời tuyên bố đanh thép vạch trần chân tướng sự thật trước sự ngỡ ngàng của tất cả mọi người.',
+        ],
       },
       general_shonen: {
         name: 'Shonen / Phiêu Lưu Hành Động',
         trope: 'Bầu trời rộng mở rực rỡ ánh bình minh, nụ cười tự tin của nhân vật chính cùng những người đồng đội kề vai sát cánh.',
         combat: 'Bộc phát toàn bộ sức mạnh ý chí, tung tuyệt kỹ tối thượng phá tan mọi rào cản và đánh bại kẻ thù.',
         sfx: '[BGM: Nhạc anime hào hùng truyền cảm hứng mãnh liệt]',
+        actionBeats: [
+          'Ngọn lửa nhiệt huyết bùng cháy trong lồng ngực, đòn tấn công toàn lực xé toạc mọi chướng ngại.',
+          'Tiếng thét vang dội khẳng định lý tưởng và quyết tâm bảo vệ những người đồng đội thân yêu.',
+          'Bất chấp thương tích đầy mình, nhân vật chính vẫn gượng dậy với nụ cười ngạo nghễ.',
+          'Cú đấm quyết định mang theo toàn bộ niềm tin và ước mơ, hạ gục tên trùm phản diện.',
+        ],
       },
     };
 
     const curGenre = genreMeta[genre] || genreMeta.hunter_system;
+    const totalPages = currentPages.length || 1;
+    const totalPanels = currentPages.reduce((acc, p) => acc + (p.panels?.length || 2), 0);
 
     let fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n`;
     fallbackScript += `> 📌 **Thể Loại**: ${curGenre.name} | **Phong Cách**: Chuẩn YouTube / TikTok Triệu View\n`;
+    fallbackScript += `> 📊 **Quy Mô Chương**: Bao quát toàn bộ ${totalPages} Trang truyện (${totalPanels} Khung hình / Panels)\n`;
     fallbackScript += `> 🎵 **Định Hướng Âm Thanh**: ${curGenre.sfx}\n\n`;
 
-    fallbackScript += `## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU GIỮ CHÂN (5s Đầu)\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng chỉ trong Chapter ${cNum} này, một biến cố kinh hoàng đã làm đảo lộn hoàn toàn vận mệnh của ${hero} không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng thưởng thức siêu phẩm ${sName} với những tình tiết bùng nổ nhất!"\n\n`;
+    fallbackScript += `## 🎯 PHÂN ĐOẠN 0: HOOK MỞ ĐẦU GIỮ CHÂN (5s Đầu)\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng chỉ trong Chapter ${cNum} với ${totalPages} trang truyện này, một biến cố kinh hoàng đã làm đảo lộn hoàn toàn vận mệnh của ${hero} không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng theo dõi toàn bộ diễn biến từ trang 1 đến trang ${totalPages} của siêu phẩm ${sName}!"\n\n`;
 
-    fallbackScript += `## 🏰 PHÂN ĐOẠN 2: BỐI CẢNH & KHỞI ĐẦU CUỘC CHẠM TRÁN\n`;
-    fallbackScript += `*🎨 [Hình Ảnh & Bối Cảnh]*: ${curGenre.trope} Từng khung tranh mở ra không gian tráng lệ nhưng cũng đầy căng thẳng, báo hiệu một cơn bão sắp ập tới.\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Mở đầu Chapter ${cNum}, nhịp truyện ngay lập tức được đẩy lên cao trào khi các nhân vật bước vào tình thế ngàn cân treo sợi tóc. Mọi ánh nhìn đều đổ dồn về phía ${hero}."\n\n`;
+    const actCount = totalPages <= 10 ? totalPages : 5;
+    const actNames = [
+      'HỒI 1: BỐI CẢNH & KHỞI ĐẦU CUỘC CHẠM TRÁN',
+      'HỒI 2: THÂM NHẬP KHÔNG GIAN NGUY HIỂM & ĐỐI MẶT THỬ THÁCH',
+      'HỒI 3: CAO TRÀO BÙNG NỔ & XUNG ĐỘT TỘT ĐỈNH',
+      'HỒI 4: BIẾN SỐ BẤT NGỜ & CÚ LẬT KÈO NGOẠN MỤC',
+      'HỒI 5: THỨC TỈNH SỨC MẠNH & KHÉP LẠI CHAPTER',
+    ];
 
-    fallbackScript += `## ⚔️ PHÂN ĐOẠN 3: DIỄN BIẾN CAO TRÀO & XUNG ĐỘT TỘT ĐỈNH\n`;
-    fallbackScript += `*🎨 [Hình Ảnh Hành Động]*: ${curGenre.combat}\n\n`;
+    const pagesPerAct = Math.ceil(totalPages / actCount);
 
-    if (cleanDialogues.length > 0) {
-      cleanDialogues.slice(0, 8).forEach((d) => {
-        const spk = d.speaker && d.speaker !== 'Nhân vật' ? d.speaker : hero;
-        fallbackScript += `**[Trang ${d.pageIndex || 1} - ${spk}]**: "${d.text || d.translatedText}"\n\n`;
-      });
-    } else {
-      fallbackScript += `**[${hero}]**: "Dù đối thủ có là ai đi chăng nữa, hôm nay ta tuyệt đối sẽ không lùi bước!"\n\n`;
-      fallbackScript += `**[Kẻ Địch]**: "Hừ! Ngươi nghĩ mình có đủ tư cách để đứng trước mặt ta sao? Hãy nếm thử sức mạnh thực sự đi!"\n\n`;
+    for (let actIdx = 0; actIdx < actCount; actIdx++) {
+      const startPageIdx = actIdx * pagesPerAct;
+      const endPageIdx = Math.min(totalPages, (actIdx + 1) * pagesPerAct);
+      const actPages = currentPages.slice(startPageIdx, endPageIdx);
+
+      if (actPages.length === 0) continue;
+
+      const actTitle =
+        actCount === totalPages
+          ? `HỒI ${actIdx + 1}: TRANG ${actPages[0].pageIndex}`
+          : `${actNames[actIdx] || `HỒI ${actIdx + 1}`} (Trang ${actPages[0].pageIndex} - ${actPages[actPages.length - 1].pageIndex})`;
+
+      fallbackScript += `## 📜 ${actTitle}\n`;
+      const beatDesc = curGenre.actionBeats[actIdx % curGenre.actionBeats.length];
+      fallbackScript += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? curGenre.trope : beatDesc}\n`;
+
+      for (const page of actPages) {
+        const pNum = page.pageIndex;
+        const panels =
+          Array.isArray(page.panels) && page.panels.length > 0
+            ? page.panels
+            : [
+                { panelIndex: 1, suggestedCameraEffect: 'zoom_in', dialogues: [] },
+                { panelIndex: 2, suggestedCameraEffect: 'pan_down', dialogues: [] },
+              ];
+
+        const pageDialogues = cleanDialogues.filter((d) => (d.pageIndex || 1) === pNum);
+
+        fallbackScript += `### 📄 Trang ${pNum} (${panels.length} Panels)\n`;
+
+        for (const pan of panels) {
+          const panNum = pan.panelIndex || 1;
+          const cam = pan.suggestedCameraEffect || (panNum === 1 ? 'dramatic_zoom' : 'pan_right');
+          const panDialogues = (pan.dialogues || []).filter((d) => {
+            const txt = (d.text || d.translatedText || '').toLowerCase().trim();
+            return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất');
+          });
+
+          if (pan.aiDescription && !pan.aiDescription.includes('Bấm "Quét Chữ')) {
+            fallbackScript += `*🎨 [Trang ${pNum} • Panel ${panNum} (${cam})]*: ${pan.aiDescription}\n`;
+          } else {
+            const actionLine = curGenre.actionBeats[(pNum + panNum) % curGenre.actionBeats.length];
+            fallbackScript += `*🎨 [Trang ${pNum} • Panel ${panNum} (${cam})]*: ${actionLine}\n`;
+          }
+
+          if (panDialogues.length > 0) {
+            for (const d of panDialogues) {
+              const spk = d.speaker && d.speaker !== 'Nhân vật' && d.speaker !== 'Dẫn Chuyện' ? d.speaker : hero;
+              fallbackScript += `**[${spk}]**: "${d.translatedText || d.text}"\n`;
+            }
+          }
+        }
+
+        if (pageDialogues.length === 0) {
+          if (pNum === 1) {
+            fallbackScript += `**[Dẫn Chuyện]**: "Ngay từ những khung hình đầu tiên của Trang ${pNum}, không khí căng thẳng đã bao trùm lấy ${hero} cùng toàn bộ chiến trường."\n`;
+          } else if (pNum === totalPages) {
+            fallbackScript += `**[Dẫn Chuyện]**: "Khung tranh cuối cùng của Trang ${pNum} khép lại với ánh mắt rực lửa của ${hero}, mở ra cánh cửa dẫn tới những thử thách kinh hoàng hơn ở chương sau!"\n`;
+          } else if (pNum % 5 === 0) {
+            fallbackScript += `**[Dẫn Chuyện]**: "Tại Trang ${pNum}, nhịp độ trận chiến được đẩy lên mức cao nhất, từng đòn tấn công va đập dữ dội làm rung chuyển toàn bộ không gian!"\n`;
+          }
+        }
+
+        fallbackScript += `\n`;
+      }
     }
 
-    fallbackScript += `## 📊 PHÂN ĐOẠN 4: CÚ LẬT KÈO NGOẠN MỤC & PHÂN TÍCH CHIẾN THUẬT\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Chính vào khoảnh khắc kẻ thù tưởng chừng đã nắm chắc phần thắng, một biến số bất ngờ đã xuất hiện! Sự kết hợp hoàn hảo giữa ý chí sắt đá và khả năng phân tích nhạy bén đã giúp ${hero} xoay chuyển tình thế một cách ngoạn mục!"\n\n`;
-
-    fallbackScript += `## 🔔 PHÂN ĐOẠN 5: HỒI KẾT KỊCH TÍNH & KÊU GỌI ĐĂNG KÝ (CLIFFHANGER)\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Trận chiến Chapter ${cNum} tạm thời khép lại với nụ cười bí ẩn, nhưng một bí mật đen tối hơn đang chờ đón chúng ta ở Chapter ${cNum + 1}. Bạn dự đoán điều gì sẽ xảy ra tiếp theo? Hãy để lại BÌNH LUẬN bên dưới, bấm LIKE và ĐĂNG KÝ KÊNH 🔔 để không bỏ lỡ video recap mới nhất trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"\n`;
+    fallbackScript += `## 🔔 HỒI KẾT: TỔNG KẾT & KÊU GỌI ĐĂNG KÝ (CLIFFHANGER)\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Toàn bộ ${totalPages} trang truyện của Chapter ${cNum} đã khép lại với những diễn biến nghẹt thở. Liệu trong Chapter ${cNum + 1}, ${hero} sẽ đối mặt với thế lực bí ẩn nào tiếp theo? Hãy để lại BÌNH LUẬN cảm nghĩ của bạn bên dưới, bấm LIKE và ĐĂNG KÝ KÊNH 🔔 để không bỏ lỡ video recap mới nhất trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại các bạn trong video tiếp theo!"\n`;
 
     set({
       scriptData: {

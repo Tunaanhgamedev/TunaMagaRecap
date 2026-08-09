@@ -246,6 +246,7 @@ export async function generateMangaRecapScript({
   chapterNumber = 1,
   mode = 'review',
   dialogues = [],
+  pages = [],
   customPrompt = '',
   apiKey = '',
   genre = null,
@@ -253,28 +254,47 @@ export async function generateMangaRecapScript({
 }) {
   const key = apiKey || process.env.GEMINI_API_KEY || '';
   const cleanDialogues = cleanRawDialogues(dialogues);
+  const totalPages = Array.isArray(pages) && pages.length > 0 ? pages.length : Math.max(1, ...cleanDialogues.map((d) => d.pageIndex || 1));
 
-  const dialoguesFormatted = cleanDialogues.length > 0
-    ? cleanDialogues.map((d, i) => `[Trang ${d.pageIndex || 1} - ${d.speaker || 'Nhân vật'}]: "${d.text || d.translatedText || ''}"`).join('\n')
-    : `(Diễn biến thực tế Chapter ${chapterNumber} bộ ${seriesName})`;
+  // Build full page & panel overview for AI
+  let pagesOverview = '';
+  if (Array.isArray(pages) && pages.length > 0) {
+    pagesOverview = pages
+      .map((p) => {
+        const pDialogues = cleanRawDialogues(p.panels?.flatMap((pan) => pan.dialogues || []) || []);
+        const pScenes = p.panels?.map((pan) => `[Panel ${pan.panelIndex} (${pan.suggestedCameraEffect || 'zoom_in'})]`).join(' ') || '';
+        const dText = pDialogues.length > 0
+          ? pDialogues.map((d) => `"${d.speaker || 'Nhân vật'}: ${d.text || d.translatedText}"`).join(', ')
+          : '(Cảnh hành động / Diễn biến không lời)';
+        return `Trang ${p.pageIndex}: ${pScenes} -> Thoại: ${dText}`;
+      })
+      .join('\n');
+  } else if (cleanDialogues.length > 0) {
+    pagesOverview = cleanDialogues
+      .map((d) => `[Trang ${d.pageIndex || 1} - ${d.speaker || 'Nhân vật'}]: "${d.text || d.translatedText || ''}"`)
+      .join('\n');
+  } else {
+    pagesOverview = `(Diễn biến thực tế Chapter ${chapterNumber} bộ ${seriesName}, tổng cộng ${totalPages} trang truyện)`;
+  }
 
-  const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok với triệu lượt xem.
-Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính dựa trên nội dung cốt truyện, hình ảnh và thoại thực tế từ Chapter ${chapterNumber} bộ truyện "${seriesName}".
+  const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok với hàng triệu lượt xem.
+Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính bao quát TOÀN BỘ từ Trang 1 đến Trang ${totalPages} của Chapter ${chapterNumber} bộ truyện "${seriesName}".
 
 QUY TẮC BẮT BUỘC:
-1. **Dựa vào hình ảnh & cốt truyện thật**: Miêu tả trực quan bối cảnh, hành động của nhân vật, bầu không khí u tối/hào nhoáng của từng khung tranh.
-2. **Không đưa câu lệnh kỹ thuật vào kịch bản**: Tuyệt đối KHÔNG xuất hiện các câu như "Bấm quét chữ", "OCR", "trích xuất văn bản".
-3. **Phân vai rõ ràng**: [Dẫn Chuyện], [Tên Nhân Vật], [Gợi Ý Nhạc/SFX].
-4. **Hook 5s Đầu Triệu View**: Câu mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
-5. **Cliffhanger cuối video**: Kêu gọi Đăng ký kênh, Like và Bình luận.
+1. **Bao quát đầy đủ tất cả ${totalPages} trang truyện**: Tuyệt đối không dừng giữa chừng. Dùng vòng lặp tư duy duyệt qua từng hồi truyện từ Trang 1 đến Trang ${totalPages}.
+2. **Dựa vào hình ảnh & cốt truyện thật**: Miêu tả trực quan bối cảnh (*🎨 [Hình Ảnh Khung Tranh]*), góc máy camera, hành động của nhân vật cho từng phân đoạn.
+3. **Không đưa câu lệnh kỹ thuật vào kịch bản**: Tuyệt đối KHÔNG xuất hiện các câu như "Bấm quét chữ", "OCR", "trích xuất văn bản".
+4. **Phân vai rõ ràng**: [Dẫn Chuyện], [${protagonist || 'Nhân Vật Chính'}], [Kẻ Địch], [Gợi Ý Nhạc/SFX].
+5. **Hook 5s Đầu Triệu View**: Câu mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
+6. **Cliffhanger cuối video**: Kêu gọi Đăng ký kênh, Like và Bình luận.
 
-DANH SÁCH THOẠI TRÍCH XUẤT TỪ TRUYỆN:
-${dialoguesFormatted}
+DANH SÁCH CHI TIẾT TỪNG TRANG TRUYỆN (${totalPages} TRANG):
+${pagesOverview}
 
 PHONG CÁCH KỊCH BẢN YÊU CẦU (${mode.toUpperCase()}):
 ${customPrompt ? `YÊU CẦU ĐẶC BIỆT TỪ ĐẠO DIỄN: "${customPrompt}"` : ''}
 
-Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, văn phong cực cuốn!`;
+Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, chất lượng đỉnh cao!`;
 
   if (key) {
     for (const model of MODEL_CANDIDATES) {
@@ -301,12 +321,13 @@ Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO Y
     }
   }
 
-  // Fallback to Universal Multi-Genre Story & Visual Narrative Generator
+  // Fallback to Universal Multi-Genre Story & Visual Narrative Generator with full page loop
   return generateUniversalMangaScript({
     seriesName,
     chapterNumber,
     mode,
     dialogues: cleanDialogues,
+    pages,
     customPrompt,
     genre,
     protagonist,

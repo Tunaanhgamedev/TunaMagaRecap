@@ -629,16 +629,22 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         const seriesName = payload.seriesName || 'Truyện Tranh Mới';
         const chapterNumber = payload.chapterNumber || 1;
         const dialogues = payload.dialogues || [];
+        const pages = payload.pages || [];
         const customPrompt = payload.customPrompt || '';
         const apiKey = payload.apiKey || '';
+        const genre = payload.genre || null;
+        const protagonist = payload.protagonist || '';
 
         const generatedScript = await AIVisionEngine.generateMangaRecapScript({
           seriesName,
           chapterNumber,
           mode,
           dialogues,
+          pages,
           customPrompt,
           apiKey,
+          genre,
+          protagonist,
         });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
