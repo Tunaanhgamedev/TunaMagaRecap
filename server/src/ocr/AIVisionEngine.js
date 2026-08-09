@@ -248,6 +248,8 @@ export async function generateMangaRecapScript({
   dialogues = [],
   customPrompt = '',
   apiKey = '',
+  genre = null,
+  protagonist = '',
 }) {
   const key = apiKey || process.env.GEMINI_API_KEY || '';
   const cleanDialogues = cleanRawDialogues(dialogues);
@@ -306,6 +308,8 @@ Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO Y
     mode,
     dialogues: cleanDialogues,
     customPrompt,
+    genre,
+    protagonist,
   });
 }
 

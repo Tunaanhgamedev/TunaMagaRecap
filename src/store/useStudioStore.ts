@@ -1433,37 +1433,6 @@ export const useStudioStore = create<StudioState>()(
         estReadTimeMinutes: Math.ceil(fallbackScript.split(/\s+/).length / 200),
       },
     });
-  },🔔 để đón xem Chapter 2 trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại!"`;
-    } else {
-      fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}
-
-## 🎯 PHÂN ĐOẠN 1: HOOK MỞ ĐẦU TRIỆU VIEW (5s Đầu)
-**[Dẫn Chuyện]**: "Chào mừng các bạn đến với TunaMagaRecap! Trong Chapter ${cNum} của bộ truyện ${sName} hôm nay, chúng ta cùng theo dõi những diễn biến bùng nổ, gay cấn và các màn combat đỉnh cao nhất!"
-
-## 📖 PHÂN ĐOẠN 2: BỐI CẢNH & KHỞI ĐẦU CUỘC CHIẾN
-*🎨 [Hình Ảnh Khung Tranh]*: Từng khung tranh khắc họa bầu không khí căng thẳng bao trùm khi các nhân vật chính bước vào trận chiến quyết định.
-**[Dẫn Chuyện]**: "Ngay từ những trang đầu tiên, tác giả đã đẩy nhịp truyện lên cao trào khi thế trận bất ngờ bị đảo chiều hoàn toàn."
-
-${cleanDialogues.length > 0
-  ? `## 💬 PHÂN ĐOẠN 3: ĐỐI THOẠI TRỰC TIẾP TỪ TRUYỆN\n` + cleanDialogues.slice(0, 8).map((d) => `**[Trang ${d.pageIndex} - ${d.speaker}]**: "${d.text}"`).join('\n\n')
-  : `## ⚔️ PHÂN ĐOẠN 3: CAO TRÀO ĐỐI ĐẦU & THỨC TỈNH\n**[Dẫn Chuyện]**: "Khoảnh khắc sinh tử buộc nhân vật phải bộc phát toàn bộ tiềm năng ẩn giấu, tung ra đòn đánh quyết định xé toạc màn đêm!"`}
-
-## 🔔 PHÂN ĐOẠN 4: HỒI KẾT & KÊU GỌI ĐĂNG KÝ KÊNH
-**[Dẫn Chuyện]**: "Trận chiến Chapter ${cNum} tạm khép lại nhưng lại mở ra một bí ẩn lớn cho Chapter ${cNum + 1}. Đừng quên bấm Like & Subscribe kênh để đồng hành cùng TunaMagaRecap trong những video tiếp theo nhé!"`;
-    }
-
-    set({
-      scriptData: {
-        mode,
-        title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
-        content: fallbackScript,
-        chunks: [
-          { id: 'sc-1', speaker: 'Dẫn Chuyện', text: `Chào mừng các bạn đến với video review ${sName} Chapter ${cNum}!`, emotion: 'excited', estDurationSec: 5.0 },
-        ],
-        wordCount: fallbackScript.split(/\s+/).length,
-        estReadTimeMinutes: Math.ceil(fallbackScript.split(/\s+/).length / 200),
-      },
-    });
   },
   updateScriptContent: (content) =>
     set((state) =>
