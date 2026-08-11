@@ -62,6 +62,12 @@ export const TimelineView: React.FC = () => {
     isCompilationMode,
     mergeChaptersToCompilation,
     exitCompilationMode,
+    chapterVideoBlobs,
+    compilationVideoUrl,
+    isConcattingVideos,
+    concatProgress,
+    saveChapterVideoBlob,
+    renderAndConcatVideos,
   } = useStudioStore();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -469,6 +475,12 @@ export const TimelineView: React.FC = () => {
         const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
         const blob = new Blob(chunks, { type: mimeType.includes('mp4') ? 'video/mp4' : 'video/webm' });
         const downloadUrl = URL.createObjectURL(blob);
+
+        // Save video blob for future compilation/merging
+        if (selectedProject?.id && !isCompilationMode) {
+          const videoBlobUrl = URL.createObjectURL(blob);
+          saveChapterVideoBlob(selectedProject.id, videoBlobUrl);
+        }
 
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -1025,6 +1037,53 @@ export const TimelineView: React.FC = () => {
         </div>
       </div>
 
+      {/* Compilation Video Preview & Download */}
+      {compilationVideoUrl && isCompilationMode && (
+        <div className="glass-panel border border-emerald-500/30 rounded-xl p-4 space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-emerald-300 flex items-center space-x-2">
+              <Film className="w-4 h-4 text-emerald-400" />
+              <span>✅ Video Compilation Hoàn Tất</span>
+            </h3>
+            <button
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = compilationVideoUrl;
+                a.download = `${selectedProject?.seriesName || 'Manga'}_Full_Compilation.webm`;
+                a.click();
+              }}
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow transition-all active:scale-95 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Tải Video Compilation</span>
+            </button>
+          </div>
+          <video
+            src={compilationVideoUrl}
+            controls
+            className="w-full rounded-lg border border-slate-700 max-h-[320px]"
+          />
+        </div>
+      )}
+
+      {/* Concat Progress Indicator */}
+      {isConcattingVideos && (
+        <div className="glass-panel border border-amber-500/30 rounded-xl p-4 space-y-2 mt-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-bold text-amber-300">
+              Đang ghép video... Chapter {concatProgress.current}/{concatProgress.total}
+            </span>
+          </div>
+          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
+              style={{ width: `${concatProgress.percent}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Merge Chapters Modal */}
       {isMergeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -1043,12 +1102,14 @@ export const TimelineView: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-slate-400">
-              Chọn các chapter muốn ghép. Hệ thống sẽ nối tuần tự tất cả trang ảnh, panel, lời thoại và kịch bản thành 1 video dài.
+              Chọn các chapter muốn ghép. Các chapter <span className="text-emerald-400 font-bold">đã render video</span> sẽ được ghép thành 1 file video dài.
+              Chapter <span className="text-red-400 font-bold">chưa render</span> cần xuất video trước khi ghép.
             </p>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {projects.map((p) => {
                 const isChecked = selectedChapterIds.includes(p.id);
+                const hasVideo = !!chapterVideoBlobs[p.id];
                 return (
                   <label
                     key={p.id}
@@ -1081,6 +1142,16 @@ export const TimelineView: React.FC = () => {
                         Chapter {p.chapterNumber} • ~{Math.round((p.durationEst || 0) / 60)} phút
                       </div>
                     </div>
+                    {/* Render status badge */}
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        hasVideo
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      }`}
+                    >
+                      {hasVideo ? '✅ Đã render' : '❌ Chưa render'}
+                    </span>
                   </label>
                 );
               })}
@@ -1098,7 +1169,8 @@ export const TimelineView: React.FC = () => {
               </label>
 
               <span className="text-[10px] text-cyan-400 font-mono">
-                {selectedChapterIds.length} chapter đã chọn
+                {selectedChapterIds.length} chapter đã chọn •{' '}
+                {selectedChapterIds.filter((id) => !!chapterVideoBlobs[id]).length} đã render
               </span>
             </div>
 
@@ -1109,18 +1181,37 @@ export const TimelineView: React.FC = () => {
               >
                 Hủy
               </button>
+
+              {/* Primary: Concat real video files */}
               <button
                 onClick={async () => {
                   if (selectedChapterIds.length < 2) return;
-                  await mergeChaptersToCompilation(selectedChapterIds, { includeBumpers: mergeBumpers });
                   setIsMergeModalOpen(false);
+                  await renderAndConcatVideos(selectedChapterIds, { includeBumpers: mergeBumpers });
                 }}
-                disabled={selectedChapterIds.length < 2}
+                disabled={
+                  selectedChapterIds.length < 2 ||
+                  selectedChapterIds.filter((id) => !!chapterVideoBlobs[id]).length < 2 ||
+                  isConcattingVideos
+                }
                 className="flex-1 text-xs font-bold text-white py-2 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 transition-all active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                🎬 Hợp Nhất & Chiếu Video Dài ({selectedChapterIds.length} chap)
+                🎬 Ghép Video Thật ({selectedChapterIds.filter((id) => !!chapterVideoBlobs[id]).length} video)
               </button>
             </div>
+
+            {/* Helper: Merge page-level fallback */}
+            <button
+              onClick={async () => {
+                if (selectedChapterIds.length < 2) return;
+                await mergeChaptersToCompilation(selectedChapterIds, { includeBumpers: mergeBumpers });
+                setIsMergeModalOpen(false);
+              }}
+              disabled={selectedChapterIds.length < 2}
+              className="w-full text-[10px] text-slate-500 hover:text-slate-300 py-1.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer disabled:opacity-40"
+            >
+              Hoặc: Ghép mức trang ảnh (preview timeline, chưa cần render video)
+            </button>
           </div>
         </div>
       )}

@@ -139,6 +139,7 @@ export interface Project {
   scriptData?: ScriptData | null;
   clips?: TimelineClip[];
   subtitles?: SubtitleItem[];
+  renderedVideoUrl?: string; // blob:// URL of rendered chapter video
 }
 
 export type CompilationTransition = 'fade' | 'slide' | 'none';
@@ -149,10 +150,17 @@ export interface CompilationChapterEntry {
   order: number;
 }
 
+export interface ChapterVideoEntry {
+  projectId: string;
+  project: Project;
+  videoUrl: string; // blob:// URL of the rendered video
+}
+
 export interface CompilationConfig {
   id: string;
   title: string;
   chapters: CompilationChapterEntry[];
+  chapterVideos: ChapterVideoEntry[]; // actual video blobs for concatenation
   includeBumpers: boolean;
   bumperDurationSec: number;
   transition: CompilationTransition;

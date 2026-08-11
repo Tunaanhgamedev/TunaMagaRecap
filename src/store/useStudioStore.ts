@@ -27,6 +27,7 @@ import {
   ThumbnailConfig,
   AIPluginConfig,
   CompilationConfig,
+  ChapterVideoEntry,
 } from '../types/studio';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -59,10 +60,16 @@ interface StudioState {
   addMangaPages: (chapterId: string, files: File[]) => void;
   clearCurrentProject: () => void;
 
-  // Multi-Chapter Compilation
+  // Multi-Chapter Compilation (Video-Level)
   compilationConfig: CompilationConfig | null;
   isCompilationMode: boolean;
+  chapterVideoBlobs: Record<string, string>; // projectId -> blob URL
+  compilationVideoUrl: string | null; // final merged video blob URL
+  isConcattingVideos: boolean;
+  concatProgress: { current: number; total: number; percent: number };
+  saveChapterVideoBlob: (projectId: string, blobUrl: string) => void;
   mergeChaptersToCompilation: (chapterProjectIds: string[], options?: { includeBumpers?: boolean }) => Promise<void>;
+  renderAndConcatVideos: (chapterProjectIds: string[], options?: { includeBumpers?: boolean }) => Promise<void>;
   exitCompilationMode: () => void;
 
   // OCR & Panel Detection
@@ -498,9 +505,22 @@ export const useStudioStore = create<StudioState>()(
     });
   },
 
-  // Multi-Chapter Compilation
+  // Multi-Chapter Compilation (Video-Level)
   compilationConfig: null,
   isCompilationMode: false,
+  chapterVideoBlobs: {},
+  compilationVideoUrl: null,
+  isConcattingVideos: false,
+  concatProgress: { current: 0, total: 0, percent: 0 },
+  saveChapterVideoBlob: (projectId, blobUrl) => {
+    set((state) => ({
+      chapterVideoBlobs: { ...state.chapterVideoBlobs, [projectId]: blobUrl },
+      // Also update project in projects list
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, renderedVideoUrl: blobUrl } : p
+      ),
+    }));
+  },
   mergeChaptersToCompilation: async (chapterProjectIds, options) => {
     const state = get();
     const includeBumpers = options?.includeBumpers ?? true;
@@ -643,6 +663,13 @@ export const useStudioStore = create<StudioState>()(
         id: `comp-${Date.now()}`,
         title: `${firstProj.seriesName} - Full Compilation (${chapterRangeText})`,
         chapters: compilationChapters,
+        chapterVideos: chapterDataList
+          .filter((ch) => state.chapterVideoBlobs[ch.project.id])
+          .map((ch) => ({
+            projectId: ch.project.id,
+            project: ch.project,
+            videoUrl: state.chapterVideoBlobs[ch.project.id],
+          })),
         includeBumpers,
         bumperDurationSec: bumperDuration,
         transition: 'fade',
@@ -704,10 +731,170 @@ export const useStudioStore = create<StudioState>()(
       set({ scrapeStatusMessage: '❌ Lỗi khi ghép chapters. Kiểm tra kết nối server.' });
     }
   },
+  renderAndConcatVideos: async (chapterProjectIds, options) => {
+    const state = get();
+    const includeBumpers = options?.includeBumpers ?? true;
+    const videoBlobs = state.chapterVideoBlobs;
+
+    // Collect video URLs for selected chapters (sorted by chapterNumber)
+    const chaptersWithVideo = chapterProjectIds
+      .map((pid) => {
+        const proj = state.projects.find((p) => p.id === pid);
+        const videoUrl = videoBlobs[pid];
+        return proj && videoUrl ? { project: proj, videoUrl } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a!.project.chapterNumber - b!.project.chapterNumber) as {
+      project: Project;
+      videoUrl: string;
+    }[];
+
+    if (chaptersWithVideo.length < 2) {
+      set({ scrapeStatusMessage: '❌ Cần ít nhất 2 chapter đã render video để ghép.' });
+      return;
+    }
+
+    set({
+      isConcattingVideos: true,
+      concatProgress: { current: 0, total: chaptersWithVideo.length, percent: 0 },
+      scrapeStatusMessage: `⏳ Đang ghép ${chaptersWithVideo.length} video chapter...`,
+    });
+
+    try {
+      // Create an offscreen canvas for the compilation
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d')!;
+
+      // Start MediaRecorder on the canvas stream
+      const stream = (canvas as any).captureStream(60);
+      let mimeType = 'video/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+          mimeType = 'video/webm;codecs=vp9';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 6000000,
+      });
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const compilationDone = new Promise<Blob>((resolve) => {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          resolve(blob);
+        };
+      });
+
+      mediaRecorder.start();
+
+      // Play each chapter video sequentially, drawing frames to canvas
+      for (let i = 0; i < chaptersWithVideo.length; i++) {
+        const ch = chaptersWithVideo[i];
+
+        set({
+          concatProgress: {
+            current: i + 1,
+            total: chaptersWithVideo.length,
+            percent: Math.round(((i) / chaptersWithVideo.length) * 100),
+          },
+          scrapeStatusMessage: `🎬 Đang ghép Chapter ${ch.project.chapterNumber} (${i + 1}/${chaptersWithVideo.length})...`,
+        });
+
+        // Draw bumper title card if enabled and not first chapter
+        if (includeBumpers && i > 0) {
+          const bumperFrames = 180; // 3 seconds at 60fps
+          for (let f = 0; f < bumperFrames; f++) {
+            ctx.fillStyle = '#080a0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gradient overlay
+            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, '#1e1b4b');
+            grad.addColorStop(0.5, '#0f172a');
+            grad.addColorStop(1, '#164e63');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Chapter title
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 48px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Chapter ${ch.project.chapterNumber}`, canvas.width / 2, canvas.height / 2 - 20);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '24px system-ui';
+            ctx.fillText(ch.project.episodeTitle || ch.project.seriesName, canvas.width / 2, canvas.height / 2 + 30);
+
+            await new Promise((r) => requestAnimationFrame(r));
+          }
+        }
+
+        // Play the chapter video and relay its frames to canvas
+        await new Promise<void>((resolve) => {
+          const video = document.createElement('video');
+          video.src = ch.videoUrl;
+          video.muted = true;
+          video.playsInline = true;
+
+          video.onloadeddata = () => {
+            video.play();
+
+            const drawFrame = () => {
+              if (video.ended || video.paused) {
+                resolve();
+                return;
+              }
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              requestAnimationFrame(drawFrame);
+            };
+            requestAnimationFrame(drawFrame);
+          };
+
+          video.onended = () => resolve();
+          video.onerror = () => resolve(); // skip broken videos
+        });
+      }
+
+      // Stop recording
+      mediaRecorder.stop();
+      const compilationBlob = await compilationDone;
+      const compilationUrl = URL.createObjectURL(compilationBlob);
+
+      set({
+        compilationVideoUrl: compilationUrl,
+        isConcattingVideos: false,
+        concatProgress: {
+          current: chaptersWithVideo.length,
+          total: chaptersWithVideo.length,
+          percent: 100,
+        },
+        isCompilationMode: true,
+        scrapeStatusMessage: `✅ Đã ghép thành công ${chaptersWithVideo.length} chapter thành 1 video dài! Bấm tải xuống.`,
+      });
+    } catch (err: any) {
+      console.error('[Video Concat Error]', err);
+      set({
+        isConcattingVideos: false,
+        scrapeStatusMessage: `❌ Lỗi ghép video: ${err.message}`,
+      });
+    }
+  },
   exitCompilationMode: () => {
+    const oldUrl = get().compilationVideoUrl;
+    if (oldUrl) {
+      try { URL.revokeObjectURL(oldUrl); } catch (e) {}
+    }
     set({
       compilationConfig: null,
       isCompilationMode: false,
+      compilationVideoUrl: null,
       pages: [],
       scrapeStatusMessage: 'Đã thoát chế độ Compilation.',
     });

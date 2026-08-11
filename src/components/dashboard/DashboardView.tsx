@@ -27,6 +27,7 @@ export const DashboardView: React.FC = () => {
     fetchProjectsFromBackend,
     mergeChaptersToCompilation,
     isCompilationMode,
+    chapterVideoBlobs,
   } = useStudioStore();
 
   React.useEffect(() => {
@@ -197,6 +198,11 @@ export const DashboardView: React.FC = () => {
                     <span className="absolute top-1.5 left-1.5 px-1.5 py-0.2 rounded bg-slate-950/80 text-[9px] font-mono text-cyan-300">
                       Chap {project.chapterNumber}
                     </span>
+                    {chapterVideoBlobs[project.id] && (
+                      <span className="absolute top-1.5 left-16 px-1.5 py-0.2 rounded bg-emerald-950/80 text-[9px] font-mono text-emerald-300 border border-emerald-500/30">
+                        🎬 Video
+                      </span>
+                    )}
 
                     {/* Delete Project Button */}
                     <button
