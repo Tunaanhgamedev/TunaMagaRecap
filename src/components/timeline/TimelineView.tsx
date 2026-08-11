@@ -163,18 +163,32 @@ export const TimelineView: React.FC = () => {
       : duration
   );
 
+  // Helper to reliably resolve image URLs without double proxying
+  const resolveMangaImgSrc = (url: string, raw?: string) => {
+    const target = raw || url || '';
+    if (!target) return '';
+    if (target.startsWith('/api/proxy-image') || target.startsWith('http://localhost:3001/api/proxy-image')) {
+      return target.startsWith('http') ? target : `http://localhost:3001${target}`;
+    }
+    if (target.startsWith('blob:') || target.startsWith('data:')) {
+      return target;
+    }
+    if (target.startsWith('http://') || target.startsWith('https://')) {
+      return `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(target)}&referer=${encodeURIComponent('https://thuviensach.vn/')}`;
+    }
+    return target;
+  };
+
   // Pre-fetch and cache all page images into imageCacheRef
   useEffect(() => {
     pages.forEach((page) => {
       const raw = (page as any).rawImageUrl || page.imageUrl;
-      const proxyUrl = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-        raw
-      )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`;
+      const imgSrc = resolveMangaImgSrc(page.imageUrl, raw);
 
       if (!imageCacheRef.current.has(page.imageUrl)) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.src = proxyUrl;
+        img.src = imgSrc;
         img.onload = () => {
           imageCacheRef.current.set(page.imageUrl, img);
         };
@@ -252,9 +266,7 @@ export const TimelineView: React.FC = () => {
         img = new Image();
         img.crossOrigin = 'anonymous';
         const raw = activeItem.rawImageUrl || activeItem.imageUrl;
-        img.src = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-          raw
-        )}&referer=${encodeURIComponent('https://truyenqqko.com/')}`;
+        img.src = resolveMangaImgSrc(activeItem.imageUrl, raw);
         img.onload = () => {
           if (img) imageCacheRef.current.set(activeItem.imageUrl, img);
         };
@@ -1098,9 +1110,9 @@ export const TimelineView: React.FC = () => {
                 Hủy
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (selectedChapterIds.length < 2) return;
-                  mergeChaptersToCompilation(selectedChapterIds, { includeBumpers: mergeBumpers });
+                  await mergeChaptersToCompilation(selectedChapterIds, { includeBumpers: mergeBumpers });
                   setIsMergeModalOpen(false);
                 }}
                 disabled={selectedChapterIds.length < 2}

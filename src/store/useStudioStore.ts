@@ -371,6 +371,8 @@ export const useStudioStore = create<StudioState>()(
           pages: restoredPages,
         };
 
+        const totalDuration = Math.max(12, restoredPages.length * 4.0);
+
         set({
           selectedProject: restoredProject,
           pages: restoredPages,
@@ -378,11 +380,16 @@ export const useStudioStore = create<StudioState>()(
           clips: Array.isArray(data.clips) ? data.clips : [],
           subtitles: Array.isArray(data.subtitles) ? data.subtitles : [],
           activePageIndex: 0,
+          currentTime: 0,
+          isPlaying: false,
+          duration: totalDuration,
+          isCompilationMode: false,
+          compilationConfig: null,
           isLoadingProject: false,
           scrapeStatusMessage: `✓ Đã tải thành công: ${restoredProject.seriesName} - Chap ${restoredProject.chapterNumber} (${restoredPages.length} trang)`,
         });
       } else {
-        // Fallback: use metadata from projects list, clear pages
+        // Fallback: use metadata from projects list
         set({
           selectedProject: projectMeta,
           pages: [],
@@ -390,6 +397,10 @@ export const useStudioStore = create<StudioState>()(
           clips: [],
           subtitles: [],
           activePageIndex: 0,
+          currentTime: 0,
+          isPlaying: false,
+          isCompilationMode: false,
+          compilationConfig: null,
           isLoadingProject: false,
           scrapeStatusMessage: projectMeta
             ? `⚠️ Chỉ tải được metadata: ${projectMeta.seriesName} - Chap ${projectMeta.chapterNumber}. Cần cào lại dữ liệu trang ảnh.`
@@ -495,26 +506,82 @@ export const useStudioStore = create<StudioState>()(
     const includeBumpers = options?.includeBumpers ?? true;
     const bumperDuration = 3; // seconds per chapter transition
 
-    set({ scrapeStatusMessage: '⏳ Đang ghép các chapter...' });
+    set({ scrapeStatusMessage: '⏳ Đang tải và ghép các chapter...' });
 
     try {
       const chapterDataList: { project: Project; pages: MangaPage[] }[] = [];
 
       for (const pid of chapterProjectIds) {
-        const res = await fetch(`${API_BASE_URL}/projects/detail?id=${encodeURIComponent(pid)}`);
-        const data = await res.json();
-        if (data.success && data.project) {
+        let projObj: Project | null = null;
+        let projPages: MangaPage[] = [];
+
+        // If this is currently active project in store and has pages, reuse them
+        if (state.selectedProject?.id === pid && state.pages.length > 0) {
+          projObj = state.selectedProject;
+          projPages = state.pages;
+        } else {
+          try {
+            const res = await fetch(`${API_BASE_URL}/projects/detail?id=${encodeURIComponent(pid)}`);
+            const data = await res.json();
+            if (data.success && data.project) {
+              projObj = data.project;
+              projPages = Array.isArray(data.pages) && data.pages.length > 0 ? data.pages : [];
+            }
+          } catch (e) {}
+        }
+
+        // Fallback: check projects list in store
+        if (!projObj) {
+          projObj = state.projects.find((p) => p.id === pid) || null;
+        }
+
+        // Fallback if pages are empty: generate 1 page with coverUrl
+        if (projObj && projPages.length === 0 && projObj.coverUrl) {
+          projPages = [
+            {
+              id: `p-fallback-${projObj.id}-1`,
+              pageIndex: 1,
+              imageUrl: projObj.coverUrl,
+              panels: [
+                {
+                  id: `pan-fallback-${projObj.id}-1`,
+                  pageIndex: 1,
+                  panelIndex: 1,
+                  bbox: { x: 5, y: 5, w: 90, h: 90 },
+                  suggestedCameraEffect: 'dramatic_zoom',
+                  aiDescription: `Trang bìa ${projObj.seriesName} Chapter ${projObj.chapterNumber}`,
+                  dialogues: [
+                    {
+                      id: `d-fallback-${projObj.id}-1`,
+                      panelId: `pan-fallback-${projObj.id}-1`,
+                      speaker: 'Dẫn Chuyện',
+                      text: `Diễn biến ${projObj.episodeTitle || projObj.seriesName}.`,
+                      emotion: 'excited',
+                    },
+                  ],
+                },
+              ],
+            },
+          ];
+        }
+
+        if (projObj && projPages.length > 0) {
           chapterDataList.push({
-            project: data.project,
-            pages: Array.isArray(data.pages) ? data.pages : [],
+            project: projObj,
+            pages: projPages,
           });
         }
+      }
+
+      if (chapterDataList.length === 0) {
+        set({ scrapeStatusMessage: '❌ Không thể tải trang ảnh của các chapter đã chọn.' });
+        return;
       }
 
       // Sort by chapter number
       chapterDataList.sort((a, b) => a.project.chapterNumber - b.project.chapterNumber);
 
-      // Merge all pages with re-indexed pageIndex
+      // Merge all pages with re-indexed pageIndex and panels
       const mergedPages: MangaPage[] = [];
       let pageOffset = 0;
       const compilationChapters: CompilationConfig['chapters'] = [];
@@ -526,24 +593,55 @@ export const useStudioStore = create<StudioState>()(
           order: idx,
         });
 
-        ch.pages.forEach((page) => {
+        ch.pages.forEach((page, pIdx) => {
+          const newPageIndex = pageOffset + pIdx + 1;
+          const reindexedPanels = (page.panels || []).map((pan, panIdx) => ({
+            ...pan,
+            id: `comp-pan-${ch.project.chapterNumber}-${newPageIndex}-${panIdx + 1}`,
+            pageIndex: newPageIndex,
+            panelIndex: pan.panelIndex || panIdx + 1,
+          }));
+
+          const finalPanels: Panel[] =
+            reindexedPanels.length > 0
+              ? reindexedPanels
+              : [
+                  {
+                    id: `comp-pan-${ch.project.chapterNumber}-${newPageIndex}-1`,
+                    pageIndex: newPageIndex,
+                    panelIndex: 1,
+                    bbox: { x: 5, y: 5, w: 90, h: 90 },
+                    suggestedCameraEffect: 'dramatic_zoom' as const,
+                    aiDescription: `Khung hình Chapter ${ch.project.chapterNumber} Trang ${pIdx + 1}`,
+                    dialogues: [
+                      {
+                        id: `comp-d-${ch.project.chapterNumber}-${newPageIndex}-1`,
+                        panelId: `comp-pan-${ch.project.chapterNumber}-${newPageIndex}-1`,
+                        speaker: 'Dẫn Chuyện',
+                        text: `Diễn biến Chapter ${ch.project.chapterNumber} - Trang ${pIdx + 1}.`,
+                        emotion: 'neutral' as const,
+                      },
+                    ],
+                  },
+                ];
+
           mergedPages.push({
             ...page,
-            id: `comp-${ch.project.id}-${page.id}`,
-            pageIndex: pageOffset + page.pageIndex,
+            id: `comp-${ch.project.id}-${page.id || pIdx + 1}`,
+            pageIndex: newPageIndex,
+            panels: finalPanels,
           });
         });
         pageOffset += ch.pages.length;
       });
 
-      const totalDuration = chapterDataList.reduce((sum, ch) => sum + (ch.project.durationEst || 0), 0)
-        + (includeBumpers ? (chapterDataList.length - 1) * bumperDuration : 0);
+      const totalDuration = Math.max(20, mergedPages.length * 3.5);
+      const firstProj = chapterDataList[0].project;
+      const chapterRangeText = chapterDataList.map((c) => `Chap ${c.project.chapterNumber}`).join(' + ');
 
       const compilationConfig: CompilationConfig = {
         id: `comp-${Date.now()}`,
-        title: chapterDataList.length > 0
-          ? `${chapterDataList[0].project.seriesName} - Full Compilation (${chapterDataList.length} Chapters)`
-          : 'Compilation',
+        title: `${firstProj.seriesName} - Full Compilation (${chapterRangeText})`,
         chapters: compilationChapters,
         includeBumpers,
         bumperDurationSec: bumperDuration,
@@ -552,11 +650,54 @@ export const useStudioStore = create<StudioState>()(
         totalDurationEst: totalDuration,
       };
 
+      const compilationProject: Project = {
+        id: `compilation-${Date.now()}`,
+        seriesName: firstProj.seriesName,
+        chapterNumber: 0,
+        episodeTitle: `Full Compilation (${chapterRangeText}) • ${mergedPages.length} Trang`,
+        status: 'ready',
+        durationEst: totalDuration,
+        coverUrl: firstProj.coverUrl,
+        updatedAt: new Date().toLocaleTimeString(),
+        pages: mergedPages,
+      };
+
+      const mergedScriptChunks = chapterDataList.map((ch, idx) => ({
+        id: `comp-sc-${idx + 1}`,
+        speaker: 'Dẫn Chuyện',
+        text: `Chào mừng các bạn đến với bản tổng hợp dài ${ch.project.seriesName} - Chapter ${ch.project.chapterNumber}!`,
+        emotion: 'excited',
+        estDurationSec: 5.0,
+      }));
+
+      const compilationScriptContent =
+        `# BẢN TỔNG HỢP FULL COMPILATION: ${firstProj.seriesName.toUpperCase()}\n\n` +
+        `**Tổng hợp ${chapterDataList.length} Chapters (${chapterRangeText})**\n` +
+        `**Quy mô**: ${mergedPages.length} trang ảnh • Thời lượng: ~${Math.round(totalDuration / 60)} phút\n\n` +
+        chapterDataList
+          .map(
+            (ch) =>
+              `## 🎞️ Diễn Biến Chapter ${ch.project.chapterNumber}: ${ch.project.episodeTitle}\n[Dẫn Chuyện]: Tóm tắt và phân tích chi tiết diễn biến Chapter ${ch.project.chapterNumber}.\n`
+          )
+          .join('\n');
+
       set({
+        selectedProject: compilationProject,
         pages: mergedPages,
         compilationConfig,
         isCompilationMode: true,
         activePageIndex: 0,
+        currentTime: 0,
+        isPlaying: false,
+        duration: totalDuration,
+        scriptData: {
+          mode: 'review',
+          title: `Full Compilation: ${firstProj.seriesName} (${chapterRangeText})`,
+          content: compilationScriptContent,
+          chunks: mergedScriptChunks,
+          wordCount: mergedPages.length * 40,
+          estReadTimeMinutes: totalDuration / 60,
+        },
         scrapeStatusMessage: `✓ Đã ghép thành công ${chapterDataList.length} chapter (${mergedPages.length} trang, ~${Math.round(totalDuration / 60)} phút)`,
       });
     } catch (err) {

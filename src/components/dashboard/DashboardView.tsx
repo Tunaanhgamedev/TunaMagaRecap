@@ -141,9 +141,9 @@ export const DashboardView: React.FC = () => {
               {projects.length >= 2 && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const allIds = projects.map((p) => p.id);
-                    mergeChaptersToCompilation(allIds, { includeBumpers: true });
+                    await mergeChaptersToCompilation(allIds, { includeBumpers: true });
                     setActiveTab('timeline');
                   }}
                   className="text-[10.5px] text-violet-400 hover:text-violet-300 hover:underline px-1.5 py-0.5 rounded cursor-pointer font-semibold"

@@ -54,7 +54,7 @@ export interface TextBlock {
 
 export interface Dialogue {
   id: string;
-  panelId: string;
+  panelId?: string;
   speaker: string;
   text: string;
   originalText?: string;

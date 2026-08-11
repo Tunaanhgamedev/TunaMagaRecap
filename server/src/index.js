@@ -716,7 +716,7 @@ async function resolveAndFetchImageBuffer(imageUrl) {
     }
 
     try {
-      const prismaProject = await prisma.project.findUnique({
+      let prismaProject = await prisma.project.findUnique({
         where: { id: projId },
         include: {
           chapters: {
@@ -733,49 +733,133 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         }
       });
 
-      if (prismaProject) {
-        let pages = [];
-        if (prismaProject.chapters && prismaProject.chapters.length > 0) {
-          const chapter = prismaProject.chapters[0];
-          pages = chapter.pages.map((page) => ({
-            id: page.id,
-            pageIndex: page.pageIndex,
-            imageUrl: page.imageUrl,
-            panels: page.panels.map((panel) => ({
-              id: panel.id,
-              pageIndex: panel.pageIndex,
-              panelIndex: panel.panelIndex,
-              bbox: {
-                x: panel.bboxX,
-                y: panel.bboxY,
-                w: panel.bboxW,
-                h: panel.bboxH,
-              },
-              aiDescription: panel.aiDescription,
-              suggestedCameraEffect: panel.suggestedCameraEffect,
-              dialogues: panel.dialogues,
-            })),
-          }));
-        }
+      const localProject = db.projects.find((p) => p.id === projId);
+      const effectiveProject = prismaProject || localProject;
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          success: true,
-          project: prismaProject,
-          pages: pages,
-          scriptData: null,
-          chapters: prismaProject.chapters,
+      if (!effectiveProject) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Project not found' }));
+        return;
+      }
+
+      let pages = [];
+      if (prismaProject && prismaProject.chapters && prismaProject.chapters.length > 0) {
+        const chapter = prismaProject.chapters[0];
+        pages = (chapter.pages || []).map((page) => ({
+          id: page.id,
+          pageIndex: page.pageIndex,
+          imageUrl: page.imageUrl,
+          panels: (page.panels || []).map((panel) => ({
+            id: panel.id,
+            pageIndex: panel.pageIndex,
+            panelIndex: panel.panelIndex,
+            bbox: {
+              x: panel.bboxX,
+              y: panel.bboxY,
+              w: panel.bboxW,
+              h: panel.bboxH,
+            },
+            aiDescription: panel.aiDescription,
+            suggestedCameraEffect: panel.suggestedCameraEffect,
+            dialogues: panel.dialogues || [],
+          })),
         }));
-      } else {
-        const localProject = db.projects.find((p) => p.id === projId);
-        if (localProject) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, project: localProject, pages: [], scriptData: null, chapters: [] }));
-        } else {
-          res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Project not found' }));
+      }
+
+      // If pages are empty but project has a sourceUrl, auto-scrape pages on the fly and cache them
+      const sourceUrl = effectiveProject.sourceUrl || (prismaProject?.chapters?.[0]?.sourceUrl) || localProject?.sourceUrl;
+      if (pages.length === 0 && sourceUrl) {
+        console.log(`[Project Detail] 🔄 Auto-recovering pages for project "${effectiveProject.seriesName}" from sourceUrl: ${sourceUrl}`);
+        try {
+          const scraped = await scraperManager.scrape(sourceUrl);
+          if (scraped && scraped.pages && scraped.pages.length > 0) {
+            pages = scraped.pages;
+
+            // Save to Prisma DB so it's cached permanently
+            try {
+              if (!prismaProject) {
+                prismaProject = await prisma.project.create({
+                  data: {
+                    id: effectiveProject.id,
+                    seriesName: effectiveProject.seriesName || scraped.project.seriesName,
+                    chapterNumber: effectiveProject.chapterNumber || scraped.project.chapterNumber || 1,
+                    episodeTitle: effectiveProject.episodeTitle || scraped.project.episodeTitle || '',
+                    status: 'ready',
+                    durationEst: effectiveProject.durationEst || scraped.project.durationEst || 260,
+                    coverUrl: effectiveProject.coverUrl || scraped.project.coverUrl || '',
+                  }
+                });
+              }
+
+              let chapter = await prisma.chapter.findFirst({
+                where: { projectId: effectiveProject.id }
+              });
+              if (!chapter) {
+                chapter = await prisma.chapter.create({
+                  data: {
+                    projectId: effectiveProject.id,
+                    number: parseInt(effectiveProject.chapterNumber) || 1,
+                    title: effectiveProject.episodeTitle || `Chapter ${effectiveProject.chapterNumber || 1}`,
+                    sourceUrl: sourceUrl,
+                  }
+                });
+              }
+
+              for (const p of pages) {
+                await prisma.mangaPage.create({
+                  data: {
+                    chapterId: chapter.id,
+                    pageIndex: p.pageIndex,
+                    imageUrl: p.imageUrl || p.rawImageUrl || '',
+                  }
+                });
+              }
+            } catch (cacheErr) {
+              console.log('[Project Detail Cache Error]:', cacheErr.message);
+            }
+          }
+        } catch (scrapeErr) {
+          console.log('[Project Detail Auto-scrape Error]:', scrapeErr.message);
         }
       }
+
+      // Fallback: If still 0 pages, create a default 1-page fallback from coverUrl
+      if (pages.length === 0 && effectiveProject.coverUrl) {
+        pages = [
+          {
+            id: `p-fallback-${effectiveProject.id}-1`,
+            pageIndex: 1,
+            imageUrl: effectiveProject.coverUrl,
+            panels: [
+              {
+                id: `pan-fallback-${effectiveProject.id}-1`,
+                pageIndex: 1,
+                panelIndex: 1,
+                bbox: { x: 5, y: 5, w: 90, h: 90 },
+                suggestedCameraEffect: 'dramatic_zoom',
+                aiDescription: `Trang bìa ${effectiveProject.seriesName} Chapter ${effectiveProject.chapterNumber}`,
+                dialogues: [
+                  {
+                    id: `d-fallback-${effectiveProject.id}-1`,
+                    speaker: 'Dẫn Chuyện',
+                    text: `Diễn biến ${effectiveProject.episodeTitle || effectiveProject.seriesName}.`,
+                    emotion: 'excited',
+                  }
+                ]
+              }
+            ]
+          }
+        ];
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        project: effectiveProject,
+        pages: pages,
+        scriptData: null,
+        chapters: prismaProject?.chapters || [],
+      }));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: err.message }));
