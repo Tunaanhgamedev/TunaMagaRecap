@@ -20,10 +20,13 @@ export const DashboardView: React.FC = () => {
     selectedProject,
     queueTasks,
     setActiveTab,
-    setSelectedProject,
+    loadProject,
+    isLoadingProject,
     deleteProject,
     clearAllProjects,
     fetchProjectsFromBackend,
+    mergeChaptersToCompilation,
+    isCompilationMode,
   } = useStudioStore();
 
   React.useEffect(() => {
@@ -135,6 +138,20 @@ export const DashboardView: React.FC = () => {
               <span>Dự Án Gần Đây ({projects.length})</span>
             </h2>
             <div className="flex items-center space-x-2">
+              {projects.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allIds = projects.map((p) => p.id);
+                    mergeChaptersToCompilation(allIds, { includeBumpers: true });
+                    setActiveTab('timeline');
+                  }}
+                  className="text-[10.5px] text-violet-400 hover:text-violet-300 hover:underline px-1.5 py-0.5 rounded cursor-pointer font-semibold"
+                  title="Ghép tất cả chapter thành 1 video dài"
+                >
+                  🎞️ Ghép Video Dài ({projects.length} chap)
+                </button>
+              )}
               {projects.length > 0 && (
                 <button
                   type="button"
@@ -169,10 +186,10 @@ export const DashboardView: React.FC = () => {
                 <div
                   key={project.id}
                   onClick={() => {
-                    setSelectedProject(project);
+                    loadProject(project);
                     setActiveTab('ocr');
                   }}
-                  className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group relative"
+                  className={`glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group relative ${isLoadingProject ? 'pointer-events-none opacity-60' : ''}`}
                   title="Bấm để chỉnh sửa tiếp dự án này"
                 >
                   <div className="relative h-28 bg-slate-900">

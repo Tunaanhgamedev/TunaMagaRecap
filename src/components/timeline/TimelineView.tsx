@@ -23,6 +23,8 @@ import {
   Volume1,
   VolumeX,
   Sliders,
+  GitMerge,
+  X,
 } from 'lucide-react';
 
 export const TimelineView: React.FC = () => {
@@ -55,6 +57,11 @@ export const TimelineView: React.FC = () => {
     setBgmVolume,
     isBgmMuted,
     setIsBgmMuted,
+    projects,
+    compilationConfig,
+    isCompilationMode,
+    mergeChaptersToCompilation,
+    exitCompilationMode,
   } = useStudioStore();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -68,6 +75,11 @@ export const TimelineView: React.FC = () => {
     speaker: string;
     text: string;
   } | null>(null);
+
+  // Multi-chapter merge modal state
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
+  const [mergeBumpers, setMergeBumpers] = useState(true);
 
   // Flatten all panels from all pages into a continuous sequence of video timeline blocks
   const panelTimeline = React.useMemo(() => {
@@ -580,7 +592,39 @@ export const TimelineView: React.FC = () => {
             <Download className="w-3.5 h-3.5" />
             <span>{isExporting ? 'Đang xuất...' : 'Xuất Video MP4'}</span>
           </button>
+
+          {/* Merge Chapters Button */}
+          {projects.length >= 2 && (
+            <button
+              onClick={() => {
+                setSelectedChapterIds(projects.map((p) => p.id));
+                setIsMergeModalOpen(true);
+              }}
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <GitMerge className="w-3.5 h-3.5" />
+              <span>🎞️ Ghép Nhiều Chapter</span>
+            </button>
+          )}
         </div>
+
+        {/* Compilation Mode Badge */}
+        {isCompilationMode && compilationConfig && (
+          <div className="flex items-center justify-between bg-gradient-to-r from-amber-950/40 via-orange-950/30 to-amber-950/40 border border-amber-500/30 rounded-lg px-3 py-2 mt-2">
+            <div className="flex items-center space-x-2">
+              <GitMerge className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-bold text-amber-300">
+                🎞️ Compilation Mode: {compilationConfig.chapters.length} Chapter • {compilationConfig.totalPages} Trang • ~{Math.round(compilationConfig.totalDurationEst / 60)} Phút
+              </span>
+            </div>
+            <button
+              onClick={exitCompilationMode}
+              className="text-[10px] text-red-400 hover:text-red-300 px-2 py-0.5 rounded border border-red-500/30 hover:border-red-400/50 transition-all cursor-pointer"
+            >
+              Thoát Compilation
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Preview Grid */}
@@ -968,6 +1012,107 @@ export const TimelineView: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+
+      {/* Merge Chapters Modal */}
+      {isMergeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="glass-panel border border-violet-500/30 rounded-2xl p-5 w-full max-w-lg space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <GitMerge className="w-4 h-4 text-amber-400" />
+                <span>🎞️ Ghép Nhiều Chapter Thành Video Dài</span>
+              </h3>
+              <button
+                onClick={() => setIsMergeModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              Chọn các chapter muốn ghép. Hệ thống sẽ nối tuần tự tất cả trang ảnh, panel, lời thoại và kịch bản thành 1 video dài.
+            </p>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {projects.map((p) => {
+                const isChecked = selectedChapterIds.includes(p.id);
+                return (
+                  <label
+                    key={p.id}
+                    className={`flex items-center space-x-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                      isChecked
+                        ? 'border-amber-500/50 bg-amber-950/20'
+                        : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedChapterIds([...selectedChapterIds, p.id]);
+                        } else {
+                          setSelectedChapterIds(selectedChapterIds.filter((id) => id !== p.id));
+                        }
+                      }}
+                      className="w-3.5 h-3.5 accent-amber-500 cursor-pointer"
+                    />
+                    <img
+                      src={p.coverUrl}
+                      alt={p.seriesName}
+                      className="w-10 h-10 object-cover rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{p.seriesName}</div>
+                      <div className="text-[10px] text-slate-400">
+                        Chapter {p.chapterNumber} • ~{Math.round((p.durationEst || 0) / 60)} phút
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={mergeBumpers}
+                  onChange={(e) => setMergeBumpers(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-violet-500 cursor-pointer"
+                />
+                <span className="text-[11px] text-slate-300">Chèn Title Card giữa các chapter</span>
+              </label>
+
+              <span className="text-[10px] text-cyan-400 font-mono">
+                {selectedChapterIds.length} chapter đã chọn
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-1">
+              <button
+                onClick={() => setIsMergeModalOpen(false)}
+                className="flex-1 text-xs font-bold text-slate-400 hover:text-white py-2 rounded-lg border border-slate-700 hover:border-slate-600 transition-all cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedChapterIds.length < 2) return;
+                  mergeChaptersToCompilation(selectedChapterIds, { includeBumpers: mergeBumpers });
+                  setIsMergeModalOpen(false);
+                }}
+                disabled={selectedChapterIds.length < 2}
+                className="flex-1 text-xs font-bold text-white py-2 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 transition-all active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                🎬 Hợp Nhất & Chiếu Video Dài ({selectedChapterIds.length} chap)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

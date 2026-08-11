@@ -204,7 +204,7 @@ const server = http.createServer(async (req, res) => {
 
         // Sync to Prisma SQLite DB
         try {
-          await prisma.project.create({
+          const project = await prisma.project.create({
             data: {
               seriesName: scrapedData.project.seriesName,
               chapterNumber: scrapedData.project.chapterNumber,
@@ -214,6 +214,23 @@ const server = http.createServer(async (req, res) => {
               coverUrl: scrapedData.project.coverUrl,
             },
           });
+          scrapedData.project.id = project.id;
+
+          if (scrapedData.pages && scrapedData.pages.length > 0) {
+            await prisma.chapter.create({
+              data: {
+                projectId: project.id,
+                number: parseInt(scrapedData.project.chapterNumber) || 1,
+                title: scrapedData.project.episodeTitle || `Chapter ${scrapedData.project.chapterNumber}`,
+                pages: {
+                  create: scrapedData.pages.map((p, idx) => ({
+                    pageIndex: p.pageIndex || idx + 1,
+                    imageUrl: p.imageUrl || p.rawImageUrl || '',
+                  }))
+                }
+              }
+            });
+          }
         } catch (dbErr) {
           console.log('[Prisma Sync] Stored in cached memory store:', dbErr.message);
         }
@@ -683,6 +700,195 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         res.end(JSON.stringify({ success: true, capcutProject: draft }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 8. GET Project Detail
+  if (pathname === '/api/projects/detail' && req.method === 'GET') {
+    const projId = reqUrl.searchParams.get('id');
+    if (!projId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Missing project id' }));
+      return;
+    }
+
+    try {
+      const prismaProject = await prisma.project.findUnique({
+        where: { id: projId },
+        include: {
+          chapters: {
+            include: {
+              pages: {
+                include: {
+                  panels: {
+                    include: { dialogues: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (prismaProject) {
+        let pages = [];
+        if (prismaProject.chapters && prismaProject.chapters.length > 0) {
+          const chapter = prismaProject.chapters[0];
+          pages = chapter.pages.map((page) => ({
+            id: page.id,
+            pageIndex: page.pageIndex,
+            imageUrl: page.imageUrl,
+            panels: page.panels.map((panel) => ({
+              id: panel.id,
+              pageIndex: panel.pageIndex,
+              panelIndex: panel.panelIndex,
+              bbox: {
+                x: panel.bboxX,
+                y: panel.bboxY,
+                w: panel.bboxW,
+                h: panel.bboxH,
+              },
+              aiDescription: panel.aiDescription,
+              suggestedCameraEffect: panel.suggestedCameraEffect,
+              dialogues: panel.dialogues,
+            })),
+          }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          project: prismaProject,
+          pages: pages,
+          scriptData: null,
+          chapters: prismaProject.chapters,
+        }));
+      } else {
+        const localProject = db.projects.find((p) => p.id === projId);
+        if (localProject) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, project: localProject, pages: [], scriptData: null, chapters: [] }));
+        } else {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Project not found' }));
+        }
+      }
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
+  // 9. POST Save Project
+  if (pathname === '/api/projects/save' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const { project, pages, scriptData } = payload;
+        
+        if (!project || !project.id) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Missing project data' }));
+          return;
+        }
+
+        await prisma.project.upsert({
+          where: { id: project.id },
+          update: {
+            seriesName: project.seriesName,
+            chapterNumber: project.chapterNumber,
+            episodeTitle: project.episodeTitle,
+            status: project.status || 'ready',
+            durationEst: project.durationEst,
+            coverUrl: project.coverUrl,
+          },
+          create: {
+            id: project.id,
+            seriesName: project.seriesName || '',
+            chapterNumber: project.chapterNumber || 1,
+            episodeTitle: project.episodeTitle || '',
+            status: project.status || 'ready',
+            durationEst: project.durationEst,
+            coverUrl: project.coverUrl,
+          }
+        });
+
+        const existingIdx = db.projects.findIndex(p => p.id === project.id);
+        if (existingIdx !== -1) {
+          db.projects[existingIdx] = { ...db.projects[existingIdx], ...project };
+        } else {
+          db.projects.push(project);
+        }
+        saveDB(db);
+
+        if (pages && pages.length > 0) {
+          let chapter = await prisma.chapter.findFirst({
+            where: { projectId: project.id, number: parseInt(project.chapterNumber) || 1 }
+          });
+          
+          if (!chapter) {
+            chapter = await prisma.chapter.create({
+              data: {
+                projectId: project.id,
+                number: parseInt(project.chapterNumber) || 1,
+                title: project.episodeTitle || `Chapter ${project.chapterNumber || 1}`,
+              }
+            });
+          }
+
+          await prisma.mangaPage.deleteMany({
+            where: { chapterId: chapter.id }
+          });
+
+          for (const page of pages) {
+            await prisma.mangaPage.create({
+              data: {
+                chapterId: chapter.id,
+                pageIndex: page.pageIndex,
+                imageUrl: page.imageUrl,
+                panels: {
+                  create: (page.panels || []).map(panel => ({
+                    pageIndex: panel.pageIndex,
+                    panelIndex: panel.panelIndex,
+                    bboxX: panel.bbox?.x || 0,
+                    bboxY: panel.bbox?.y || 0,
+                    bboxW: panel.bbox?.w || 0,
+                    bboxH: panel.bbox?.h || 0,
+                    aiDescription: panel.aiDescription || '',
+                    suggestedCameraEffect: panel.suggestedCameraEffect || '',
+                    dialogues: {
+                      create: (panel.dialogues || []).map(d => ({
+                        speaker: d.speaker || '',
+                        text: d.text || '',
+                        originalText: d.originalText || '',
+                        translatedText: d.translatedText || '',
+                        language: d.language || 'vi',
+                        textType: d.textType || 'DIALOGUE',
+                        fontFamily: d.fontFamily || '',
+                        fontSize: d.fontSize || 14,
+                        confidence: d.confidence || 1.0,
+                        useForScript: d.useForScript !== undefined ? d.useForScript : true,
+                        emotion: d.emotion || 'neutral'
+                      }))
+                    }
+                  }))
+                }
+              }
+            });
+          }
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Project saved' }));
+      } catch (err) {
+        console.error('[Save Project Error]', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
     });

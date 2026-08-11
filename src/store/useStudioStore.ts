@@ -26,6 +26,7 @@ import {
   SEOMetadata,
   ThumbnailConfig,
   AIPluginConfig,
+  CompilationConfig,
 } from '../types/studio';
 
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -48,12 +49,21 @@ interface StudioState {
   selectedChapter: Chapter | null;
   fetchProjectsFromBackend: () => Promise<void>;
   setSelectedProject: (p: Project) => void;
+  loadProject: (projectOrId: Project | string) => Promise<void>;
+  isLoadingProject: boolean;
+  saveProjectToBackend: () => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   clearAllProjects: () => Promise<void>;
   resetAllStoreState: () => void;
   setSelectedChapter: (c: Chapter) => void;
   addMangaPages: (chapterId: string, files: File[]) => void;
   clearCurrentProject: () => void;
+
+  // Multi-Chapter Compilation
+  compilationConfig: CompilationConfig | null;
+  isCompilationMode: boolean;
+  mergeChaptersToCompilation: (chapterProjectIds: string[], options?: { includeBumpers?: boolean }) => Promise<void>;
+  exitCompilationMode: () => void;
 
   // OCR & Panel Detection
   pages: MangaPage[];
@@ -337,6 +347,86 @@ export const useStudioStore = create<StudioState>()(
     } catch (err) {}
   },
   setSelectedProject: (p) => set({ selectedProject: p }),
+  isLoadingProject: false,
+  loadProject: async (projectOrId) => {
+    const state = get();
+    const projectId = typeof projectOrId === 'string' ? projectOrId : projectOrId.id;
+    const projectMeta = typeof projectOrId === 'string'
+      ? state.projects.find((p) => p.id === projectId) || null
+      : projectOrId;
+
+    set({
+      isLoadingProject: true,
+      scrapeStatusMessage: `⏳ Đang tải dữ liệu project...`,
+    });
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/projects/detail?id=${encodeURIComponent(projectId)}`);
+      const data = await res.json();
+
+      if (data.success && data.project) {
+        const restoredPages: MangaPage[] = Array.isArray(data.pages) ? data.pages : [];
+        const restoredProject: Project = {
+          ...data.project,
+          pages: restoredPages,
+        };
+
+        set({
+          selectedProject: restoredProject,
+          pages: restoredPages,
+          scriptData: data.scriptData || null,
+          clips: Array.isArray(data.clips) ? data.clips : [],
+          subtitles: Array.isArray(data.subtitles) ? data.subtitles : [],
+          activePageIndex: 0,
+          isLoadingProject: false,
+          scrapeStatusMessage: `✓ Đã tải thành công: ${restoredProject.seriesName} - Chap ${restoredProject.chapterNumber} (${restoredPages.length} trang)`,
+        });
+      } else {
+        // Fallback: use metadata from projects list, clear pages
+        set({
+          selectedProject: projectMeta,
+          pages: [],
+          scriptData: null,
+          clips: [],
+          subtitles: [],
+          activePageIndex: 0,
+          isLoadingProject: false,
+          scrapeStatusMessage: projectMeta
+            ? `⚠️ Chỉ tải được metadata: ${projectMeta.seriesName} - Chap ${projectMeta.chapterNumber}. Cần cào lại dữ liệu trang ảnh.`
+            : '❌ Không tìm thấy dữ liệu project.',
+        });
+      }
+    } catch (err) {
+      // Network error: fallback to metadata only
+      set({
+        selectedProject: projectMeta,
+        pages: [],
+        isLoadingProject: false,
+        scrapeStatusMessage: '❌ Lỗi kết nối server. Thử khởi động lại backend.',
+      });
+    }
+  },
+  saveProjectToBackend: async () => {
+    const state = get();
+    if (!state.selectedProject) return;
+
+    try {
+      await fetch(`${API_BASE_URL}/projects/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: state.selectedProject,
+          pages: state.pages,
+          scriptData: state.scriptData,
+          clips: state.clips,
+          subtitles: state.subtitles,
+        }),
+      });
+      set({ scrapeStatusMessage: '✓ Đã lưu project thành công!' });
+    } catch (err) {
+      set({ scrapeStatusMessage: '❌ Lỗi lưu project. Kiểm tra kết nối server.' });
+    }
+  },
   deleteProject: async (projectId) => {
     try {
       await fetch(`${API_BASE_URL}/projects/delete`, {
@@ -392,6 +482,93 @@ export const useStudioStore = create<StudioState>()(
       thumbnail: null,
       mangaUrlInput: '',
       scrapeStatusMessage: null,
+      compilationConfig: null,
+      isCompilationMode: false,
+    });
+  },
+
+  // Multi-Chapter Compilation
+  compilationConfig: null,
+  isCompilationMode: false,
+  mergeChaptersToCompilation: async (chapterProjectIds, options) => {
+    const state = get();
+    const includeBumpers = options?.includeBumpers ?? true;
+    const bumperDuration = 3; // seconds per chapter transition
+
+    set({ scrapeStatusMessage: '⏳ Đang ghép các chapter...' });
+
+    try {
+      const chapterDataList: { project: Project; pages: MangaPage[] }[] = [];
+
+      for (const pid of chapterProjectIds) {
+        const res = await fetch(`${API_BASE_URL}/projects/detail?id=${encodeURIComponent(pid)}`);
+        const data = await res.json();
+        if (data.success && data.project) {
+          chapterDataList.push({
+            project: data.project,
+            pages: Array.isArray(data.pages) ? data.pages : [],
+          });
+        }
+      }
+
+      // Sort by chapter number
+      chapterDataList.sort((a, b) => a.project.chapterNumber - b.project.chapterNumber);
+
+      // Merge all pages with re-indexed pageIndex
+      const mergedPages: MangaPage[] = [];
+      let pageOffset = 0;
+      const compilationChapters: CompilationConfig['chapters'] = [];
+
+      chapterDataList.forEach((ch, idx) => {
+        compilationChapters.push({
+          projectId: ch.project.id,
+          project: ch.project,
+          order: idx,
+        });
+
+        ch.pages.forEach((page) => {
+          mergedPages.push({
+            ...page,
+            id: `comp-${ch.project.id}-${page.id}`,
+            pageIndex: pageOffset + page.pageIndex,
+          });
+        });
+        pageOffset += ch.pages.length;
+      });
+
+      const totalDuration = chapterDataList.reduce((sum, ch) => sum + (ch.project.durationEst || 0), 0)
+        + (includeBumpers ? (chapterDataList.length - 1) * bumperDuration : 0);
+
+      const compilationConfig: CompilationConfig = {
+        id: `comp-${Date.now()}`,
+        title: chapterDataList.length > 0
+          ? `${chapterDataList[0].project.seriesName} - Full Compilation (${chapterDataList.length} Chapters)`
+          : 'Compilation',
+        chapters: compilationChapters,
+        includeBumpers,
+        bumperDurationSec: bumperDuration,
+        transition: 'fade',
+        totalPages: mergedPages.length,
+        totalDurationEst: totalDuration,
+      };
+
+      set({
+        pages: mergedPages,
+        compilationConfig,
+        isCompilationMode: true,
+        activePageIndex: 0,
+        scrapeStatusMessage: `✓ Đã ghép thành công ${chapterDataList.length} chapter (${mergedPages.length} trang, ~${Math.round(totalDuration / 60)} phút)`,
+      });
+    } catch (err) {
+      set({ scrapeStatusMessage: '❌ Lỗi khi ghép chapters. Kiểm tra kết nối server.' });
+    }
+  },
+  exitCompilationMode: () => {
+    set({
+      compilationConfig: null,
+      isCompilationMode: false,
+      pages: [],
+      scrapeStatusMessage: 'Đã thoát chế độ Compilation.',
     });
   },
   resetAllStoreState: () => {

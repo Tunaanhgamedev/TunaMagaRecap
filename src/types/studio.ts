@@ -131,6 +131,31 @@ export interface Project {
   durationEst: number; // in seconds
   coverUrl: string;
   updatedAt: string;
+  sourceUrl?: string;
+  sourceName?: string;
+  pages?: MangaPage[];
+  scriptData?: ScriptData | null;
+  clips?: TimelineClip[];
+  subtitles?: SubtitleItem[];
+}
+
+export type CompilationTransition = 'fade' | 'slide' | 'none';
+
+export interface CompilationChapterEntry {
+  projectId: string;
+  project: Project;
+  order: number;
+}
+
+export interface CompilationConfig {
+  id: string;
+  title: string;
+  chapters: CompilationChapterEntry[];
+  includeBumpers: boolean;
+  bumperDurationSec: number;
+  transition: CompilationTransition;
+  totalPages: number;
+  totalDurationEst: number;
 }
 
 export type MangaGenre =
