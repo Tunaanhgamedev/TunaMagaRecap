@@ -99,6 +99,8 @@ export interface MangaPage {
   id: string;
   pageIndex: number;
   imageUrl: string;
+  rawImageUrl?: string;
+  ocrProcessed?: boolean;
   panels: Panel[];
 }
 
@@ -262,13 +264,13 @@ export interface QueueTask {
 
 export interface SEOMetadata {
   title: string;
-  alternativeTitles: string[];
+  alternativeTitles?: string[];
   description: string;
   tags: string[];
   hashtags: string[];
-  pinnedComment: string;
-  timecodes: { timestamp: string; label: string }[];
-  tiktokCaption: string;
+  pinnedComment?: string;
+  timecodes?: { timestamp: string; label: string }[];
+  tiktokCaption?: string;
   playlist: string;
   scheduleTime: string;
   targetAudience: string;

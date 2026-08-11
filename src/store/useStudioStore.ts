@@ -1711,12 +1711,28 @@ export const useStudioStore = create<StudioState>()(
 
       for (const page of actPages) {
         const pNum = page.pageIndex;
-        const panels =
+        const panels: Panel[] =
           Array.isArray(page.panels) && page.panels.length > 0
             ? page.panels
             : [
-                { panelIndex: 1, suggestedCameraEffect: 'zoom_in', dialogues: [] },
-                { panelIndex: 2, suggestedCameraEffect: 'pan_down', dialogues: [] },
+                {
+                  id: `p-${pNum}-1`,
+                  pageIndex: pNum,
+                  panelIndex: 1,
+                  bbox: { x: 5, y: 5, w: 90, h: 45 },
+                  suggestedCameraEffect: 'zoom_in',
+                  aiDescription: '',
+                  dialogues: [],
+                },
+                {
+                  id: `p-${pNum}-2`,
+                  pageIndex: pNum,
+                  panelIndex: 2,
+                  bbox: { x: 5, y: 50, w: 90, h: 45 },
+                  suggestedCameraEffect: 'pan_down',
+                  aiDescription: '',
+                  dialogues: [],
+                },
               ];
 
         const pageDialogues = cleanDialogues.filter((d) => (d.pageIndex || 1) === pNum);
