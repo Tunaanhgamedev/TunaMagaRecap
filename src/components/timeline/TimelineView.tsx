@@ -1012,7 +1012,6 @@ export const TimelineView: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
 
       {/* Merge Chapters Modal */}
       {isMergeModalOpen && (
