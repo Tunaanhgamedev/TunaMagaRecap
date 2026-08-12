@@ -127,6 +127,8 @@ interface StudioState {
   setSubtitleStyle: (style: 'standard' | 'tiktok_yellow' | 'anime_glowing' | 'bold_impact') => void;
   generateSubtitlesFromAudio: () => void;
   updateSubtitleText: (id: string, text: string) => void;
+  panelSrtData: SubtitleItem[];
+  generateSRTFromPanels: () => void;
 
   // Timeline & CapCut Export
   isPlaying: boolean;
@@ -2248,6 +2250,76 @@ export const useStudioStore = create<StudioState>()(
     set((state) => ({
       subtitles: state.subtitles.map((s) => (s.id === id ? { ...s, text } : s)),
     }));
+  },
+
+  panelSrtData: [],
+  generateSRTFromPanels: () => {
+    const state = get();
+    const pages = state.pages;
+    const durationPerPanel = 3.5;
+    let cursor = 0;
+    const srtItems: SubtitleItem[] = [];
+
+    pages.forEach((page, pIdx) => {
+      const pagePanels =
+        page.panels && page.panels.length > 0
+          ? page.panels
+          : [
+              {
+                id: `p-full-${pIdx}`,
+                pageIndex: page.pageIndex,
+                panelIndex: 1,
+                dialogues: [
+                  {
+                    id: `d-${pIdx}`,
+                    speaker: 'Dẫn Chuyện',
+                    text: `Phân cảnh Trang ${page.pageIndex}.`,
+                    emotion: 'neutral',
+                  },
+                ],
+              },
+            ];
+
+      pagePanels.forEach((panel, panIdx) => {
+        // Gather ALL dialogues from panel, not just the first one
+        const dialogues =
+          panel.dialogues && panel.dialogues.length > 0
+            ? panel.dialogues
+            : [
+                {
+                  speaker: 'Dẫn Chuyện',
+                  text: `Trang ${page.pageIndex}, Panel ${panIdx + 1}.`,
+                  emotion: 'neutral',
+                },
+              ];
+
+        // If panel has multiple dialogues, split the panel duration equally
+        const subDuration = durationPerPanel / dialogues.length;
+
+        dialogues.forEach((d, dIdx) => {
+          if (!d.text || d.text.trim().length === 0) return;
+
+          const startTime = cursor + dIdx * subDuration;
+          const endTime = startTime + subDuration;
+
+          srtItems.push({
+            id: `srt-p${pIdx}-pn${panIdx}-d${dIdx}-${Date.now()}`,
+            startTime: parseFloat(startTime.toFixed(3)),
+            endTime: parseFloat(endTime.toFixed(3)),
+            text: d.text.trim(),
+            speaker: d.speaker || 'Dẫn Chuyện',
+            stylePreset: state.subtitleStyle,
+          });
+        });
+
+        cursor += durationPerPanel;
+      });
+    });
+
+    set({
+      panelSrtData: srtItems,
+      scrapeStatusMessage: `✅ Đã tạo ${srtItems.length} dòng SRT từ ${pages.length} trang (${srtItems.length} panel dialogue).`,
+    });
   },
 
   isPlaying: false,
