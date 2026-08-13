@@ -1,10 +1,9 @@
 import React, { useState, useRef } from "react";
 import { useStudioStore } from "../../store/useStudioStore";
+import { API_BASE_URL, getProxyImageUrl } from "../../utils/constants";
 import {
   ScanText,
   Sparkles,
-  Camera,
-  MessageSquare,
   FolderOpen,
   Trash2,
   Plus,
@@ -17,14 +16,9 @@ import {
   Copy,
   Check,
   RotateCw,
-  Film,
   Zap,
-  Volume2,
   FileText,
-  Settings2,
   Sliders,
-  Eye,
-  Edit3,
   ChevronLeft,
   ChevronRight,
   Image as ImageIcon,
@@ -34,8 +28,6 @@ import {
   Bold,
   Italic,
   CaseSensitive,
-  CaseUpper,
-  CaseLower,
 } from "lucide-react";
 import {
   DetectedLanguage,
@@ -82,15 +74,11 @@ export const OCRView: React.FC = () => {
     toggleItalicDialogue,
     toggleBoldToAll,
     toggleItalicToAll,
-    highlightedDialogueId,
-    setHighlightedDialogueId,
     addNarrationPanel,
     cleanPageNoise,
-    cleanAllPagesNoise,
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
-    batchOCRProgress,
     geminiApiKey,
     setGeminiApiKey,
     isAIConfigModalOpen,
@@ -101,7 +89,6 @@ export const OCRView: React.FC = () => {
   const [resizingPanelId, setResizingPanelId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [fontApplyScope, setFontApplyScope] = useState<"all" | "single">("all");
   const [isRunningOCR, setIsRunningOCR] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -282,7 +269,6 @@ export const OCRView: React.FC = () => {
     setIsRunningOCR(true);
     try {
       const imgUrl = (currentPage as any).rawImageUrl || currentPage.imageUrl;
-      const API_BASE_URL = "http://localhost:3001/api";
 
       const res = await fetch(`${API_BASE_URL}/ocr/detect`, {
         method: "POST",
@@ -838,9 +824,7 @@ export const OCRView: React.FC = () => {
                   }`}
                 >
                   <img
-                    src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-                      (p as any).rawImageUrl || p.imageUrl,
-                    )}&referer=${encodeURIComponent("https://truyenqqko.com/")}`}
+                    src={getProxyImageUrl((p as any).rawImageUrl || p.imageUrl, "https://truyenqqko.com/")}
                     alt={`Thumb ${idx + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -939,9 +923,7 @@ export const OCRView: React.FC = () => {
             >
               <div className="relative inline-block">
                 <img
-                  src={`http://localhost:3001/api/proxy-image?url=${encodeURIComponent(
-                    (currentPage as any).rawImageUrl || currentPage.imageUrl,
-                  )}&referer=${encodeURIComponent("https://truyenqqko.com/")}`}
+                  src={getProxyImageUrl((currentPage as any).rawImageUrl || currentPage.imageUrl, "https://truyenqqko.com/")}
                   alt={`Page ${currentPage.pageIndex}`}
                   className="block max-w-full max-h-[580px] w-auto h-auto object-contain rounded shadow-lg pointer-events-none"
                   onError={(e) => {

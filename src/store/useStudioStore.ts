@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { voiceAudioEngine } from '../utils/audioSynthesizer';
+import { API_BASE_URL } from '../utils/constants';
+import { transformTextCase, cleanNoiseFromText } from '../utils/textHelpers';
 import {
   ActiveTab,
   Project,
@@ -29,8 +31,6 @@ import {
   CompilationConfig,
   ChapterVideoEntry,
 } from '../types/studio';
-
-const API_BASE_URL = 'http://localhost:3001/api';
 
 interface StudioState {
   activeTab: ActiveTab;
@@ -1388,19 +1388,6 @@ export const useStudioStore = create<StudioState>()(
   },
 
   applyTextCaseToDialogue: (pageIdx, panIdx, dIdx, caseType) => {
-    const transform = (str: string) => {
-      if (!str) return '';
-      if (caseType === 'upper') return str.toUpperCase();
-      if (caseType === 'lower') return str.toLowerCase();
-      if (caseType === 'title') {
-        return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-      }
-      if (caseType === 'sentence') {
-        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-      }
-      return str;
-    };
-
     set((state) => {
       const updatedPages = [...state.pages];
       const page = updatedPages[pageIdx];
@@ -1410,9 +1397,9 @@ export const useStudioStore = create<StudioState>()(
           const d = panel.dialogues[dIdx];
           panel.dialogues[dIdx] = {
             ...d,
-            text: transform(d.text),
-            translatedText: transform(d.translatedText || d.text),
-            originalText: transform(d.originalText || d.text),
+            text: transformTextCase(d.text, caseType),
+            translatedText: transformTextCase(d.translatedText || d.text, caseType),
+            originalText: transformTextCase(d.originalText || d.text, caseType),
             textCase: caseType,
           };
         }
@@ -1422,19 +1409,6 @@ export const useStudioStore = create<StudioState>()(
   },
 
   applyTextCaseToAll: (caseType) => {
-    const transform = (str: string) => {
-      if (!str) return '';
-      if (caseType === 'upper') return str.toUpperCase();
-      if (caseType === 'lower') return str.toLowerCase();
-      if (caseType === 'title') {
-        return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-      }
-      if (caseType === 'sentence') {
-        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-      }
-      return str;
-    };
-
     set((state) => {
       const updatedPages = state.pages.map((p) => ({
         ...p,
@@ -1442,9 +1416,9 @@ export const useStudioStore = create<StudioState>()(
           ...panel,
           dialogues: panel.dialogues.map((d) => ({
             ...d,
-            text: transform(d.text),
-            translatedText: transform(d.translatedText || d.text),
-            originalText: transform(d.originalText || d.text),
+            text: transformTextCase(d.text, caseType),
+            translatedText: transformTextCase(d.translatedText || d.text, caseType),
+            originalText: transformTextCase(d.originalText || d.text, caseType),
             textCase: caseType,
           })),
         })),
@@ -1620,25 +1594,7 @@ export const useStudioStore = create<StudioState>()(
 
       page.panels.forEach((panel) => {
         panel.dialogues.forEach((d) => {
-          let text = (d.originalText || d.text || '')
-            .replace(/[|—_\\\/\[\]\{\}\(\)\<\>~`^+=*#$@%&©;:]/g, ' ')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-
-          const tokens = text.split(' ').filter((t) => {
-            const trimmed = t.trim();
-            if (!trimmed) return false;
-            if (trimmed.length === 1 && !/^[aAàÀáÁeEèÈéÉiIoOuUyY]$/i.test(trimmed)) return false;
-            if (/\d+[a-zA-Z]+|[a-zA-Z]+\d+/.test(trimmed) && !/^[ESDABC]급?$/i.test(trimmed)) return false;
-            if (trimmed.length === 2 && /^(xx|ip|vy|cu|na|gg|nl|aa|nl)$/i.test(trimmed)) return false;
-            return true;
-          });
-
-          let cleaned = tokens.join(' ')
-            .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2$3')
-            .replace(/\b([a-zA-ZÀ-ỹ])\s+([a-zA-ZÀ-ỹ])\b/g, '$1$2')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
+          let cleaned = cleanNoiseFromText(d.originalText || d.text || '');
 
           if (!cleaned || cleaned.length < 2) {
             cleaned = d.text || d.originalText || '';

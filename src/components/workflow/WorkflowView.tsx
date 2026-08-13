@@ -1,9 +1,9 @@
 import React from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
-import { GitFork, Sparkles, Play, CheckCircle2, AlertCircle, RefreshCw, Zap } from 'lucide-react';
+import { GitFork, CheckCircle2, RefreshCw, Zap } from 'lucide-react';
 
 export const WorkflowView: React.FC = () => {
-  const { nodes, edges, isExecutingWorkflow, runWorkflow } = useStudioStore();
+  const { nodes, isExecutingWorkflow, runWorkflow } = useStudioStore();
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">

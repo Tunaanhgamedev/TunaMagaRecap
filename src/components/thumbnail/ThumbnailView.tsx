@@ -1,10 +1,9 @@
 import React, { useRef } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
-import { Image as ImageIcon, Sparkles, Download, Layers, FolderOpen } from 'lucide-react';
+import { Image as ImageIcon, Download, Layers, FolderOpen } from 'lucide-react';
 
 export const ThumbnailView: React.FC = () => {
   const { thumbnail, setThumbnailConfig, setActiveTab } = useStudioStore();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   if (!thumbnail) {
     return (

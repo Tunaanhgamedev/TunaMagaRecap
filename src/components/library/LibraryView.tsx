@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
+import { getProxyImageUrl } from '../../utils/constants';
 import {
   FolderOpen,
   Upload,
@@ -220,7 +221,7 @@ export const LibraryView: React.FC = () => {
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       const raw = (page as any).rawImageUrl || page.imageUrl;
-                      const fallback = `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(raw)}&referer=${encodeURIComponent(mangaUrlInput.trim() || 'https://truyenqqko.com/')}`;
+                      const fallback = getProxyImageUrl(raw, mangaUrlInput.trim() || 'https://truyenqqko.com/');
                       if (target.src !== fallback) {
                         target.src = fallback;
                       }

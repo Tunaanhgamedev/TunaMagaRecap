@@ -5,7 +5,6 @@ import {
   Eye,
   Clock,
   TrendingUp,
-  Play,
   Zap,
   Layers,
   Sparkles,
@@ -26,7 +25,6 @@ export const DashboardView: React.FC = () => {
     clearAllProjects,
     fetchProjectsFromBackend,
     mergeChaptersToCompilation,
-    isCompilationMode,
     chapterVideoBlobs,
   } = useStudioStore();
 

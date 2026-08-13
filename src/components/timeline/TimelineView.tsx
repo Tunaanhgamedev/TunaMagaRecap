@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
+import { API_BASE_URL, getProxyImageUrl } from '../../utils/constants';
 import {
   Play,
   Pause,
@@ -7,17 +8,14 @@ import {
   Film,
   Download,
   Layers,
-  Camera,
   Music,
   Mic,
   MicOff,
   Subtitles,
-  Zap,
   Share2,
   FolderOpen,
   Smartphone,
   Tv,
-  Maximize2,
   Sparkles,
   Volume2,
   Volume1,
@@ -34,8 +32,6 @@ export const TimelineView: React.FC = () => {
     currentTime,
     setCurrentTime,
     duration,
-    clips,
-    subtitles,
     pages,
     selectedProject,
     aspectRatio,
@@ -173,14 +169,14 @@ export const TimelineView: React.FC = () => {
   const resolveMangaImgSrc = (url: string, raw?: string) => {
     const target = raw || url || '';
     if (!target) return '';
-    if (target.startsWith('/api/proxy-image') || target.startsWith('http://localhost:3001/api/proxy-image')) {
+    if (target.startsWith('/api/proxy-image') || target.startsWith(`${API_BASE_URL}/proxy-image`)) {
       return target.startsWith('http') ? target : `http://localhost:3001${target}`;
     }
     if (target.startsWith('blob:') || target.startsWith('data:')) {
       return target;
     }
     if (target.startsWith('http://') || target.startsWith('https://')) {
-      return `http://localhost:3001/api/proxy-image?url=${encodeURIComponent(target)}&referer=${encodeURIComponent('https://thuviensach.vn/')}`;
+      return getProxyImageUrl(target, 'https://thuviensach.vn/');
     }
     return target;
   };

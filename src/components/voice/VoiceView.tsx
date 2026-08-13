@@ -6,13 +6,10 @@ import {
   Sparkles,
   Check,
   ArrowRight,
-  FolderOpen,
   ExternalLink,
   Mic,
   Sliders,
   Radio,
-  AudioWaveform,
-  VolumeX,
 } from 'lucide-react';
 
 export const VoiceView: React.FC = () => {
@@ -23,9 +20,7 @@ export const VoiceView: React.FC = () => {
     isSynthesizingTTS,
     synthesizeVoiceAudio,
     setActiveTab,
-    scriptData,
     playNarrationAudio,
-    stopNarrationAudio,
   } = useStudioStore();
 
   const [speechSpeed, setSpeechSpeed] = useState(1.05);

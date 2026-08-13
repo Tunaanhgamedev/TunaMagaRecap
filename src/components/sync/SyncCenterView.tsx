@@ -6,20 +6,13 @@ import {
   HardDrive,
   GitBranch,
   RefreshCw,
-  Server,
   Layers,
   CheckCircle,
   FolderGit2,
-  Cpu,
-  ArrowRight,
   ShieldCheck,
   Zap,
-  Box,
-  FileCode,
-  Globe,
   UploadCloud,
   DownloadCloud,
-  Check,
 } from 'lucide-react';
 
 export const SyncCenterView: React.FC = () => {
@@ -30,7 +23,6 @@ export const SyncCenterView: React.FC = () => {
   const [cloudVersion, setCloudVersion] = useState(10);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  const [conflictResolved, setConflictResolved] = useState(true);
 
   const handleSyncToCloud = () => {
     setIsSyncing(true);
