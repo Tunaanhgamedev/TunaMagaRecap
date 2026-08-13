@@ -277,16 +277,17 @@ export async function generateMangaRecapScript({
     pagesOverview = `(Diễn biến thực tế Chapter ${chapterNumber} bộ ${seriesName}, tổng cộng ${totalPages} trang truyện)`;
   }
 
-  const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok với hàng triệu lượt xem.
-Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) cực kỳ lôi cuốn, mượt mà và kịch tính bao quát TOÀN BỘ từ Trang 1 đến Trang ${totalPages} của Chapter ${chapterNumber} bộ truyện "${seriesName}".
+  const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok Triệu View với phong cách bình luận giật gân, cuốn hút và vô cùng kịch tính.
+Nhiệm vụ của bạn: Viết một kịch bản đọc thuyết minh (Voiceover Script) CỰC KỲ DÀI, CHI TIẾT, HÀO HÙNG VÀ SÔI ĐỘNG (tối thiểu 2000 - 3500 từ) bao quát 100% TOÀN BỘ từ Trang 1 đến Trang ${totalPages} của Chapter ${chapterNumber} bộ truyện "${seriesName}".
 
-QUY TẮC BẮT BUỘC:
-1. **Bao quát đầy đủ tất cả ${totalPages} trang truyện**: Tuyệt đối không dừng giữa chừng. Dùng vòng lặp tư duy duyệt qua từng hồi truyện từ Trang 1 đến Trang ${totalPages}.
-2. **Dựa vào hình ảnh & cốt truyện thật**: Miêu tả trực quan bối cảnh (*🎨 [Hình Ảnh Khung Tranh]*), góc máy camera, hành động của nhân vật cho từng phân đoạn.
-3. **Không đưa câu lệnh kỹ thuật vào kịch bản**: Tuyệt đối KHÔNG xuất hiện các câu như "Bấm quét chữ", "OCR", "trích xuất văn bản".
-4. **Phân vai rõ ràng**: [Dẫn Chuyện], [${protagonist || 'Nhân Vật Chính'}], [Kẻ Địch], [Gợi Ý Nhạc/SFX].
-5. **Hook 5s Đầu Triệu View**: Câu mở đầu giật gân, khơi gợi tò mò kéo giữ chân người xem.
-6. **Cliffhanger cuối video**: Kêu gọi Đăng ký kênh, Like và Bình luận.
+QUY TẮC BẮT BUỘC ĐỂ TẠO VIDEO TRIỆU VIEW:
+1. **Lời dẫn chuyện liên tục cho TẤT CẢ các Panel**: Với MỌI panel khung hình trên từng trang, BẮT BUỘC có ít nhất 1-2 câu thuyết minh **[Dẫn Chuyện]** miêu tả hành động, phân tích tâm lý, bối cảnh và tạo hype ("Pha lật kèo đỉnh cao!", "Vả mặt cực gắt!", "Khán giả trố mắt trầm ồ...", "Ma lực bùng nổ nghẹt thở..."). KHÔNG ĐỂ BẤT KỲ PANEL NÀO BỊ TRỐNG HOẶC IM LẶNG!
+2. **Bao quát đầy đủ tất cả ${totalPages} trang truyện**: Tuyệt đối không cắt ngắn hay dừng giữa chừng. Duyệt tỉ mỉ từng hồi từ Trang 1 tới Trang ${totalPages}.
+3. **Mô tả bối cảnh & Góc máy chuyên nghiệp**: Dùng thẻ *🎨 [Trang X • Panel Y (Góc Máy)]* miêu tả hiệu ứng trực quan (Dramatic Zoom, Pan Right, Tilt Up, Ma Lực Bùng Nổ).
+4. **Không đưa từ ngữ rác kỹ thuật**: Tuyệt đối KHÔNG xuất hiện "Bấm quét chữ", "OCR", "trích xuất văn bản", "chờ xử lý".
+5. **Phân vai sắc nét**: **[Dẫn Chuyện]**, **[${protagonist || 'Nhân Vật Chính'}]**, **[Phản Diện / Kẻ Địch]**, **[Hiệu Ứng / SFX / BGM]**.
+6. **Hook 5s Đầu Triệu View**: Câu mở đầu giật gân, dồn dập, kéo giữ chân người xem 100%.
+7. **Phân tích chiến thuật & Kết thúc Cliffhanger cực gắt**: Kêu gọi Like, Subscribe và Đăng ký kênh 🔔.
 
 DANH SÁCH CHI TIẾT TỪNG TRANG TRUYỆN (${totalPages} TRANG):
 ${pagesOverview}
@@ -294,7 +295,7 @@ ${pagesOverview}
 PHONG CÁCH KỊCH BẢN YÊU CẦU (${mode.toUpperCase()}):
 ${customPrompt ? `YÊU CẦU ĐẶC BIỆT TỪ ĐẠO DIỄN: "${customPrompt}"` : ''}
 
-Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, chất lượng đỉnh cao!`;
+Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO YouTube, văn phong nảy lửa, cuốn hút từng giây!`;
 
   if (key) {
     for (const model of MODEL_CANDIDATES) {

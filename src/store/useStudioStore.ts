@@ -1956,25 +1956,71 @@ export const useStudioStore = create<StudioState>()(
       },
     };
 
+    const hypeCommentaries: Record<string, string[]> = {
+      hunter_system: [
+        `Cửa sổ thông báo hệ thống phát sáng xanh rực trước mắt ${hero}! Các chỉ số sức mạnh nổ tung ngoài tầm kiểm soát!`,
+        `Nhìn vào vệt ma lực tím đen cuồn cuộn bao phủ thanh vũ khí kìa! Áp lực ma pháp khiến cả hầm ngục như muốn sụp đổ!`,
+        `Kèo này tưởng chừng như là đường chết, nhưng đối thủ đâu có ngờ ${hero} đang chuẩn bị tung ra đòn kết liễu chí mạng!`,
+        `Sự kiêu ngạo của quái vật Boss lập tức biến thành sự kinh hãi! Pha vả mặt đỉnh cao khiến fan xem chỉ biết trầm ồ thỏa mãn!`,
+        `Tốc độ di chuyển vượt mốc âm thanh! Từng cú vung đao chính xác đến rùng mình phá hủy hoàn toàn cốt lõi kẻ thù!`,
+      ],
+      cultivation_wuxia: [
+        `Linh lực trong đan điền dâng trào như đại dương cuồng bạo! Vạn đạo kiếm quang rợp trời rạch nát hư không!`,
+        `Địch nhân tưởng rằng mình là thiên tài tông môn có thể áp đảo, nhưng trước mặt ${hero}, chúng chẳng khác nào dế mèn!`,
+        `Chưởng phong dội xuống làm rung chuyển sơn hà! Thần thái ngạo nghễ nhìn thấu càn khôn của bậc đế vương!`,
+        `Một đòn kiếm khí rực rỡ cắt đứt mọi hy vọng phản kháng! Cảnh giới bộc phát vượt xa tưởng tượng của toàn bộ chưởng lão!`,
+        `Màn lật kèo quá đỗi mãn nhãn! Kẻ phản bội phải quỳ gối xin tha trong sự bàng hoàng tột độ!`,
+      ],
+      isekai_fantasy: [
+        `Vòng tròn ma pháp cấm thuật đa tầng phát sáng rực rỡ dưới chân! Năng lượng ma pháp cổ xưa thức tỉnh trọn vẹn!`,
+        `Kỹ năng gian lận (Cheat Skill) chính thức kích hoạt! Quy luật của thế giới fantasy này hoàn toàn bị bẻ cong!`,
+        `Cả binh đoàn quái vật đứng chết lặng trước uy áp tuyệt đối! Sự tự tin của ${hero} khiến đối phương phải khiếp sợ!`,
+        `Màn trình diễn đại ma pháp không thể tin nổi! Chỉ với một chiêu duy nhất, toàn bộ trận địa bị san bằng!`,
+        `Pha xử lý đẳng cấp ma vương! Khán giả theo dõi chỉ biết thốt lên: Quá ngầu và quá bá đạo!`,
+      ],
+      regression_revenge: [
+        `Ánh mắt lạnh như băng giá của ${hero} nhìn thấu mọi mưu đồ! Ký ức kiếp trước giúp nắm trọn 100% chiến thắng!`,
+        `Từng bước đi của kẻ thù đều nằm trong kịch bản đã giăng sẵn! Sự ngạo mạn của chúng sắp sửa phải trả giá bằng máu!`,
+        `Ra tay quyết đoán không một động tác thừa! Món nợ năm xưa giờ đây được thanh toán sòng phẳng từng chút một!`,
+        `Nhìn cái biểu cảm hốt hoảng của tên phản bội kìa! Hắn không hiểu tại sao mọi lợi thế đều biến mất trong chớp mắt!`,
+        `Màn vả mặt đỉnh cao không thể thỏa mãn hơn! Công lý và sự phục thù tàn khốc đã giáng xuống đúng lúc!`,
+      ],
+      school_urban: [
+        `Cú đấm thẳng đầy uy lực phá tan thế phòng thủ! Tiếng va chạm đanh thép dội vang khắp không gian!`,
+        `Né đòn cực phẩm rồi tung chiêu bẻ khớp đối thủ trong tích tắc! Phong thái bá chủ đường phố không thể bàn cãi!`,
+        `Ánh mắt kiên định không hề chớp trước đám đông bao vây! Từng tên một lần lượt ngã gục dưới chân ${hero}!`,
+        `Trật tự mới đã được thiết lập! Sự thống trị tuyệt đối khiến toàn bộ bang hội đối phương phải cúi đầu nhận thua!`,
+        `Pha cận chiến thực dụng đến nghẹt thở! Nhịp độ dồn dập khiến người xem không thể rời mắt dù chỉ 1 giây!`,
+      ],
+      general_shonen: [
+        `Ngọn lửa ý chí bộc phát cuồng bạo! Sức mạnh niềm tin và quyết tâm bảo vệ đồng đội dâng trào tột đỉnh!`,
+        `Bất chấp thương tích đầy mình, ${hero} vẫn gượng dậy với nụ cười tự tin ngạo nghễ!`,
+        `Tuyệt kỹ tối thượng được giải phóng! Cú đấm quyết định mang theo toàn bộ ước mơ phá tan mọi chướng ngại!`,
+        `Không khí sôi động bùng nổ! Từng khoảnh khắc đều khiến trái tim người xem đập liên hồi phấn khích!`,
+        `Chiến thắng thuyết phục không thể bàn cãi! Bản lĩnh của bậc anh hùng chân chính được khẳng định rực rỡ!`,
+      ],
+    };
+
+    const activeHypeList = hypeCommentaries[genre] || hypeCommentaries.hunter_system || hypeCommentaries.general_shonen;
     const curGenre = genreMeta[genre] || genreMeta.hunter_system;
     const totalPages = currentPages.length || 1;
     const totalPanels = currentPages.reduce((acc, p) => acc + (p.panels?.length || 2), 0);
 
-    let fallbackScript = `# 🎬 KỊCH BẢN REVIEW AI (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n`;
-    fallbackScript += `> 📌 **Thể Loại**: ${curGenre.name} | **Phong Cách**: Chuẩn YouTube / TikTok Triệu View\n`;
-    fallbackScript += `> 📊 **Quy Mô Chương**: Bao quát toàn bộ ${totalPages} Trang truyện (${totalPanels} Khung hình / Panels)\n`;
+    let fallbackScript = `# 🎬 KỊCH BẢN REVIEW CHI TIẾT (${mode.toUpperCase()}): ${sName.toUpperCase()} CHAPTER ${cNum}\n`;
+    fallbackScript += `> 📌 **Thể Loại**: ${curGenre.name} | **Phong Cách Video**: Chuẩn YouTube / TikTok Triệu View (Kịch Tính - Sôi Động - Cuốn Hút)\n`;
+    fallbackScript += `> 📊 **Quy Mô Chương**: Bao quát 100% toàn bộ ${totalPages} Trang truyện (${totalPanels} Khung hình / Panels)\n`;
     fallbackScript += `> 🎵 **Định Hướng Âm Thanh**: ${curGenre.sfx}\n\n`;
 
-    fallbackScript += `## 🎯 PHÂN ĐOẠN 0: HOOK MỞ ĐẦU GIỮ CHÂN (5s Đầu)\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin rằng chỉ trong Chapter ${cNum} với ${totalPages} trang truyện này, một biến cố kinh hoàng đã làm đảo lộn hoàn toàn vận mệnh của ${hero} không? Chào mừng các bạn đến với TunaMagaRecap! Hôm nay chúng ta sẽ cùng theo dõi toàn bộ diễn biến từ trang 1 đến trang ${totalPages} của siêu phẩm ${sName}!"\n\n`;
+    fallbackScript += `## 🎯 PHÂN ĐOẠN 0: HOOK GIỮ CHÂN 5S THÂM NHẬP GIẬT GÂN\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "CẢNH BÁO: Đừng xem video này nếu bạn chưa sẵn sàng đón nhận cú sốc lớn nhất Chapter ${cNum}! Bạn có tin rằng chỉ trong ${totalPages} trang truyện căng thẳng này, một biến cố kinh hoàng đã đảo lộn hoàn toàn vận mệnh của ${hero} không? Chào mừng các bạn đến với TunaMagaRecap! Hãy cùng mình bóc tách chi tiết từng trang truyện từ 1 đến ${totalPages} của siêu phẩm ${sName} ngay bây giờ!"\n\n`;
 
     const actCount = totalPages <= 10 ? totalPages : 5;
     const actNames = [
-      'HỒI 1: BỐI CẢNH & KHỞI ĐẦU CUỘC CHẠM TRÁN',
+      'HỒI 1: BẤT NGỜ XUẤT HIỆN & KHỞI ĐẦU CUỘC CHẠM TRÁN GAY CẤN',
       'HỒI 2: THÂM NHẬP KHÔNG GIAN NGUY HIỂM & ĐỐI MẶT THỬ THÁCH',
       'HỒI 3: CAO TRÀO BÙNG NỔ & XUNG ĐỘT TỘT ĐỈNH',
-      'HỒI 4: BIẾN SỐ BẤT NGỜ & CÚ LẬT KÈO NGOẠN MỤC',
-      'HỒI 5: THỨC TỈNH SỨC MẠNH & KHÉP LẠI CHAPTER',
+      'HỒI 4: BIẾN SỐ BẤT NGỜ & MÀN VẢ MẶT LẬT KÈO NGOẠN MỤC',
+      'HỒI 5: THỨC TỈNH SỨC MẠNH TOÀN LỰC & KHÉP LẠI CHAPTER',
     ];
 
     const pagesPerAct = Math.ceil(totalPages / actCount);
@@ -1993,7 +2039,8 @@ export const useStudioStore = create<StudioState>()(
 
       fallbackScript += `## 📜 ${actTitle}\n`;
       const beatDesc = curGenre.actionBeats[actIdx % curGenre.actionBeats.length];
-      fallbackScript += `*🎨 [Bối Cảnh Khung Tranh]*: ${actIdx === 0 ? `${curGenre.trope} ${curGenre.combat}` : beatDesc}\n`;
+      fallbackScript += `*🎨 [Bối Cảnh & Hiệu Ứng Trực Quan]*: ${actIdx === 0 ? `${curGenre.trope} ${curGenre.combat}` : beatDesc}\n`;
+      fallbackScript += `*🎵 [Âm Nhạc Sub-BGM]*: ${curGenre.sfx}\n\n`;
 
       for (const page of actPages) {
         const pNum = page.pageIndex;
@@ -2006,7 +2053,7 @@ export const useStudioStore = create<StudioState>()(
                   pageIndex: pNum,
                   panelIndex: 1,
                   bbox: { x: 5, y: 5, w: 90, h: 45 },
-                  suggestedCameraEffect: 'zoom_in',
+                  suggestedCameraEffect: 'dramatic_zoom',
                   aiDescription: '',
                   dialogues: [],
                 },
@@ -2023,15 +2070,24 @@ export const useStudioStore = create<StudioState>()(
 
         const pageDialogues = cleanDialogues.filter((d) => (d.pageIndex || 1) === pNum);
 
-        fallbackScript += `### 📄 Trang ${pNum} (${panels.length} Panels)\n`;
+        fallbackScript += `### 📄 Trang ${pNum} (Gồm ${panels.length} Khung Hình Panels)\n`;
 
-        for (const pan of panels) {
-          const panNum = pan.panelIndex || 1;
+        if (pNum === 1) {
+          fallbackScript += `**[Dẫn Chuyện]**: "Mở đầu Trang ${pNum}, bầu không khí ngột ngạt và căng thẳng lập tức bao trùm! ${hero} xuất hiện với phong thái tự tin nhưng ẩn chứa sát khí vô cùng sắc lạnh!"\n`;
+        } else if (pNum % 3 === 0) {
+          fallbackScript += `**[Dẫn Chuyện]**: "Chuyển sang Trang ${pNum}, nhịp độ trận đấu được đẩy lên một tầm cao mới! Từng chuyển động của các nhân vật đều khiến không gian xung quanh rung chuyển dữ dội!"\n`;
+        }
+
+        for (let panIdx = 0; panIdx < panels.length; panIdx++) {
+          const pan = panels[panIdx];
+          const panNum = pan.panelIndex || (panIdx + 1);
           const cam = pan.suggestedCameraEffect || (panNum === 1 ? 'dramatic_zoom' : 'pan_right');
           const panDialogues = (pan.dialogues || []).filter((d) => {
             const txt = (d.text || d.translatedText || '').toLowerCase().trim();
             return txt && !txt.includes('quét chữ thật') && !txt.includes('quet chu that') && !txt.includes('trích xuất');
           });
+          const hypeIndex = (pNum * 3 + panNum) % activeHypeList.length;
+          const hypeText = activeHypeList[hypeIndex];
 
           if (pan.aiDescription && !pan.aiDescription.includes('Bấm "Quét Chữ')) {
             fallbackScript += `*🎨 [Trang ${pNum} • Panel ${panNum} (${cam})]*: ${pan.aiDescription}\n`;
@@ -2040,30 +2096,30 @@ export const useStudioStore = create<StudioState>()(
             fallbackScript += `*🎨 [Trang ${pNum} • Panel ${panNum} (${cam})]*: ${actionLine}\n`;
           }
 
+          fallbackScript += `**[Dẫn Chuyện]**: "Tại Panel ${panNum} của Trang ${pNum}, ${hypeText}"\n`;
+
           if (panDialogues.length > 0) {
             for (const d of panDialogues) {
               const spk = d.speaker && d.speaker !== 'Nhân vật' && d.speaker !== 'Dẫn Chuyện' ? d.speaker : hero;
               fallbackScript += `**[${spk}]**: "${d.translatedText || d.text}"\n`;
             }
+            fallbackScript += `**[Dẫn Chuyện]**: "Từng lời phát ra đều mang sức nặng nghìn cân, khiến bất cứ ai có mặt tại hiện trường cũng phải bàng hoàng!"\n`;
           }
         }
 
-        if (pageDialogues.length === 0) {
-          if (pNum === 1) {
-            fallbackScript += `**[Dẫn Chuyện]**: "Ngay từ những khung hình đầu tiên của Trang ${pNum}, không khí căng thẳng đã bao trùm lấy ${hero} cùng toàn bộ chiến trường."\n`;
-          } else if (pNum === totalPages) {
-            fallbackScript += `**[Dẫn Chuyện]**: "Khung tranh cuối cùng của Trang ${pNum} khép lại với ánh mắt rực lửa của ${hero}, mở ra cánh cửa dẫn tới những thử thách kinh hoàng hơn ở chương sau!"\n`;
-          } else if (pNum % 5 === 0) {
-            fallbackScript += `**[Dẫn Chuyện]**: "Tại Trang ${pNum}, nhịp độ trận chiến được đẩy lên mức cao nhất, từng đòn tấn công va đập dữ dội làm rung chuyển toàn bộ không gian!"\n`;
-          }
+        if (pageDialogues.length === 0 && pNum % 2 === 0) {
+          fallbackScript += `**[Dẫn Chuyện]**: "Diễn biến trên Trang ${pNum} dù không cần nhiều lời thoại nhưng từng hình ảnh đã tự cất lời, khắc họa một bức tranh chiến trận vô cùng hoành tráng!"\n`;
         }
 
         fallbackScript += `\n`;
       }
+
+      fallbackScript += `> 💡 *[Phân Tích Đạo Diễn Hồi ${actIdx + 1}]*: Nhịp phim đang được đẩy lên cao trào. Các góc máy Zoom & Pan kết hợp với giọng thuyết minh truyền cảm giúp tăng 200% tỷ lệ giữ chân khán giả (Audience Retention).\n\n`;
     }
 
-    fallbackScript += `## 🔔 HỒI KẾT: TỔNG KẾT & KÊU GỌI ĐĂNG KÝ (CLIFFHANGER)\n`;
-    fallbackScript += `**[Dẫn Chuyện]**: "Toàn bộ ${totalPages} trang truyện của Chapter ${cNum} đã khép lại với những diễn biến nghẹt thở. Liệu trong Chapter ${cNum + 1}, ${hero} sẽ đối mặt với thế lực bí ẩn nào tiếp theo? Hãy để lại BÌNH LUẬN cảm nghĩ của bạn bên dưới, bấm LIKE và ĐĂNG KÝ KÊNH 🔔 để không bỏ lỡ video recap mới nhất trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại các bạn trong video tiếp theo!"\n`;
+    fallbackScript += `## 🔔 HỒI KẾT: ĐÁNH GIÁ TỔNG KẾT & KÊU GỌI ĐĂNG KÝ (CLIFFHANGER GIẬT GÂN)\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Toàn bộ ${totalPages} trang truyện của Chapter ${cNum} đã khép lại với những diễn biến nghẹt thở và mãn nhãn tột cùng! Liệu trong Chapter ${cNum + 1}, ${hero} sẽ đối mặt với thế lực bá chủ nào tiếp theo? Cú lật kèo tới đây có thực sự thành công hay chỉ là khởi đầu cho một cơn ác mộng lớn hơn?"\n`;
+    fallbackScript += `**[Dẫn Chuyện]**: "Anh em thấy thế nào về pha vả mặt đỉnh cao này? Đừng quên để lại BÌNH LUẬN cảm nghĩ bên dưới, nhấn LIKE và bấm nút ĐĂNG KÝ KÊNH 🔔 kèm chuông thông báo để là người đầu tiên đón xem video recap Chapter ${cNum + 1} mới nhất trên TunaMagaRecap nhé! Xin chào và hẹn gặp lại các bạn trong những video triệu view tiếp theo!"\n`;
 
     set({
       scriptData: {
