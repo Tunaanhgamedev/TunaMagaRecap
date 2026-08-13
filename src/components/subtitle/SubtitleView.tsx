@@ -52,7 +52,7 @@ export const SubtitleView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'MangaStudioAI_Subtitles.srt';
+    a.download = `${selectedProject?.seriesName || 'Manga'}_Chapter_${selectedProject?.chapterNumber || 0}_Whisper.srt`;
     a.click();
   };
 
@@ -64,7 +64,7 @@ export const SubtitleView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedProject?.seriesName || 'Manga'}_Panel_Sync.srt`;
+    a.download = `${selectedProject?.seriesName || 'Manga'}_Chapter_${selectedProject?.chapterNumber || 0}_Panel_Sync.srt`;
     a.click();
   };
 
