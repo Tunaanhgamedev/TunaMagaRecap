@@ -375,6 +375,7 @@ export const TimelineView: React.FC = () => {
           const next = s.currentTime + 0.1;
           if (next >= totalVideoDuration) {
             lastSpokenPanelIdRef.current = '';
+            stopNarrationAudio();
             return { currentTime: 0, isPlaying: false };
           }
           return { currentTime: next };
@@ -384,6 +385,7 @@ export const TimelineView: React.FC = () => {
       return () => clearInterval(interval);
     } else {
       lastSpokenPanelIdRef.current = '';
+      stopNarrationAudio();
     }
   }, [currentTime, isPlaying, panelTimeline, aspectRatio, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
 

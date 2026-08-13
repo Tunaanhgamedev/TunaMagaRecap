@@ -5,13 +5,34 @@
  * Properly persists selected voice across panel transitions.
  */
 
+function sanitizeTextForSpeech(rawText: string): string {
+  if (!rawText) return '';
+  return rawText
+    // Strip visual/camera markdown notes like *🎨 [Trang 1 • Panel 1]*
+    .replace(/\*🎨.*?\*/g, '')
+    .replace(/\*🎵.*?\*/g, '')
+    .replace(/\*💡.*?\*/g, '')
+    // Strip speaker role tags like **[Dẫn Chuyện]**:, **[Nhân Vật]**:
+    .replace(/\*\*\[.*?\]\*\*:?/g, '')
+    .replace(/\[\/?(Dẫn Chuyện|Nhân vật|Phản Diện|Gợi Ý|BGM|SFX|Audio|Speaker).*?\]:?/gi, '')
+    // Strip markdown headers, blockquotes, bullets, and symbols
+    .replace(/^#+\s*/gm, '')
+    .replace(/^>\s*/gm, '')
+    .replace(/[*_~`#|]/g, '')
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // strip emojis
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .trim();
+}
+
 class VoiceAudioEngine {
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private activeUtterances: SpeechSynthesisUtterance[] = []; // GC protection array
   private isSpeakingActive: boolean = false;
   private currentVolume: number = 0.8;
   private cachedVoices: SpeechSynthesisVoice[] = [];
   private selectedVoice: SpeechSynthesisVoice | null = null;
   private lastVoiceId: string = '';
+  private pendingTimeout: any = null;
 
   constructor() {
     // Pre-cache voices — browsers load them asynchronously
@@ -30,19 +51,16 @@ class VoiceAudioEngine {
    * and caches the result so it persists across panel transitions.
    */
   private resolveVoice(voiceId: string): SpeechSynthesisVoice | null {
-    // If same voiceId as before and we have a cached match, reuse it
     if (voiceId === this.lastVoiceId && this.selectedVoice) {
       return this.selectedVoice;
     }
 
-    // Refresh voice list if empty
     if (this.cachedVoices.length === 0) {
       this.cachedVoices = window.speechSynthesis.getVoices();
     }
 
     if (this.cachedVoices.length === 0) return null;
 
-    // Priority mapping: our voiceId keywords → voice search terms
     const voiceKeywords: Record<string, string[]> = {
       'v-vbee-manhdung': ['dũng', 'dung', 'manh', 'male'],
       'v-vbee-thaotrinh': ['thảo', 'thao', 'trinh', 'female'],
@@ -54,7 +72,6 @@ class VoiceAudioEngine {
 
     const keywords = voiceKeywords[voiceId] || [];
 
-    // Step 1: Try exact keyword match in Vietnamese voices
     const viVoices = this.cachedVoices.filter(
       (v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam')
     );
@@ -70,14 +87,12 @@ class VoiceAudioEngine {
       }
     }
 
-    // Step 2: Use first Vietnamese voice available
     if (viVoices.length > 0) {
       this.selectedVoice = viVoices[0];
       this.lastVoiceId = voiceId;
       return viVoices[0];
     }
 
-    // Step 3: Fallback — any voice with 'vi' or use the default
     const anyViVoice = this.cachedVoices.find(
       (v) =>
         v.lang.includes('vi') ||
@@ -91,7 +106,6 @@ class VoiceAudioEngine {
       return anyViVoice;
     }
 
-    // Step 4: Use first available voice (ultimate fallback)
     this.selectedVoice = this.cachedVoices[0] || null;
     this.lastVoiceId = voiceId;
     return this.selectedVoice;
@@ -99,7 +113,7 @@ class VoiceAudioEngine {
 
   /**
    * Speaks Vietnamese narration cleanly and naturally with volume control.
-   * Preserves the selected voice across panel transitions.
+   * Sanitizes text to remove markdown/emojis, and preserves voice settings.
    */
   public speak(
     text: string,
@@ -109,52 +123,77 @@ class VoiceAudioEngine {
     volume: number = 0.8,
     onEnd?: () => void
   ) {
-    if (!text || typeof window === 'undefined') return;
+    const cleanText = sanitizeTextForSpeech(text);
+    if (!cleanText || typeof window === 'undefined') {
+      if (onEnd) onEnd();
+      return;
+    }
 
     this.currentVolume = Math.max(0, Math.min(1, volume));
 
-    // If muted or near zero volume, cancel and return immediately
     if (this.currentVolume <= 0.01) {
       this.stop();
       if (onEnd) onEnd();
       return;
     }
 
-    // Browser SpeechSynthesis Engine
     if ('speechSynthesis' in window) {
       try {
-        // Cancel any pending speech safely
+        if (this.pendingTimeout) {
+          clearTimeout(this.pendingTimeout);
+          this.pendingTimeout = null;
+        }
+
+        // Resume if browser TTS engine is paused
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
+        // Cancel pending speech safely
         window.speechSynthesis.cancel();
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.rate = Math.max(0.85, Math.min(1.4, rate));
         utterance.pitch = Math.max(0.8, Math.min(1.3, pitch));
         utterance.volume = this.currentVolume;
         utterance.lang = 'vi-VN';
 
-        // Use resolved voice — persists across panel transitions
         const resolvedVoice = this.resolveVoice(voiceId);
         if (resolvedVoice) {
           utterance.voice = resolvedVoice;
         }
 
+        // GC Protection: keep reference in activeUtterances
+        this.activeUtterances.push(utterance);
+        if (this.activeUtterances.length > 10) {
+          this.activeUtterances.shift();
+        }
+
         utterance.onend = () => {
           this.isSpeakingActive = false;
+          const idx = this.activeUtterances.indexOf(utterance);
+          if (idx !== -1) this.activeUtterances.splice(idx, 1);
           if (onEnd) onEnd();
         };
 
         utterance.onerror = () => {
           this.isSpeakingActive = false;
+          const idx = this.activeUtterances.indexOf(utterance);
+          if (idx !== -1) this.activeUtterances.splice(idx, 1);
           if (onEnd) onEnd();
         };
 
         this.currentUtterance = utterance;
         this.isSpeakingActive = true;
 
-        // Slight microtask delay avoids Chrome's synchronous cancel-speak lockup
-        setTimeout(() => {
-          window.speechSynthesis.speak(utterance);
-        }, 20);
+        this.pendingTimeout = setTimeout(() => {
+          if ('speechSynthesis' in window) {
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+            window.speechSynthesis.speak(utterance);
+          }
+        }, 30);
       } catch (err) {
         console.warn('[VoiceAudioEngine] Speech engine exception:', err);
       }
@@ -162,11 +201,16 @@ class VoiceAudioEngine {
   }
 
   public stop() {
+    if (this.pendingTimeout) {
+      clearTimeout(this.pendingTimeout);
+      this.pendingTimeout = null;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
         this.isSpeakingActive = false;
         this.currentUtterance = null;
+        this.activeUtterances = [];
       } catch (err) {}
     }
   }
@@ -177,4 +221,5 @@ class VoiceAudioEngine {
 }
 
 export const voiceAudioEngine = new VoiceAudioEngine();
+
 
