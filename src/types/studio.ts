@@ -284,6 +284,57 @@ export interface SEOMetadata {
   targetAudience: string;
 }
 
+export interface AIVisualElement {
+  id: string;
+  name: string;
+  url: string;
+  x: number; // 0 - 100%
+  y: number; // 0 - 100%
+  scale: number; // 0.2 - 3.0
+  opacity: number; // 0.1 - 1.0
+  rotation?: number; // -180 to 180 deg
+  blendMode?: 'normal' | 'screen' | 'overlay' | 'lighten' | 'color-dodge';
+  type: 'aura' | 'flame' | 'lightning' | 'badge' | 'monster' | 'slash' | 'magic_circle' | 'sticker' | 'custom';
+}
+
+export type ThumbnailTheme =
+  | 'solo_awakening' // Hunter dark blue + neon electric
+  | 'dark_monarch' // Crimson red + shadow void
+  | 'golden_immortal' // Tu Tien golden dragon + ancient flames
+  | 'magic_overlord' // Isekai purple rift + rune circles
+  | 'cyber_system' // Holographic cyan + matrix HUD
+  | 'blood_fury' // Blood moon + berserk battle
+  | 'speed_action' // Yellow lightning + comic blast
+  | 'custom';
+
+export type ThumbnailBadgeStyle =
+  | 'gold_metallic'
+  | 'neon_cyan'
+  | 'blood_red'
+  | 'flaming_orange'
+  | 'sss_danger'
+  | 'purple_void'
+  | 'emerald_god';
+
+export type ThumbnailTitleStyle =
+  | 'gold_3d'
+  | 'fiery_orange'
+  | 'electric_blue'
+  | 'crimson_blood'
+  | 'neon_cyan'
+  | 'toxic_green'
+  | 'pure_white';
+
+export type ThumbnailOverlayEffect =
+  | 'speed_lines'
+  | 'lightning_storm'
+  | 'flaming_embers'
+  | 'shattered_glass'
+  | 'magic_runes'
+  | 'system_hud'
+  | 'vignette_dark'
+  | 'none';
+
 export interface ThumbnailConfig {
   mainTitle: string;
   subtitle: string;
@@ -291,6 +342,27 @@ export interface ThumbnailConfig {
   characterImage: string;
   bgGradient: string;
   glowColor: string;
+  // Extended Epic & AI Features
+  theme?: ThumbnailTheme;
+  badgeStyle?: ThumbnailBadgeStyle;
+  titleStyle?: ThumbnailTitleStyle;
+  overlayEffect?: ThumbnailOverlayEffect;
+  characterSecondaryImage?: string;
+  aiArtworkUrl?: string;
+  characterPosition?: 'right' | 'left' | 'center' | 'split';
+  characterScale?: number; // 50 to 150
+  characterGlow?: boolean;
+  characterBlend?: 'normal' | 'screen' | 'overlay' | 'lighten';
+  aspectRatio?: '16:9' | '9:16' | '1:1';
+  stickers?: string[];
+  activeStickers?: string[];
+  aiElements?: AIVisualElement[];
+  filterSettings?: {
+    brightness: number; // 80 - 150
+    contrast: number; // 80 - 180
+    saturation: number; // 80 - 200
+    vignette: number; // 0 - 100
+  };
 }
 
 export interface AIPluginConfig {

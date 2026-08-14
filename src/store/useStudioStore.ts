@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { voiceAudioEngine } from '../utils/audioSynthesizer';
 import { API_BASE_URL } from '../utils/constants';
 import { transformTextCase, cleanNoiseFromText } from '../utils/textHelpers';
+import { createDefaultThumbnailConfig } from '../utils/thumbnailPresets';
 import {
   ActiveTab,
   Project,
@@ -2406,11 +2407,23 @@ export const useStudioStore = create<StudioState>()(
   setSEOMetadata: (meta) =>
     set((state) => ({ seo: state.seo ? { ...state.seo, ...meta } : null })),
   setThumbnailConfig: (config) =>
-    set((state) => ({ thumbnail: state.thumbnail ? { ...state.thumbnail, ...config } : null })),
+    set((state) => ({
+      thumbnail: state.thumbnail
+        ? { ...state.thumbnail, ...config }
+        : {
+            ...createDefaultThumbnailConfig(
+              state.selectedProject?.seriesName || 'Tôi Thăng Cấp Một Mình',
+              state.selectedProject?.chapterNumber || 1,
+              state.pages[0]?.imageUrl || ''
+            ),
+            ...config,
+          },
+    })),
   generateAISEO: () => {
     const proj = get().selectedProject;
     const series = proj?.seriesName || 'Tôi Thăng Cấp Một Mình - Solo Leveling';
     const chap = proj?.chapterNumber || 1;
+    const cover = get().pages[0]?.imageUrl || '';
 
     const altTitles = [
       `🔥 ${series} Chapter ${chap}: SỨC MẠNH THỨC TỈNH BÙNG NỔ! (Tóm Tắt Recap Cực Cuốn)`,
@@ -2502,6 +2515,7 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
         scheduleTime: '19:00 Hôm Nay (Giờ Vàng YouTube)',
         targetAudience: 'Manga / Manhwa / Anime Fans & TikTok Creators',
       },
+      thumbnail: createDefaultThumbnailConfig(series, chap, cover),
     });
   },
 
