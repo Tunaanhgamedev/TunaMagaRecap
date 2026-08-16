@@ -338,8 +338,29 @@ function drawOverlayEffects(
     ctx.lineWidth = 3;
     ctx.strokeRect(width * 0.03, height * 0.05, width * 0.94, height * 0.9);
     ctx.fillStyle = '#06b6d4';
-    ctx.fillRect(width * 0.03, height * 0.05, 120, 4);
     ctx.fillRect(width * 0.03, height * 0.05, 4, 120);
+    ctx.restore();
+  } else if (effect === 'shattered_glass') {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 2;
+    const cx = width * 0.8;
+    const cy = height * 0.5;
+    for (let i = 0; i < 15; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      const angle = (i / 15) * Math.PI * 2 + (Math.random() * 0.2);
+      const length = width * 0.5 + Math.random() * width * 0.3;
+      
+      let curX = cx;
+      let curY = cy;
+      for (let j = 0; j < 4; j++) {
+        curX += Math.cos(angle) * (length / 4) + (Math.random() * 40 - 20);
+        curY += Math.sin(angle) * (length / 4) + (Math.random() * 40 - 20);
+        ctx.lineTo(curX, curY);
+      }
+      ctx.stroke();
+    }
     ctx.restore();
   }
 }
@@ -419,7 +440,7 @@ function drawChapterPillAndTimestamp(
   ctx.font = '900 32px "Arial Black", Impact, sans-serif';
   const textWidth = ctx.measureText(chapterText).width;
   
-  ctx.fillStyle = '#dc2626'; // red-600
+  ctx.fillStyle = getBadgeColor(config.badgeStyle || 'blood_red');
   ctx.shadowColor = 'rgba(220, 38, 38, 0.8)';
   ctx.shadowBlur = 10;
   roundRect(ctx, 40, 40, textWidth + 40, 56, 28);
@@ -472,7 +493,27 @@ function drawEpicTypographyBottom(
   const isPortrait = config.aspectRatio === '9:16';
   
   ctx.save();
-  ctx.textAlign = 'center';
+
+  let baseX = width / 2;
+  let align: CanvasTextAlign = 'center';
+  const position = config.textPosition || 'bottom-center';
+  
+  if (position === 'left-half') {
+    baseX = width * 0.25;
+    align = 'center';
+  } else if (position === 'bottom-left') {
+    baseX = width * 0.05;
+    align = 'left';
+  }
+
+  const rotation = config.textRotation || 0;
+  if (rotation !== 0) {
+    ctx.translate(baseX, height);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-baseX, -height);
+  }
+
+  ctx.textAlign = align;
   ctx.textBaseline = 'bottom';
   
   let currentY = height - 40; // start from bottom up
@@ -485,40 +526,61 @@ function drawEpicTypographyBottom(
     
     ctx.lineWidth = 8;
     ctx.strokeStyle = '#000000';
-    ctx.strokeText(subtitle, width / 2, currentY);
+    ctx.strokeText(subtitle, baseX, currentY);
     
-    ctx.fillStyle = config.glowColor || '#38bdf8';
-    ctx.fillText(subtitle, width / 2, currentY);
+    const subGrad = ctx.createLinearGradient(baseX, currentY - subFontSize, baseX, currentY);
+    subGrad.addColorStop(0, '#ffffff');
+    subGrad.addColorStop(1, config.glowColor || '#38bdf8');
+    ctx.fillStyle = subGrad;
+    ctx.fillText(subtitle, baseX, currentY);
     
     currentY -= (subFontSize + 10);
   }
 
   // 2. Draw 3D Main Title
   if (config.mainTitle) {
-    const title = config.mainTitle.toUpperCase();
-    // Use clamp-like logic for font size
-    const fontSize = isPortrait ? 60 : Math.min(140, Math.max(80, Math.floor(width / title.length * 1.4)));
-    ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+    const rawTitle = config.mainTitle.toUpperCase();
+    const maxWidth = width * 0.85;
+    let lines = [rawTitle];
     
-    // Heavy black outline / stroke
-    ctx.lineWidth = 20;
-    ctx.strokeStyle = '#000000';
-    ctx.lineJoin = 'round';
-    ctx.strokeText(title, width / 2, currentY);
+    const initialFontSize = isPortrait ? 60 : Math.min(140, Math.max(80, Math.floor(width / rawTitle.length * 1.4)));
+    ctx.font = `900 ${initialFontSize}px "Arial Black", Impact, sans-serif`;
     
-    // 3D Shadow Layers (extruded downwards slightly)
-    ctx.fillStyle = '#000000';
-    for (let offset = 8; offset >= 1; offset--) {
-      ctx.fillText(title, width / 2, currentY + offset);
+    if (ctx.measureText(rawTitle).width > maxWidth) {
+      const words = rawTitle.split(' ');
+      const mid = Math.ceil(words.length / 2);
+      if (words.length > 1) {
+        lines = [
+          words.slice(0, mid).join(' '),
+          words.slice(mid).join(' ')
+        ];
+      }
     }
     
-    // Gradient fill or flat color based on style
-    if (config.titleStyle === 'fiery_orange') {
-      ctx.fillStyle = '#fbbf24';
-    } else {
-      ctx.fillStyle = '#ffffff';
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const title = lines[i];
+      const fontSize = isPortrait ? 60 : Math.min(140, Math.max(80, Math.floor(width / title.length * 1.4)));
+      ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+      
+      // Heavy black outline / stroke
+      ctx.lineWidth = 20;
+      ctx.strokeStyle = '#000000';
+      ctx.lineJoin = 'round';
+      ctx.strokeText(title, baseX, currentY);
+      
+      // 3D Shadow Layers (extruded downwards slightly)
+      ctx.fillStyle = '#000000';
+      for (let offset = 8; offset >= 1; offset--) {
+        ctx.fillText(title, baseX, currentY + offset);
+      }
+      
+      const grad = ctx.createLinearGradient(baseX, currentY - fontSize, baseX, currentY);
+      applyTitleGradient(grad, config.titleStyle || 'pure_white');
+      ctx.fillStyle = grad;
+      ctx.fillText(title, baseX, currentY);
+      
+      currentY -= (fontSize + 10);
     }
-    ctx.fillText(title, width / 2, currentY);
   }
 
   ctx.restore();
