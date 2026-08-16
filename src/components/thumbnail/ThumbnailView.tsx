@@ -26,6 +26,10 @@ import {
   ArrowRight,
   X,
   ImagePlus,
+  TrendingUp,
+  Video,
+  Award,
+  ExternalLink,
 } from 'lucide-react';
 import {
   THUMBNAIL_THEMES,
@@ -33,7 +37,9 @@ import {
   CTR_STICKERS,
   VIRAL_TITLE_TEMPLATES,
   PROGRESSION_BADGES,
+  YOUTUBE_CHANNELS_BENCHMARK,
   ViralTitleTemplate,
+  YouTubeChannelBenchmark,
   createDefaultThumbnailConfig,
 } from '../../utils/thumbnailPresets';
 import { downloadThumbnailImage } from '../../utils/thumbnailExporter';
@@ -48,13 +54,15 @@ import {
 export const ThumbnailView: React.FC = () => {
   const { thumbnail, setThumbnailConfig, setActiveTab, selectedProject, pages } = useStudioStore();
 
-  const [activeControlTab, setActiveControlTab] = useState<'theme' | 'character' | 'typography' | 'ai_prompt'>('character');
+  const [activeControlTab, setActiveControlTab] = useState<'theme' | 'character' | 'typography' | 'viral_research' | 'ai_prompt'>('character');
   const [isExporting, setIsExporting] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputText, setUrlInputText] = useState('');
   const [showMobileView, setShowMobileView] = useState(false);
   const [showViralModal, setShowViralModal] = useState(false);
+  const [selectedViralCategory, setSelectedViralCategory] = useState<string>('all');
+  const [activeViralSubTab, setActiveViralSubTab] = useState<'templates' | 'channels'>('templates');
   const [selectedSlotForEdit, setSelectedSlotForEdit] = useState<number | null>(null);
   
   // Custom uploaded or pasted external images
@@ -283,6 +291,7 @@ export const ThumbnailView: React.FC = () => {
       badgeStyle: theme.badgeStyle,
       titleStyle: template.titleStyle,
       overlayEffect: theme.overlayEffect,
+      progressionBadge: template.progressionBadge || currentThumbnail.progressionBadge,
     });
     setShowViralModal(false);
   };
@@ -299,7 +308,31 @@ export const ThumbnailView: React.FC = () => {
   };
 
   const getAIPrompt = () => {
-    const series = selectedProject?.seriesName || 'Solo Leveling Protagonist';
+    const series = selectedProject?.seriesName || 'Epic Manga Protagonist';
+    const theme = currentThumbnail.theme || 'solo_awakening';
+
+    if (theme === 'tutien_mahoang' || theme === 'golden_immortal') {
+      return `Masterpiece, ultra high resolution 8K oriental fantasy key visual of ${series}, ancient handsome cultivation grandmaster in flowing silk robes, glowing golden dragon aura swirling around body, floating celestial spirit swords, dramatic misty mountains background, intense martial gaze, highly detailed digital painting, trending on ArtStation, octane render --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'dark_monarch') {
+      return `Masterpiece, 8K dark fantasy manhwa key visual of ${series}, intimidating Shadow Monarch with glowing electric purple eyes, surrounded by rising black mist and legion of armored undead shadow soldiers, sharp dynamic battle stance, obsidian dagger, volumetric dark lighting, cinematic octane render --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'haihuoc_su_muoi') {
+      return `Masterpiece, 8K anime key visual of ${series}, extremely beautiful waifu anime girl with subtle red dragon horns, cute shy blushing expression yet holding massive flaming warhammer, vibrant pink and orange sunset lighting, hyper-detailed anime illustration, trending on pixiv --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'boss_nhatu') {
+      return `Masterpiece, 8K gritty action manhwa illustration of ${series}, cold-blooded badass chemistry teacher secretly feared as the most dangerous maximum-security prison boss, wearing suit with glowing blood-red eyes, shattered neon glass background, dramatic high contrast shadows --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'nguyento_vodich') {
+      return `Masterpiece, 8K epic fantasy artwork of ${series}, all-powerful elemental archmage simultaneously summoning blazing inferno, freezing glacial frost, and crackling cyan lightning storm, glowing elemental runes encircling hands, high dynamic range --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'chuyensinh_bochet') {
+      return `Masterpiece, 8K comedic fantasy anime illustration of ${series}, microscopic mutant beast leveling up into an apex predator, glowing neon green toxic venom aura, dynamic funny shock manga expression, high details --ar 16:9 --v 6.0`;
+    }
+    if (theme === 'dothi_gianghe') {
+      return `Masterpiece, 8K modern urban manhwa visual of ${series}, ultra wealthy CEO protagonist revealing true overpowered identity, glowing golden aura, luxury skyscrapers night city backdrop, confident smug smile, sharp black suit --ar 16:9 --v 6.0`;
+    }
+
     return `Masterpiece, ultra high resolution 8K anime key visual of ${series}, glowing neon electric eyes, badass dynamic battle stance, holding glowing legendary weapon, dramatic dark lighting, cinematic volumetric aura, speed action lines, sharp details, detailed digital art wallpaper, octane render, trending on pixiv, highly saturated vibrant colors --ar 16:9 --v 6.0`;
   };
 
@@ -408,54 +441,211 @@ export const ThumbnailView: React.FC = () => {
         </div>
       </div>
 
-      {/* VIRAL TITLE TEMPLATES MODAL */}
+      {/* VIRAL TITLE & CHANNEL RESEARCH MODAL */}
       {showViralModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[88vh] overflow-y-auto p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-black text-white">Kho Tiêu Đề & Concept Giật Gân Chuẩn Triệu View YouTube</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-md">
+                  <Flame className="w-4 h-4 text-slate-950 fill-current" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>Kho Dữ Liệu Thumbnail & Tiêu Đề Triệu View YouTube</span>
+                    <span className="text-[10px] bg-red-950 text-red-300 font-bold px-2 py-0.5 rounded-full border border-red-800">
+                      vidIQ Verified
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Phân tích từ top kênh recap hàng đầu: Sắn Review, Gấu Xàm Anime, Bé Khôi, Tỷ Tỷ, Mèo Cày, DuuDey...
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowViralModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
-              Chọn một mẫu để hệ thống tự động thiết lập toàn bộ Tiêu Đề, Phụ Đề, Huy Hiệu và Bộ Màu Sắc chuẩn công thức giữ chân người xem:
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {VIRAL_TITLE_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => handleApplyViralTemplate(tmpl)}
-                  className="p-3 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-slate-800 hover:border-amber-500/80 text-left transition-all group flex flex-col justify-between space-y-2"
-                >
-                  <div>
-                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block mb-1">
-                      {tmpl.categoryLabel}
-                    </span>
-                    <h4 className="text-xs font-black text-white group-hover:text-amber-300 leading-snug">
-                      {tmpl.title}
-                    </h4>
-                    <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                      {tmpl.subtitle}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[9px]">
-                    <span className="bg-red-950 text-red-300 px-1.5 py-0.5 rounded border border-red-800/60 font-bold">
-                      {tmpl.badge}
-                    </span>
-                    <span className="text-cyan-400 font-bold group-hover:underline">1-Click Áp Dụng ➔</span>
-                  </div>
-                </button>
-              ))}
+            {/* Sub Tabs: Templates vs Channels */}
+            <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+              <button
+                onClick={() => setActiveViralSubTab('templates')}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
+                  activeViralSubTab === 'templates'
+                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                    : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                }`}
+              >
+                <Flame className="w-3.5 h-3.5" />
+                <span>25+ Mẫu Tiêu Đề & Concept Triệu View</span>
+              </button>
+              <button
+                onClick={() => setActiveViralSubTab('channels')}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${
+                  activeViralSubTab === 'channels'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
+                    : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Top Kênh YouTube Benchmark</span>
+              </button>
             </div>
+
+            {/* TAB CONTENT 1: VIRAL TITLE TEMPLATES */}
+            {activeViralSubTab === 'templates' && (
+              <div className="space-y-3">
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                  {[
+                    { id: 'all', label: '⚡ Tất Cả Mẫu' },
+                    { id: 'fulldai', label: '🏆 Full Bộ 10h+ (Sắn/Bé Khôi)' },
+                    { id: 'tutien', label: '🐉 Tu Tiên / Ma Hoàng' },
+                    { id: 'thosan', label: '⚡ Thợ Săn / Bug Game' },
+                    { id: 'harem', label: '🌸 Sư Muội / Waifu' },
+                    { id: 'dothi', label: '💼 Đô Thị / Chủ Tịch' },
+                    { id: 'baothu', label: '🩸 Báo Thù Rửa Hận' },
+                    { id: 'shorts', label: '🦗 Shorts Triệu View' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedViralCategory(cat.id)}
+                      className={`px-2.5 py-1 rounded-lg font-bold flex-shrink-0 transition-all ${
+                        selectedViralCategory === cat.id
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/60'
+                          : 'bg-slate-950/80 text-slate-400 border border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {VIRAL_TITLE_TEMPLATES.filter(
+                    (tmpl) => selectedViralCategory === 'all' || tmpl.category === selectedViralCategory
+                  ).map((tmpl) => (
+                    <div
+                      key={tmpl.id}
+                      className="p-3 rounded-xl border border-slate-800 bg-slate-950/80 hover:border-amber-500/70 transition-all flex flex-col justify-between space-y-2 group"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="font-bold text-amber-400 uppercase tracking-wider bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/40">
+                            {tmpl.categoryLabel}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-slate-400 font-mono">
+                            {tmpl.viewsEstimate && (
+                              <span className="text-emerald-400 font-bold bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-800/40">
+                                {tmpl.viewsEstimate}
+                              </span>
+                            )}
+                            {tmpl.durationLabel && (
+                              <span className="text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded">
+                                {tmpl.durationLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <h4 className="text-xs font-black text-white group-hover:text-amber-300 leading-snug">
+                          {tmpl.title}
+                        </h4>
+                        <p className="text-[10px] text-slate-300 font-medium line-clamp-2">
+                          {tmpl.subtitle}
+                        </p>
+                        
+                        {tmpl.hookExplanation && (
+                          <p className="text-[9px] text-slate-400 italic bg-slate-900/60 p-1.5 rounded border border-slate-800/60">
+                            💡 {tmpl.hookExplanation}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px]">
+                        <span className="bg-red-950 text-red-300 px-2 py-0.5 rounded border border-red-800/60 font-bold">
+                          {tmpl.badge}
+                        </span>
+                        <button
+                          onClick={() => handleApplyViralTemplate(tmpl)}
+                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-2.5 py-1 rounded-lg shadow transition-all active:scale-95 text-[10px]"
+                        >
+                          <span>1-Click Áp Dụng</span>
+                          <span>➔</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT 2: YOUTUBE CHANNELS BENCHMARK */}
+            {activeViralSubTab === 'channels' && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-400">
+                  Tổng hợp phong cách làm thumbnail và định dạng video của các kênh review truyện hàng đầu Việt Nam:
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {YOUTUBE_CHANNELS_BENCHMARK.map((ch) => (
+                    <div
+                      key={ch.id}
+                      className="p-3 rounded-xl border border-slate-800 bg-slate-950/80 space-y-2.5 hover:border-cyan-500/60 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-cyan-950 border border-cyan-800 flex items-center justify-center font-black text-xs text-cyan-300">
+                            {ch.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-white flex items-center gap-1">
+                              <span>{ch.name}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">{ch.handle}</span>
+                            </h4>
+                            <span className="text-[9px] text-cyan-400 font-bold">{ch.genreFocus}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right text-[10px] font-mono">
+                          <span className="text-emerald-400 font-bold block">{ch.subs} subs</span>
+                          <span className="text-slate-400">{ch.totalViews} views</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80 space-y-1 text-[10px]">
+                        <div className="text-slate-300">
+                          <span className="font-bold text-amber-400">🔥 Video Tiêu Biểu:</span> {ch.hitVideoTitle}
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-400 font-mono text-[9px]">
+                          <span className="text-emerald-400 font-bold">{ch.hitViews}</span>
+                          <span>•</span>
+                          <span>Độ dài: {ch.hitDuration}</span>
+                        </div>
+                        <div className="text-slate-400 pt-1 border-t border-slate-800 text-[9px]">
+                          <span className="font-bold text-slate-300">🎨 Style Thumbnail:</span> {ch.thumbnailStyle}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          handleApplyTheme(ch.recommendedTheme);
+                          setShowViralModal(false);
+                        }}
+                        className="w-full py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-950 hover:text-cyan-300 border border-slate-700 text-slate-300 text-[10px] font-bold transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>Áp Dụng Style Thumbnail Kênh Này</span>
+                        <span>➔</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -615,13 +805,6 @@ export const ThumbnailView: React.FC = () => {
               <div className="absolute top-3 left-3 z-20">
                 <div className="bg-red-600 text-white font-black text-xs md:text-sm px-2.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(220,38,38,0.8)] border border-white/30 tracking-wider uppercase">
                   {currentThumbnail.badge || `1 - ${selectedProject?.chapterNumber || 9}`}
-                </div>
-              </div>
-
-              {/* Duration Timestamp (Bottom-Right) */}
-              <div className="absolute bottom-3 right-3 z-20">
-                <div className="bg-black/90 text-white font-mono font-black text-[11px] px-1.5 py-0.5 rounded border border-white/20 shadow-xl">
-                  {selectedProject?.durationEst ? `${Math.floor(selectedProject.durationEst / 60)}:${(selectedProject.durationEst % 60).toString().padStart(2, '0')}` : '3:16:01'}
                 </div>
               </div>
 
@@ -847,13 +1030,6 @@ export const ThumbnailView: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Time */}
-                    <div className="absolute bottom-1.5 right-1.5 z-20">
-                      <span className="bg-black/90 text-white font-bold text-[9px] px-1 rounded">
-                        3:16:01
-                      </span>
-                    </div>
-
                     {/* Title */}
                     <div className="absolute inset-x-0 bottom-1 z-20 px-1 text-center">
                       <h4
@@ -891,50 +1067,61 @@ export const ThumbnailView: React.FC = () => {
         {/* Right: Comprehensive Multi-Tab Controls */}
         <div className="lg:col-span-4 space-y-3">
           {/* Navigation Control Tabs */}
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
             <button
               onClick={() => setActiveControlTab('character')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all ${
                 activeControlTab === 'character'
                   ? 'bg-slate-800 text-pink-400 shadow-sm font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Khung & Ảnh AI</span>
+              <Layers className="w-3 h-3" />
+              <span>Khung</span>
             </button>
             <button
               onClick={() => setActiveControlTab('theme')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all ${
                 activeControlTab === 'theme'
                   ? 'bg-slate-800 text-cyan-400 shadow-sm font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Palette className="w-3.5 h-3.5" />
-              <span>Chủ Đề & FX</span>
+              <Palette className="w-3 h-3" />
+              <span>Chủ Đề</span>
             </button>
             <button
               onClick={() => setActiveControlTab('typography')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all ${
                 activeControlTab === 'typography'
                   ? 'bg-slate-800 text-amber-400 shadow-sm font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Type className="w-3.5 h-3.5" />
+              <Type className="w-3 h-3" />
               <span>Chữ 3D</span>
             </button>
             <button
+              onClick={() => setActiveControlTab('viral_research')}
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all ${
+                activeControlTab === 'viral_research'
+                  ? 'bg-slate-800 text-orange-400 shadow-sm font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Flame className="w-3 h-3" />
+              <span>Trend YT</span>
+            </button>
+            <button
               onClick={() => setActiveControlTab('ai_prompt')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1 transition-all ${
                 activeControlTab === 'ai_prompt'
                   ? 'bg-slate-800 text-emerald-400 shadow-sm font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Cpu className="w-3.5 h-3.5" />
-              <span>Prompt AI</span>
+              <Cpu className="w-3 h-3" />
+              <span>Prompt</span>
             </button>
           </div>
 
@@ -1506,7 +1693,162 @@ export const ThumbnailView: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: AI PROMPT GENERATOR */}
+          {/* TAB 4: VIRAL YOUTUBE BENCHMARK & TEMPLATES */}
+          {activeControlTab === 'viral_research' && (
+            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-950/70 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-black text-amber-400">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <span>Xu Hướng YouTube Recap Triệu View</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">vidIQ Verified</span>
+              </div>
+
+              {/* Sub Tab Toggle */}
+              <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
+                <button
+                  onClick={() => setActiveViralSubTab('templates')}
+                  className={`flex-1 py-1 rounded-lg transition-all ${
+                    activeViralSubTab === 'templates'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  25+ Mẫu Video Triệu View
+                </button>
+                <button
+                  onClick={() => setActiveViralSubTab('channels')}
+                  className={`flex-1 py-1 rounded-lg transition-all ${
+                    activeViralSubTab === 'channels'
+                      ? 'bg-cyan-500 text-slate-950 font-black shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Top Kênh YouTube
+                </button>
+              </div>
+
+              {/* Templates Sub-Tab */}
+              {activeViralSubTab === 'templates' && (
+                <div className="space-y-2.5">
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] scrollbar-none">
+                    {[
+                      { id: 'all', label: 'Tất Cả' },
+                      { id: 'fulldai', label: '🏆 Full 10h+' },
+                      { id: 'tutien', label: '🐉 Tu Tiên' },
+                      { id: 'thosan', label: '⚡ Thợ Săn' },
+                      { id: 'harem', label: '🌸 Sư Muội' },
+                      { id: 'dothi', label: '💼 Đô Thị' },
+                      { id: 'baothu', label: '🩸 Báo Thù' },
+                      { id: 'shorts', label: '🦗 Shorts' },
+                    ].map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedViralCategory(c.id)}
+                        className={`px-2 py-0.5 rounded-lg flex-shrink-0 font-bold border transition-all ${
+                          selectedViralCategory === c.id
+                            ? 'bg-amber-500/30 border-amber-500 text-amber-300'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* List of Templates */}
+                  <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                    {VIRAL_TITLE_TEMPLATES.filter(
+                      (t) => selectedViralCategory === 'all' || t.category === selectedViralCategory
+                    ).map((t) => (
+                      <div
+                        key={t.id}
+                        className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-amber-500/60 transition-all space-y-1.5 text-[10px]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-400 uppercase text-[9px] bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-800/40">
+                            {t.categoryLabel}
+                          </span>
+                          <span className="text-emerald-400 font-mono font-bold text-[9px]">
+                            {t.viewsEstimate}
+                          </span>
+                        </div>
+                        <h4 className="font-black text-white text-[11px] leading-snug">
+                          {t.title}
+                        </h4>
+                        <p className="text-slate-300 line-clamp-1">
+                          {t.subtitle}
+                        </p>
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                          <span className="bg-red-950 text-red-300 font-bold px-1.5 py-0.2 rounded border border-red-900/40 text-[9px]">
+                            {t.badge}
+                          </span>
+                          <button
+                            onClick={() => handleApplyViralTemplate(t)}
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded text-[9px] transition-all active:scale-95 flex items-center gap-1"
+                          >
+                            <span>Áp Dụng</span>
+                            <span>➔</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Channels Sub-Tab */}
+              {activeViralSubTab === 'channels' && (
+                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
+                  {YOUTUBE_CHANNELS_BENCHMARK.map((ch) => (
+                    <div
+                      key={ch.id}
+                      className="p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2 text-[10px]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-black text-white text-[11px] flex items-center gap-1">
+                            <span>{ch.name}</span>
+                            <span className="text-[9px] text-slate-400 font-normal">{ch.handle}</span>
+                          </h4>
+                          <span className="text-[9px] text-cyan-400 font-bold">{ch.genreFocus}</span>
+                        </div>
+                        <div className="text-right text-[9px] font-mono">
+                          <span className="text-emerald-400 font-bold block">{ch.subs}</span>
+                          <span className="text-slate-400">{ch.totalViews}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-950/80 p-2 rounded-lg border border-slate-800/80 space-y-1 text-[9px]">
+                        <div className="text-slate-300 font-bold">
+                          🔥 <span className="text-amber-400">Hit:</span> {ch.hitVideoTitle}
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-400 font-mono">
+                          <span className="text-emerald-400 font-bold">{ch.hitViews}</span>
+                          <span>•</span>
+                          <span>{ch.hitDuration}</span>
+                        </div>
+                        <div className="text-slate-400 pt-1 border-t border-slate-800">
+                          🎨 {ch.thumbnailStyle}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleApplyTheme(ch.recommendedTheme)}
+                        className="w-full py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 font-bold text-[9px] transition-all flex items-center justify-center gap-1"
+                      >
+                        <span>Áp Dụng Phong Cách Kênh Này</span>
+                        <span>➔</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: AI PROMPT GENERATOR */}
           {activeControlTab === 'ai_prompt' && (
             <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-950/70 space-y-3">
               <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400">

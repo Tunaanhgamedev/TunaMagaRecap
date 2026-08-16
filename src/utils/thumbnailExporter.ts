@@ -460,29 +460,6 @@ function drawChapterPillAndTimestamp(
     ctx.fillText(progText, progX + (progWidth + 36) / 2, progY + 28);
   }
 
-  // Timestamp Bottom-Right
-  const timeText = '12:34';
-  ctx.font = 'bold 24px Arial, sans-serif';
-  const timeWidth = ctx.measureText(timeText).width;
-  const timeX = width - timeWidth - 60;
-  const timeY = height - 70;
-  
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-  ctx.shadowBlur = 10;
-  roundRect(ctx, timeX, timeY, timeWidth + 30, 40, 6);
-  ctx.fill();
-  
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-  ctx.stroke();
-  
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(timeText, timeX + (timeWidth + 30) / 2, timeY + 20);
-  
   ctx.restore();
 }
 

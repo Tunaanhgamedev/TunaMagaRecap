@@ -301,10 +301,16 @@ export type ThumbnailTheme =
   | 'solo_awakening' // Hunter dark blue + neon electric
   | 'dark_monarch' // Crimson red + shadow void
   | 'golden_immortal' // Tu Tien golden dragon + ancient flames
+  | 'tutien_mahoang' // Ma Hoang / Tu Tien co phong emerald & gold
   | 'magic_overlord' // Isekai purple rift + rune circles
-  | 'cyber_system' // Holographic cyan + matrix HUD
   | 'blood_fury' // Blood moon + berserk battle
   | 'speed_action' // Yellow lightning + comic blast
+  | 'haihuoc_su_muoi' // Su muoi / Hai huoc / Harem pink & orange
+  | 'nguyento_vodich' // 100% Nguyen to / Meo Cay Truyen cyan & frost
+  | 'boss_nhatu' // Gau Xam Boss nha tu red & warning orange
+  | 'chuyensinh_bochet' // Chuyen sinh bo chet / shorts viral lime & toxic
+  | 'dothi_gianghe' // Do thi chu tich gia ngheo gold & executive blue
+  | 'cyber_system' // Holographic cyan + matrix HUD
   | 'custom';
 
 export type ThumbnailBadgeStyle =
