@@ -64,6 +64,33 @@ export const ThumbnailView: React.FC = () => {
   const [selectedViralCategory, setSelectedViralCategory] = useState<string>('all');
   const [activeViralSubTab, setActiveViralSubTab] = useState<'templates' | 'channels'>('templates');
   const [selectedSlotForEdit, setSelectedSlotForEdit] = useState<number | null>(null);
+  const [showRandomTitleMenu, setShowRandomTitleMenu] = useState(false);
+
+  const getBadgeBgClass = (style?: string) => {
+    switch(style) {
+      case 'gold_metallic': return 'bg-amber-500 text-slate-950';
+      case 'neon_cyan': return 'bg-cyan-500 text-slate-950';
+      case 'blood_red': return 'bg-red-600 text-white';
+      case 'flaming_orange': return 'bg-orange-500 text-slate-950';
+      case 'sss_danger': return 'bg-red-700 text-white';
+      case 'purple_void': return 'bg-purple-600 text-white';
+      case 'emerald_god': return 'bg-emerald-500 text-slate-950';
+      default: return 'bg-red-600 text-white';
+    }
+  };
+
+  const getTitleGradient = (style?: string) => {
+    switch(style) {
+      case 'gold_3d': return '#fef08a, #b45309';
+      case 'fiery_orange': return '#ffedd5, #c2410c';
+      case 'electric_blue': return '#e0f2fe, #0369a1';
+      case 'crimson_blood': return '#fee2e2, #7f1d1d';
+      case 'toxic_green': return '#dcfce7, #15803d';
+      case 'neon_cyan': return '#cffafe, #0891b2';
+      case 'pure_white':
+      default: return '#ffffff, #94a3b8';
+    }
+  };
   
   // Custom uploaded or pasted external images
   const [customImages, setCustomImages] = useState<string[]>(() => {
@@ -342,6 +369,16 @@ export const ThumbnailView: React.FC = () => {
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
+  const handleRandomTitle = (genre?: string) => {
+    const templates = genre && genre !== 'all'
+      ? VIRAL_TITLE_TEMPLATES.filter(t => t.category === genre)
+      : VIRAL_TITLE_TEMPLATES;
+    if (templates.length === 0) return;
+    const random = templates[Math.floor(Math.random() * templates.length)];
+    handleApplyViralTemplate(random);
+    setShowRandomTitleMenu(false);
+  };
+
   const isPortrait = currentThumbnail.aspectRatio === '9:16';
   const isSquare = currentThumbnail.aspectRatio === '1:1';
 
@@ -402,6 +439,15 @@ export const ThumbnailView: React.FC = () => {
           >
             <Flame className="w-3.5 h-3.5 text-slate-950 fill-current" />
             <span>Tiêu Đề Triệu View (1-Click)</span>
+          </button>
+
+          <button
+            onClick={() => handleRandomTitle()}
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-95"
+            title="Random chọn 1 concept tiêu đề triệu view ngẫu nhiên"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>🎲 Random Title</span>
           </button>
 
           <button
@@ -688,6 +734,8 @@ export const ThumbnailView: React.FC = () => {
                       const zoom = currentThumbnail.slotZooms?.[i] || 1.0;
                       const objPos = focus === 'center' ? 'object-center' : focus === 'bottom' ? 'object-bottom' : 'object-top';
 
+                      const normalFilter = `brightness(${currentThumbnail.filterSettings?.brightness ?? 105}%) contrast(${currentThumbnail.filterSettings?.contrast ?? 125}%) saturate(${currentThumbnail.filterSettings?.saturation ?? 130}%) ${currentThumbnail.characterGlow ? `drop-shadow(0 0 8px ${currentThumbnail.glowColor || '#06b6d4'}) drop-shadow(0 0 16px ${currentThumbnail.glowColor || '#06b6d4'})` : ''}`;
+
                       return (
                         <div key={i} className="flex-1 h-full relative overflow-hidden border-r-2 md:border-r-4 border-black shadow-[0_0_12px_rgba(0,0,0,0.8)] last:border-r-0">
                           <img
@@ -696,14 +744,17 @@ export const ThumbnailView: React.FC = () => {
                             className={`w-full h-full object-cover ${objPos} transition-transform duration-200`}
                             style={{
                               transform: `scale(${zoom})`,
-                              filter: `brightness(${currentThumbnail.filterSettings?.brightness ?? 105}%) contrast(${
-                                currentThumbnail.filterSettings?.contrast ?? 125
-                              }%) saturate(${currentThumbnail.filterSettings?.saturation ?? 130}%)`,
+                              filter: currentThumbnail.splitMode && images.length === 2 && i === 0 ? 'grayscale(100%) brightness(60%)' : normalFilter,
                             }}
                           />
                         </div>
                       );
                     })}
+                    {currentThumbnail.splitMode && images.length === 2 && (
+                      <div className="absolute inset-0 z-10 pointer-events-none" style={{
+                        background: 'linear-gradient(135deg, transparent 48%, rgba(255,255,255,0.8) 49%, rgba(255,255,255,0.8) 51%, transparent 52%)'
+                      }} />
+                    )}
                   </div>
                 );
               })()}
@@ -774,6 +825,20 @@ export const ThumbnailView: React.FC = () => {
                 </div>
               )}
 
+              {currentThumbnail.overlayEffect === 'shattered_glass' && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-60">
+                  <svg className="w-full h-full" viewBox="0 0 400 225" fill="none">
+                    <line x1="250" y1="0" x2="180" y2="225" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+                    <line x1="280" y1="0" x2="350" y2="225" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+                    <line x1="200" y1="100" x2="400" y2="50" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="220" y1="80" x2="320" y2="200" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+                    <line x1="260" y1="30" x2="150" y2="180" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+                    <line x1="300" y1="0" x2="250" y2="130" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+                    <line x1="240" y1="110" x2="380" y2="160" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                  </svg>
+                </div>
+              )}
+
               {/* Custom AI Visual Elements (Floating Skill Cards, Hologram, Red Arrow) */}
               {currentThumbnail.aiElements?.map((elem) => (
                 <img
@@ -803,20 +868,30 @@ export const ThumbnailView: React.FC = () => {
 
               {/* Chapter Pill (Top-Left) */}
               <div className="absolute top-3 left-3 z-20">
-                <div className="bg-red-600 text-white font-black text-xs md:text-sm px-2.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(220,38,38,0.8)] border border-white/30 tracking-wider uppercase">
+                <div className={`font-black text-xs md:text-sm px-2.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(220,38,38,0.8)] border border-white/30 tracking-wider uppercase ${getBadgeBgClass(currentThumbnail.badgeStyle)}`}>
                   {currentThumbnail.badge || `1 - ${selectedProject?.chapterNumber || 9}`}
                 </div>
               </div>
 
               {/* Giant Bottom Text Title (YouTube Recap Style) */}
-              <div className="absolute inset-x-0 bottom-4 z-20 px-3 flex flex-col items-center text-center">
+              <div 
+                className={`absolute z-20 px-3 flex flex-col ${
+                  currentThumbnail.textPosition === 'left-half' ? 'inset-y-0 left-0 w-1/2 justify-center items-start text-left' :
+                  currentThumbnail.textPosition === 'bottom-left' ? 'bottom-4 left-4 items-start text-left' :
+                  'inset-x-0 bottom-4 items-center text-center'
+                }`}
+                style={{ transform: `rotate(${currentThumbnail.textRotation || 0}deg)` }}
+              >
                 <h2
                   className="font-black uppercase w-full tracking-tight"
                   style={{
                     fontSize: isPortrait ? '2.2rem' : 'clamp(1.8rem, 4.2vw, 3.8rem)',
                     lineHeight: '1.05',
                     WebkitTextStroke: '3.5px #000000',
-                    color: currentThumbnail.titleStyle === 'fiery_orange' ? '#fbbf24' : currentThumbnail.titleStyle === 'crimson_blood' ? '#ef4444' : currentThumbnail.titleStyle === 'neon_cyan' ? '#38bdf8' : '#ffffff',
+                    color: 'transparent',
+                    background: `linear-gradient(to bottom, ${getTitleGradient(currentThumbnail.titleStyle)})`,
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
                     textShadow: '0 4px 8px rgba(0,0,0,0.9), 0 8px 16px rgba(0,0,0,0.8)',
                   }}
                 >
@@ -1168,6 +1243,64 @@ export const ThumbnailView: React.FC = () => {
                 </div>
               </div>
 
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <label className="text-[11px] font-bold text-slate-300">Vị Trí Nhân Vật</label>
+                <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
+                  {[
+                    { id: 'right', label: 'Phải' },
+                    { id: 'center', label: 'Giữa' },
+                    { id: 'left', label: 'Trái' },
+                    { id: 'split', label: 'VS' },
+                  ].map((pos) => (
+                    <button
+                      key={pos.id}
+                      onClick={() => setThumbnailConfig({ characterPosition: pos.id as any })}
+                      className={`p-1.5 rounded-lg border text-center transition-all ${
+                        (currentThumbnail.characterPosition || 'right') === pos.id
+                          ? 'border-pink-500 bg-pink-950/40 text-pink-300'
+                          : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {pos.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Rim Light Phát Sáng (Viền Neon)</span>
+                </label>
+                <button
+                  onClick={() => setThumbnailConfig({ characterGlow: !currentThumbnail.characterGlow })}
+                  className={`text-[10px] font-bold px-3 py-1 rounded-lg border transition-all ${
+                    currentThumbnail.characterGlow
+                      ? 'bg-cyan-600 border-cyan-400 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {currentThumbnail.characterGlow ? '✅ BẬT' : 'TẮT'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Before vs After (Phế Vật → Bá Chủ)</span>
+                </label>
+                <button
+                  onClick={() => setThumbnailConfig({ splitMode: !currentThumbnail.splitMode })}
+                  className={`text-[10px] font-bold px-3 py-1 rounded-lg border transition-all ${
+                    currentThumbnail.splitMode
+                      ? 'bg-amber-600 border-amber-400 text-white shadow-md shadow-amber-500/30'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {currentThumbnail.splitMode ? '✅ BẬT' : 'TẮT'}
+                </button>
+              </div>
+
               {/* Active Collage Slots Manager with Focal Point & Zoom */}
               <div className="space-y-2 pt-2 border-t border-slate-800/80">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
@@ -1474,6 +1607,7 @@ export const ThumbnailView: React.FC = () => {
                     { id: 'flaming_embers', label: '🔥 Tàn Lửa Embers' },
                     { id: 'magic_runes', label: '🔮 Ma Pháp Trận' },
                     { id: 'system_hud', label: '🖥️ Khung Hệ Thống' },
+                    { id: 'shattered_glass', label: '💎 Mảnh Vỡ Kính' },
                     { id: 'none', label: '🚫 Không Phủ' },
                   ].map((fx) => (
                     <button
@@ -1498,6 +1632,32 @@ export const ThumbnailView: React.FC = () => {
                     <Sliders className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Bộ Lọc Màu Điện Ảnh (Cinematic Grading)</span>
                   </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>Độ Sáng (Brightness)</span>
+                    <span className="font-mono text-emerald-400">
+                      {currentThumbnail.filterSettings?.brightness ?? 105}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="60"
+                    max="150"
+                    value={currentThumbnail.filterSettings?.brightness ?? 105}
+                    onChange={(e) =>
+                      setThumbnailConfig({
+                        filterSettings: {
+                          contrast: currentThumbnail.filterSettings?.contrast ?? 125,
+                          saturation: currentThumbnail.filterSettings?.saturation ?? 130,
+                          vignette: currentThumbnail.filterSettings?.vignette ?? 40,
+                          brightness: Number(e.target.value),
+                        },
+                      })
+                    }
+                    className="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -1663,6 +1823,45 @@ export const ThumbnailView: React.FC = () => {
                     className="w-full bg-slate-950 text-xs text-white p-2 rounded-lg border border-slate-800 focus:outline-none focus:border-amber-500 font-bold"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <label className="text-[11px] font-bold text-slate-300">Vị Trí Chữ Trên Thumbnail</label>
+                <div className="grid grid-cols-3 gap-1.5 text-[10px] font-bold">
+                  {[
+                    { id: 'bottom-center', label: '⬇️ Dưới Giữa' },
+                    { id: 'left-half', label: '⬅️ Nửa Trái' },
+                    { id: 'bottom-left', label: '↙️ Dưới Trái' },
+                  ].map((pos) => (
+                    <button
+                      key={pos.id}
+                      onClick={() => setThumbnailConfig({ textPosition: pos.id as any })}
+                      className={`p-2 rounded-lg border text-left transition-all ${
+                        (currentThumbnail.textPosition || 'bottom-center') === pos.id
+                          ? 'border-amber-500 bg-amber-950/40 text-amber-300'
+                          : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {pos.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="font-bold text-slate-300">Nghiêng Chữ (Action Tilt)</span>
+                  <span className="font-mono text-amber-400">{currentThumbnail.textRotation || 0}°</span>
+                </div>
+                <input
+                  type="range"
+                  min="-10"
+                  max="10"
+                  step="1"
+                  value={currentThumbnail.textRotation || 0}
+                  onChange={(e) => setThumbnailConfig({ textRotation: Number(e.target.value) })}
+                  className="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                />
               </div>
 
               {/* High-CTR Stickers Checklist */}
