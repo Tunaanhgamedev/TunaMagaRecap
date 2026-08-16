@@ -2150,13 +2150,31 @@ export const useStudioStore = create<StudioState>()(
 
   voiceActors: [
     {
+      id: 'vi-VN-NamMinhNeural',
+      name: 'Nam Minh (Microsoft Edge Neural)',
+      gender: 'male',
+      provider: 'azure',
+      voiceKey: 'vi-VN-NamMinhNeural',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      description: '⭐ [KHUYÊN DÙNG] Giọng nam MC hào hùng, uy lực, chuyên review Manga/Manhwa/Tu Tiên triệu view YouTube.',
+    },
+    {
+      id: 'vi-VN-HoaiMyNeural',
+      name: 'Hoài My (Microsoft Edge Neural)',
+      gender: 'female',
+      provider: 'azure',
+      voiceKey: 'vi-VN-HoaiMyNeural',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      description: '⭐ [KHUYÊN DÙNG] Giọng nữ truyền cảm, ngọt ngào, chuyên truyện Ngôn tình, Isekai, Nữ phụ phản diện.',
+    },
+    {
       id: 'v-vbee-manhdung',
       name: 'Vbee - Mạnh Dũng (Hà Nội)',
       gender: 'male',
       provider: 'capcut_edge',
       voiceKey: 'vbee_vi_manhdung_pro',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      description: 'Giọng nam Hà Nội trầm ấm, truyền cảm, chuyên review truyện tranh & phim ảnh triệu view.',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      description: 'Giọng nam Hà Nội trầm ấm, truyền cảm, chuyên review truyện tranh & phim ảnh.',
     },
     {
       id: 'v-vbee-thaotrinh',
@@ -2165,7 +2183,7 @@ export const useStudioStore = create<StudioState>()(
       provider: 'capcut_edge',
       voiceKey: 'vbee_vi_thaotrinh_emotional',
       avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      description: 'Giọng nữ Hà Nội ngọt ngào, biểu cảm sâu sắc, chuyên thuyết minh manga & tiểu thuyết.',
+      description: 'Giọng nữ Hà Nội ngọt ngào, biểu cảm sâu sắc, chuyên thuyết minh manga.',
     },
     {
       id: 'v-vbee-quynhanh',
@@ -2173,7 +2191,7 @@ export const useStudioStore = create<StudioState>()(
       gender: 'female',
       provider: 'capcut_edge',
       voiceKey: 'vbee_vi_quynhanh_south',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
       description: 'Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn người nghe trên TikTok / YouTube.',
     },
     {
@@ -2182,44 +2200,8 @@ export const useStudioStore = create<StudioState>()(
       gender: 'male',
       provider: 'capcut_edge',
       voiceKey: 'vbee_vi_bahung_action',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      description: 'Giọng nam miền Nam hào sảng, kịch tính, phù hợp các phân cảnh combat hành động gay cấn.',
-    },
-    {
-      id: 'v-vbee-phuongtrang',
-      name: 'Vbee - Phương Trang (Hà Nội)',
-      gender: 'female',
-      provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_phuongtrang_anime',
-      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-      description: 'Giọng nữ trẻ trung, năng động, phong cách review manga/anime hot trend.',
-    },
-    {
-      id: 'v-vbee-huukien',
-      name: 'Vbee - Hữu Kiên (Trầm Hùng)',
-      gender: 'male',
-      provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_huukien_epic',
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      description: 'Giọng nam trầm hùng uy nghiêm, chuyên truyện tiên hiệp, huyền huyễn, vương giả.',
-    },
-    {
-      id: 'v-vbee-cloning',
-      name: 'Vbee - Voice Cloning AI',
-      gender: 'male',
-      provider: 'browser',
-      voiceKey: 'vbee_voice_cloning_custom',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      description: 'Công nghệ nhân bản giọng đọc Vbee (studio.vbee.vn/studio/voice-cloning/voices).',
-    },
-    {
-      id: 'v-azure-hoainam',
-      name: 'Azure - Hoài Nam Neural',
-      gender: 'male',
-      provider: 'azure',
-      voiceKey: 'vi-VN-HoaiNamNeural',
-      avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
-      description: 'Giọng nam chuẩn phát thanh viên truyền hình Việt Nam.',
+      description: 'Giọng nam miền Nam hào sảng, kịch tính, phù hợp các phân cảnh combat gay cấn.',
     },
     {
       id: 'v-eleven-adam',
@@ -2231,14 +2213,25 @@ export const useStudioStore = create<StudioState>()(
       description: 'Giọng nam trầm ấm, uy lực phong cách điện ảnh Hollywood.',
     },
   ],
-  assignedVoiceId: 'v-vbee-manhdung',
+  assignedVoiceId: 'vi-VN-NamMinhNeural',
   setAssignedVoiceId: (id) => set({ assignedVoiceId: id }),
   isSynthesizingTTS: false,
-  synthesizeVoiceAudio: () => {
+  synthesizeVoiceAudio: async () => {
     set({ isSynthesizingTTS: true });
-    setTimeout(() => {
+    try {
+      const { scriptData, assignedVoiceId, pages } = get();
+      const voice = assignedVoiceId || 'vi-VN-NamMinhNeural';
+
+      if (scriptData?.content) {
+        await voiceAudioEngine.speak(scriptData.content.slice(0, 300), voice, 1.15, 1.0, 0.9);
+      } else if (pages[0]?.panels?.[0]?.dialogues?.[0]?.text) {
+        await voiceAudioEngine.speak(pages[0].panels[0].dialogues[0].text, voice, 1.15, 1.0, 0.9);
+      }
+    } catch (e) {
+      console.warn('[Synthesize Voice Error]:', e);
+    } finally {
       set({ isSynthesizingTTS: false });
-    }, 2000);
+    }
   },
 
   subtitles: [],

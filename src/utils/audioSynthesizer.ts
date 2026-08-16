@@ -1,11 +1,21 @@
 /**
  * Production-Ready Voice & Speech Audio Synthesizer
- * Speaks pure, natural Vietnamese human narration with ZERO beep/chime artifacts.
- * Supports dynamic volume scaling (0.0 to 1.0) and instant mute control.
- * Properly persists selected voice across panel transitions.
+ * Uses High-Fidelity Microsoft Edge Neural TTS Backend (vi-VN-NamMinhNeural, vi-VN-HoaiMyNeural)
+ * Produces 100% natural, human-like Vietnamese narration for Manga/Manhwa Recaps with ZERO robotic artifacts.
  */
 
-function sanitizeTextForSpeech(rawText: string): string {
+export interface TTSResponse {
+  fileName: string;
+  filePath: string;
+  audioUrl: string;
+  base64?: string;
+  cached: boolean;
+  cleanedText: string;
+  duration: number;
+  voice: string;
+}
+
+export function sanitizeTextForSpeech(rawText: string): string {
   if (!rawText) return '';
   return rawText
     // Strip visual/camera markdown notes like *🎨 [Trang 1 • Panel 1]*
@@ -14,28 +24,71 @@ function sanitizeTextForSpeech(rawText: string): string {
     .replace(/\*💡.*?\*/g, '')
     // Strip speaker role tags like **[Dẫn Chuyện]**:, **[Nhân Vật]**:
     .replace(/\*\*\[.*?\]\*\*:?/g, '')
-    .replace(/\[\/?(Dẫn Chuyện|Nhân vật|Phản Diện|Gợi Ý|BGM|SFX|Audio|Speaker).*?\]:?/gi, '')
-    // Strip markdown headers, blockquotes, bullets, and symbols
+    .replace(/\[\/?(Dẫn Chuyện|Nhân vật|Phản Diện|Gợi Ý|BGM|SFX|Audio|Speaker|Trang \d+|Panel \d+).*?\]:?/gi, '')
+    // Strip annotations in brackets
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/【[^】]*】/g, ' ')
+    // Strip markdown formatting
     .replace(/^#+\s*/gm, '')
     .replace(/^>\s*/gm, '')
-    .replace(/[*_~`#|]/g, '')
-    .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // strip emojis
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // strip emojis
     .replace(/^["'\s]+|["'\s]+$/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
+/**
+ * Call Server-Side Edge Neural TTS API
+ */
+export async function synthesizeVoiceAudioApi(options: {
+  text: string;
+  voice?: string;
+  rate?: number | string;
+  pitch?: number | string;
+}): Promise<TTSResponse | null> {
+  const cleanText = sanitizeTextForSpeech(options.text);
+  if (!cleanText) return null;
+
+  try {
+    const res = await fetch('/api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: cleanText,
+        voice: options.voice || 'vi-VN-NamMinhNeural',
+        rate: options.rate || '+15%',
+        pitch: options.pitch || '+0Hz',
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      return data.data as TTSResponse;
+    }
+    return null;
+  } catch (err) {
+    console.warn('[AudioSynthesizer] Backend TTS API error:', err);
+    return null;
+  }
+}
+
 class VoiceAudioEngine {
+  private currentAudio: HTMLAudioElement | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
-  private activeUtterances: SpeechSynthesisUtterance[] = []; // GC protection array
+  private activeUtterances: SpeechSynthesisUtterance[] = [];
   private isSpeakingActive: boolean = false;
-  private currentVolume: number = 0.8;
+  private currentVolume: number = 0.85;
+  private memoryCache: Map<string, string> = new Map(); // hash/key -> base64/url
   private cachedVoices: SpeechSynthesisVoice[] = [];
-  private selectedVoice: SpeechSynthesisVoice | null = null;
-  private lastVoiceId: string = '';
-  private pendingTimeout: any = null;
+  private selectedBrowserVoice: SpeechSynthesisVoice | null = null;
+  private currentRequestId: number = 0;
 
   constructor() {
-    // Pre-cache voices — browsers load them asynchronously
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const loadVoices = () => {
         this.cachedVoices = window.speechSynthesis.getVoices();
@@ -46,169 +99,203 @@ class VoiceAudioEngine {
   }
 
   /**
-   * Find the best matching voice for a given voiceId.
-   * Maps our custom IDs (e.g. 'v-vbee-manhdung') to real browser voices,
-   * and caches the result so it persists across panel transitions.
+   * Resolve a browser voice fallback if network is offline
    */
-  private resolveVoice(voiceId: string): SpeechSynthesisVoice | null {
-    if (voiceId === this.lastVoiceId && this.selectedVoice) {
-      return this.selectedVoice;
-    }
-
-    if (this.cachedVoices.length === 0) {
+  private resolveBrowserVoice(voiceId: string): SpeechSynthesisVoice | null {
+    if (this.cachedVoices.length === 0 && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.cachedVoices = window.speechSynthesis.getVoices();
     }
-
     if (this.cachedVoices.length === 0) return null;
 
-    const voiceKeywords: Record<string, string[]> = {
-      'v-vbee-manhdung': ['dũng', 'dung', 'manh', 'male'],
-      'v-vbee-thaotrinh': ['thảo', 'thao', 'trinh', 'female'],
-      'v-vbee-quynhanh': ['quỳnh', 'quynh', 'anh', 'female'],
-      'v-vbee-bahung': ['hùng', 'hung', 'ba', 'male'],
-      'v-azure-hoaimy': ['hoài', 'hoai', 'my', 'female'],
-      'v-elevenlabs-adam': ['adam'],
-    };
-
-    const keywords = voiceKeywords[voiceId] || [];
-
     const viVoices = this.cachedVoices.filter(
-      (v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam')
+      (v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('vietnamese')
     );
 
-    if (viVoices.length > 0 && keywords.length > 0) {
-      for (const kw of keywords) {
-        const match = viVoices.find((v) => v.name.toLowerCase().includes(kw));
-        if (match) {
-          this.selectedVoice = match;
-          this.lastVoiceId = voiceId;
-          return match;
-        }
-      }
-    }
-
     if (viVoices.length > 0) {
-      this.selectedVoice = viVoices[0];
-      this.lastVoiceId = voiceId;
+      if (voiceId.includes('hoaimy') || voiceId.includes('female') || voiceId.includes('nu')) {
+        const femaleMatch = viVoices.find((v) => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('hoai') || v.name.toLowerCase().includes('nu'));
+        if (femaleMatch) return femaleMatch;
+      }
       return viVoices[0];
     }
 
-    const anyViVoice = this.cachedVoices.find(
-      (v) =>
-        v.lang.includes('vi') ||
-        v.name.toLowerCase().includes('vietnam') ||
-        v.name.toLowerCase().includes('vietnamese')
-    );
-
-    if (anyViVoice) {
-      this.selectedVoice = anyViVoice;
-      this.lastVoiceId = voiceId;
-      return anyViVoice;
-    }
-
-    this.selectedVoice = this.cachedVoices[0] || null;
-    this.lastVoiceId = voiceId;
-    return this.selectedVoice;
+    return this.cachedVoices[0] || null;
   }
 
   /**
-   * Speaks Vietnamese narration cleanly and naturally with volume control.
-   * Sanitizes text to remove markdown/emojis, and preserves voice settings.
+   * Plays realistic human Vietnamese narration via Edge Neural TTS with browser speech fallback
    */
-  public speak(
+  public async speak(
     text: string,
-    voiceId: string = 'v-vbee-manhdung',
-    rate: number = 1.05,
+    voiceId: string = 'vi-VN-NamMinhNeural',
+    rate: number = 1.15,
     pitch: number = 1.0,
-    volume: number = 0.8,
+    volume: number = 0.85,
     onEnd?: () => void
   ) {
     const cleanText = sanitizeTextForSpeech(text);
-    if (!cleanText || typeof window === 'undefined') {
+    if (!cleanText) {
       if (onEnd) onEnd();
       return;
     }
 
+    this.stop();
     this.currentVolume = Math.max(0, Math.min(1, volume));
-
     if (this.currentVolume <= 0.01) {
-      this.stop();
       if (onEnd) onEnd();
       return;
     }
 
-    if ('speechSynthesis' in window) {
-      try {
-        if (this.pendingTimeout) {
-          clearTimeout(this.pendingTimeout);
-          this.pendingTimeout = null;
-        }
+    const requestId = ++this.currentRequestId;
+    this.isSpeakingActive = true;
 
-        // Resume if browser TTS engine is paused
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
+    // Check memory cache first for instant playback
+    const cacheKey = `${voiceId}_${rate}_${pitch}_${cleanText}`;
+    const cachedAudioSrc = this.memoryCache.get(cacheKey);
 
-        // Cancel pending speech safely
-        window.speechSynthesis.cancel();
+    if (cachedAudioSrc) {
+      this.playHtmlAudio(cachedAudioSrc, onEnd, requestId);
+      return;
+    }
 
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = Math.max(0.85, Math.min(1.4, rate));
-        utterance.pitch = Math.max(0.8, Math.min(1.3, pitch));
-        utterance.volume = this.currentVolume;
-        utterance.lang = 'vi-VN';
+    // Attempt Server Edge Neural TTS
+    try {
+      const rateStr = rate >= 1.0 ? `+${Math.round((rate - 1.0) * 100)}%` : `${Math.round((rate - 1.0) * 100)}%`;
+      const ttsData = await synthesizeVoiceAudioApi({
+        text: cleanText,
+        voice: voiceId,
+        rate: rateStr,
+        pitch: '+0Hz',
+      });
 
-        const resolvedVoice = this.resolveVoice(voiceId);
-        if (resolvedVoice) {
-          utterance.voice = resolvedVoice;
-        }
+      // If user started a newer speech while waiting, cancel this one
+      if (this.currentRequestId !== requestId) return;
 
-        // GC Protection: keep reference in activeUtterances
-        this.activeUtterances.push(utterance);
-        if (this.activeUtterances.length > 10) {
-          this.activeUtterances.shift();
-        }
-
-        utterance.onend = () => {
-          this.isSpeakingActive = false;
-          const idx = this.activeUtterances.indexOf(utterance);
-          if (idx !== -1) this.activeUtterances.splice(idx, 1);
-          if (onEnd) onEnd();
-        };
-
-        utterance.onerror = () => {
-          this.isSpeakingActive = false;
-          const idx = this.activeUtterances.indexOf(utterance);
-          if (idx !== -1) this.activeUtterances.splice(idx, 1);
-          if (onEnd) onEnd();
-        };
-
-        this.currentUtterance = utterance;
-        this.isSpeakingActive = true;
-
-        this.pendingTimeout = setTimeout(() => {
-          if ('speechSynthesis' in window) {
-            if (window.speechSynthesis.paused) {
-              window.speechSynthesis.resume();
-            }
-            window.speechSynthesis.speak(utterance);
-          }
-        }, 30);
-      } catch (err) {
-        console.warn('[VoiceAudioEngine] Speech engine exception:', err);
+      if (ttsData && (ttsData.base64 || ttsData.audioUrl)) {
+        const audioSrc = ttsData.base64 || ttsData.audioUrl;
+        this.memoryCache.set(cacheKey, audioSrc);
+        this.playHtmlAudio(audioSrc, onEnd, requestId);
+        return;
       }
+    } catch (err) {
+      console.warn('[VoiceAudioEngine] Server TTS failed, using browser fallback:', err);
+    }
+
+    // Fallback to browser SpeechSynthesis
+    if (this.currentRequestId === requestId) {
+      this.speakBrowserFallback(cleanText, voiceId, rate, pitch, onEnd);
+    }
+  }
+
+  private playHtmlAudio(src: string, onEnd?: () => void, requestId?: number) {
+    try {
+      const audio = new Audio(src);
+      this.currentAudio = audio;
+      audio.volume = this.currentVolume;
+
+      audio.onended = () => {
+        if (!requestId || this.currentRequestId === requestId) {
+          this.isSpeakingActive = false;
+          this.currentAudio = null;
+          if (onEnd) onEnd();
+        }
+      };
+
+      audio.onerror = (err) => {
+        console.warn('[VoiceAudioEngine] Audio playback error:', err);
+        if (!requestId || this.currentRequestId === requestId) {
+          this.isSpeakingActive = false;
+          this.currentAudio = null;
+          if (onEnd) onEnd();
+        }
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('[VoiceAudioEngine] Audio play promise interrupted:', err);
+        });
+      }
+    } catch (e) {
+      console.warn('[VoiceAudioEngine] HTMLAudioElement error:', e);
+      this.isSpeakingActive = false;
+      if (onEnd) onEnd();
+    }
+  }
+
+  private speakBrowserFallback(
+    cleanText: string,
+    voiceId: string,
+    rate: number,
+    pitch: number,
+    onEnd?: () => void
+  ) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      this.isSpeakingActive = false;
+      if (onEnd) onEnd();
+      return;
+    }
+
+    try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = Math.max(0.85, Math.min(1.4, rate));
+      utterance.pitch = Math.max(0.8, Math.min(1.3, pitch));
+      utterance.volume = this.currentVolume;
+      utterance.lang = 'vi-VN';
+
+      const resolvedVoice = this.resolveBrowserVoice(voiceId);
+      if (resolvedVoice) {
+        utterance.voice = resolvedVoice;
+      }
+
+      this.activeUtterances.push(utterance);
+      if (this.activeUtterances.length > 10) {
+        this.activeUtterances.shift();
+      }
+
+      utterance.onend = () => {
+        this.isSpeakingActive = false;
+        const idx = this.activeUtterances.indexOf(utterance);
+        if (idx !== -1) this.activeUtterances.splice(idx, 1);
+        if (onEnd) onEnd();
+      };
+
+      utterance.onerror = () => {
+        this.isSpeakingActive = false;
+        const idx = this.activeUtterances.indexOf(utterance);
+        if (idx !== -1) this.activeUtterances.splice(idx, 1);
+        if (onEnd) onEnd();
+      };
+
+      this.currentUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('[VoiceAudioEngine] Fallback speech error:', err);
+      this.isSpeakingActive = false;
+      if (onEnd) onEnd();
     }
   }
 
   public stop() {
-    if (this.pendingTimeout) {
-      clearTimeout(this.pendingTimeout);
-      this.pendingTimeout = null;
+    this.currentRequestId++;
+    this.isSpeakingActive = false;
+
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+        this.currentAudio = null;
+      } catch (err) {}
     }
+
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-        this.isSpeakingActive = false;
         this.currentUtterance = null;
         this.activeUtterances = [];
       } catch (err) {}
@@ -221,5 +308,3 @@ class VoiceAudioEngine {
 }
 
 export const voiceAudioEngine = new VoiceAudioEngine();
-
-

@@ -10,6 +10,7 @@ import { storyMemoryEngine } from './story/StoryMemoryEngine.js';
 import { CapCutGenerator } from './story/CapCutGenerator.js';
 import { ocrExtractText } from './ocr/MangaOCREngine.js';
 import { AIVisionEngine } from './ocr/AIVisionEngine.js';
+import { EdgeTtsService } from './tts/edgeTtsService.js';
 
 const PORT = 3001;
 const prisma = new PrismaClient();
@@ -587,6 +588,102 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
     });
+    return;
+  }
+
+  // 5d. GET Available High-Fidelity Edge Neural TTS Voices
+  if (pathname === '/api/tts/voices' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        success: true,
+        voices: [
+          {
+            id: 'vi-VN-NamMinhNeural',
+            name: 'Nam Minh (Nam - Hào Hùng, Review Manhwa/Manga/Tu Tiên)',
+            gender: 'male',
+            lang: 'vi-VN',
+            provider: 'Microsoft Edge Neural',
+            recommendedRate: '+15%',
+            recommendedPitch: '+0Hz',
+            avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+            description: 'Giọng nam hào hùng, dứt khoát, âm sắc rõ ràng, chuẩn phong cách review YouTube triệu view.',
+          },
+          {
+            id: 'vi-VN-HoaiMyNeural',
+            name: 'Hoài My (Nữ - Truyền Cảm, Ngôn Tình/Drama/Isekai)',
+            gender: 'female',
+            lang: 'vi-VN',
+            provider: 'Microsoft Edge Neural',
+            recommendedRate: '+10%',
+            recommendedPitch: '+0Hz',
+            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            description: 'Giọng nữ ngọt ngào, truyền cảm hứng, phát âm tự nhiên 100% như người thật.',
+          },
+        ],
+      })
+    );
+    return;
+  }
+
+  // 5e. POST Synthesize Text to Neural Audio MP3 with Disk Caching
+  if (pathname === '/api/tts/synthesize' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const text = payload.text || '';
+        const voice = payload.voice || 'vi-VN-NamMinhNeural';
+        const rate = payload.rate || '+15%';
+        const pitch = payload.pitch || '+0Hz';
+
+        if (!text || typeof text !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Vui lòng cung cấp văn bản cần đọc.' }));
+          return;
+        }
+
+        console.log(`[Server TTS] 🎙️ Synthesizing (${voice}): "${text.slice(0, 50)}..."`);
+        const result = await EdgeTtsService.synthesize({
+          text,
+          voice,
+          rate,
+          pitch,
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            success: true,
+            data: result,
+          })
+        );
+      } catch (err) {
+        console.error('[Server TTS Error]:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message || 'Lỗi tổng hợp giọng nói AI.' }));
+      }
+    });
+    return;
+  }
+
+  // 5f. GET Stream Cached MP3 Audio File
+  if (pathname.startsWith('/api/tts/audio/') && req.method === 'GET') {
+    const filename = pathname.replace('/api/tts/audio/', '');
+    const audioBuffer = EdgeTtsService.getAudioFile(filename);
+    if (!audioBuffer) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'File audio không tồn tại.' }));
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length,
+      'Cache-Control': 'public, max-age=31536000',
+    });
+    res.end(audioBuffer);
     return;
   }
 

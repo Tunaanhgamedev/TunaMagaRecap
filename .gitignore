@@ -20,6 +20,8 @@ node_modules
 dist
 dist-ssr
 *.local
+server/cache/
+public/cache/
 
 # Editor directories and files
 .vscode/*

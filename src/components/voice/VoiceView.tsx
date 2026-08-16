@@ -3,6 +3,7 @@ import { useStudioStore } from '../../store/useStudioStore';
 import {
   Volume2,
   Play,
+  Square,
   Sparkles,
   Check,
   ArrowRight,
@@ -10,7 +11,9 @@ import {
   Mic,
   Sliders,
   Radio,
+  Zap,
 } from 'lucide-react';
+import { voiceAudioEngine } from '../../utils/audioSynthesizer';
 
 export const VoiceView: React.FC = () => {
   const {
@@ -20,42 +23,56 @@ export const VoiceView: React.FC = () => {
     isSynthesizingTTS,
     synthesizeVoiceAudio,
     setActiveTab,
-    playNarrationAudio,
   } = useStudioStore();
 
-  const [speechSpeed, setSpeechSpeed] = useState(1.05);
+  const [speechSpeed, setSpeechSpeed] = useState(1.15);
   const [speechPitch, setSpeechPitch] = useState(1.0);
   const [isPlayingSample, setIsPlayingSample] = useState<string | null>(null);
+  const [customTestText, setCustomTestText] = useState(
+    'Chào mừng các bạn đến với video recap chapter mới nhất! Hôm nay Sung Jinwoo sẽ chính thức thức tỉnh sức mạnh Chúa Tể Bóng Tối cấp SSS.'
+  );
 
-  const sampleTestText =
-    'Chào mừng các bạn đến với video recap chapter mới nhất! Hôm nay nhân vật chính của chúng ta sẽ bước vào trận quyết chiến đỉnh cao.';
-
-  const handleTestVoice = (actorId: string, sampleText: string) => {
-    setIsPlayingSample(actorId);
-    playNarrationAudio(sampleText);
-    setTimeout(() => {
+  const handleTestVoice = async (actorId: string, textToSpeak: string) => {
+    if (isPlayingSample === actorId) {
+      voiceAudioEngine.stop();
       setIsPlayingSample(null);
-    }, 4500);
+      return;
+    }
+
+    setIsPlayingSample(actorId);
+    await voiceAudioEngine.speak(
+      textToSpeak,
+      actorId,
+      speechSpeed,
+      speechPitch,
+      0.9,
+      () => {
+        setIsPlayingSample(null);
+      }
+    );
   };
 
   const vbeeServices = [
     {
-      title: 'Vbee Text-To-Speech Studio',
+      title: 'Edge Neural TTS (Đang Bật)',
+      url: 'https://speech.platform.bing.com',
+      desc: 'Giọng đọc AI tự nhiên 100% như MC review thật (Nam Minh & Hoài My). Hoàn toàn miễn phí, không giới hạn.',
+      badge: 'Edge Neural Studio 48kHz',
+      active: true,
+    },
+    {
+      title: 'Vbee AI Studio Việt Nam',
       url: 'https://studio.vbee.vn/studio/text-to-speech',
-      desc: 'Giọng đọc AI chuẩn tiếng Việt tự nhiên, đa vùng miền (Bắc, Trung, Nam).',
-      badge: 'studio.vbee.vn/text-to-speech',
+      desc: 'Giọng đọc AI chuẩn tiếng Việt đa vùng miền (Mạnh Dũng, Thảo Trinh, Quỳnh Anh, Bá Hùng).',
+      badge: 'studio.vbee.vn',
+      active: false,
     },
     {
-      title: 'Vbee AI Dubbing Studio',
-      url: 'https://studio.vbee.vn/studio/dubbing',
-      desc: 'Tự động dịch và lồng tiếng video đa ngôn ngữ với nhịp điệu khớp từng frame hình.',
-      badge: 'studio.vbee.vn/dubbing',
-    },
-    {
-      title: 'Vbee Voice Cloning & Voices',
-      url: 'https://studio.vbee.vn/studio/voice-cloning/voices',
-      desc: 'Nhân bản giọng đọc thần tượng / diễn viên độc quyền theo file audio mẫu 5 giây.',
-      badge: 'studio.vbee.vn/voice-cloning',
+      title: 'ElevenLabs Multilingual',
+      url: 'https://elevenlabs.io',
+      desc: 'Công nghệ tái tạo cảm xúc điện ảnh Hollywood (Adam, Rachel).',
+      badge: 'elevenlabs.io',
+      active: false,
     },
   ];
 
@@ -66,10 +83,10 @@ export const VoiceView: React.FC = () => {
         <div>
           <h1 className="text-base font-bold text-white flex items-center space-x-2">
             <Volume2 className="w-4 h-4 text-cyan-400" />
-            <span>Voice & Multi-Character TTS Studio (Tích Hợp Vbee AI & Azure)</span>
+            <span>Voice & Multi-Character TTS Studio (Microsoft Edge Neural & Vbee AI)</span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Lồng tiếng AI tự nhiên cho từng nhân vật với các giọng đọc đình đám từ Vbee Studio (Mạnh Dũng, Thảo Trinh, Quỳnh Anh, Bá Hùng).
+            Lồng tiếng AI tự nhiên, hào hùng chuẩn review YouTube triệu view với bộ giọng Neural HD không bị giật cục hay méo tiếng.
           </p>
         </div>
 
@@ -93,25 +110,39 @@ export const VoiceView: React.FC = () => {
         </div>
       </div>
 
-      {/* Vbee Official Studio Services Banner */}
+      {/* Services Info Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {vbeeServices.map((service) => (
           <a
-            key={service.url}
+            key={service.title}
             href={service.url}
             target="_blank"
             rel="noreferrer"
-            className="p-3.5 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 rounded-xl border border-slate-800 hover:border-violet-500/60 transition-all group block shadow-md"
+            className={`p-3.5 rounded-xl border transition-all group block shadow-md ${
+              service.active
+                ? 'bg-gradient-to-br from-emerald-950/50 via-slate-950 to-cyan-950/40 border-emerald-500/60 ring-1 ring-emerald-500/30'
+                : 'bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 border-slate-800 hover:border-violet-500/60'
+            }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-bold text-violet-300 group-hover:text-cyan-300 transition-colors flex items-center space-x-1">
-                <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                {service.active ? (
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                )}
                 <span>{service.title}</span>
               </span>
               <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
             </div>
             <p className="text-[10.5px] text-slate-400 leading-snug">{service.desc}</p>
-            <span className="inline-block mt-2 text-[9px] font-mono text-cyan-400 bg-cyan-950/70 px-1.5 py-0.2 rounded border border-cyan-800/40">
+            <span
+              className={`inline-block mt-2 text-[9px] font-mono px-1.5 py-0.2 rounded border ${
+                service.active
+                  ? 'text-emerald-300 bg-emerald-950/80 border-emerald-700/60'
+                  : 'text-cyan-400 bg-cyan-950/70 border-cyan-800/40'
+              }`}
+            >
               {service.badge}
             </span>
           </a>
@@ -126,7 +157,7 @@ export const VoiceView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <h3 className="text-xs font-bold text-white flex items-center space-x-1.5">
                 <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Danh Sách Diễn Viên Lồng Tiếng AI (Vbee / Azure / ElevenLabs)</span>
+                <span>Danh Sách Diễn Viên Lồng Tiếng AI (Neural Studio HD)</span>
               </h3>
               <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
                 {voiceActors.length} Giọng Đọc Sẵn Sàng
@@ -144,7 +175,7 @@ export const VoiceView: React.FC = () => {
                     onClick={() => setAssignedVoiceId(actor.id)}
                     className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       isSelected
-                        ? 'bg-violet-950/40 border-violet-500/80 ring-1 ring-violet-500/40'
+                        ? 'bg-violet-950/40 border-violet-500/80 ring-1 ring-violet-500/40 shadow-lg shadow-violet-500/10'
                         : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
                     }`}
                   >
@@ -158,8 +189,14 @@ export const VoiceView: React.FC = () => {
                       <div className="space-y-0.5">
                         <div className="flex items-center space-x-2">
                           <h4 className="text-xs font-bold text-white">{actor.name}</h4>
-                          <span className="text-[8.5px] font-mono uppercase px-1.5 py-0.2 rounded bg-violet-600/30 text-violet-300 border border-violet-500/30">
-                            {actor.provider.toUpperCase()}
+                          <span
+                            className={`text-[8.5px] font-mono uppercase px-1.5 py-0.2 rounded border ${
+                              actor.id.includes('Neural')
+                                ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/60 font-bold'
+                                : 'bg-violet-600/30 text-violet-300 border-violet-500/30'
+                            }`}
+                          >
+                            {actor.id.includes('Neural') ? 'EDGE NEURAL 48KHZ' : actor.provider.toUpperCase()}
                           </span>
                         </div>
                         <p className="text-[10.5px] text-slate-400 leading-snug">{actor.description}</p>
@@ -167,17 +204,21 @@ export const VoiceView: React.FC = () => {
                     </div>
 
                     <div className="flex items-center space-x-2 shrink-0">
-                      {/* Audition Play Button */}
+                      {/* Audition Play/Stop Button */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleTestVoice(actor.id, sampleTestText);
+                          handleTestVoice(actor.id, customTestText);
                         }}
-                        className="bg-cyan-600/80 hover:bg-cyan-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow flex items-center space-x-1 transition-all active:scale-95 cursor-pointer"
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shadow flex items-center space-x-1 transition-all active:scale-95 cursor-pointer ${
+                          isPlayingThis
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white animate-pulse'
+                            : 'bg-cyan-600/80 hover:bg-cyan-500 text-white'
+                        }`}
                       >
-                        <Play className={`w-3 h-3 ${isPlayingThis ? 'text-yellow-300 animate-pulse' : ''}`} />
-                        <span>{isPlayingThis ? 'Đang đọc...' : 'Nghe Thử'}</span>
+                        {isPlayingThis ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3" />}
+                        <span>{isPlayingThis ? 'Dừng Lại' : 'Nghe Thử'}</span>
                       </button>
 
                       {isSelected && (
@@ -201,30 +242,47 @@ export const VoiceView: React.FC = () => {
               <span>Tinh Chỉnh Tốc Độ & Cao Độ Giọng Đọc</span>
             </h3>
 
-            {/* Simulated Animated Audio Waveform */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-center space-x-1.5 h-28">
+            {/* Animated Audio Waveform */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-center space-x-1.5 h-24">
               {[12, 28, 45, 18, 35, 52, 24, 40, 16, 32, 48, 20, 36, 14, 26, 42].map((height, i) => (
                 <div
                   key={i}
-                  style={{ height: isPlayingSample ? `${height * 1.4}px` : `${height}px` }}
+                  style={{
+                    height: isPlayingSample ? `${Math.min(60, height * 1.5)}px` : `${Math.max(6, height * 0.4)}px`,
+                  }}
                   className={`w-1.5 rounded-full transition-all duration-150 ${
-                    isPlayingSample ? 'bg-gradient-to-t from-cyan-400 to-violet-500 animate-pulse' : 'bg-slate-700'
+                    isPlayingSample ? 'bg-gradient-to-t from-cyan-400 to-violet-500 animate-pulse' : 'bg-slate-800'
                   }`}
                 />
               ))}
+            </div>
+
+            {/* Custom Test Text Input */}
+            <div className="space-y-1 text-xs">
+              <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                <span>Câu Thử Nghiệm Giọng Đọc</span>
+                <span className="text-[10px] text-slate-400 font-mono">Tự động phiên âm chuẩn</span>
+              </label>
+              <textarea
+                value={customTestText}
+                onChange={(e) => setCustomTestText(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-950 text-xs text-white p-2 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500 resize-none font-medium"
+                placeholder="Nhập câu tiếng Việt để nghe thử cách phát âm..."
+              />
             </div>
 
             {/* Sliders */}
             <div className="space-y-3 pt-1 text-xs">
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px] text-slate-300">
-                  <span>Tốc độ đọc (Speed Rate)</span>
+                  <span>Tốc độ đọc (Speed Rate - Chuẩn YouTube: 1.15x)</span>
                   <span className="font-mono text-cyan-400 font-bold">{speechSpeed}x</span>
                 </div>
                 <input
                   type="range"
-                  min={0.8}
-                  max={1.5}
+                  min={0.85}
+                  max={1.4}
                   step={0.05}
                   value={speechSpeed}
                   onChange={(e) => setSpeechSpeed(parseFloat(e.target.value))}
@@ -239,8 +297,8 @@ export const VoiceView: React.FC = () => {
                 </div>
                 <input
                   type="range"
-                  min={0.7}
-                  max={1.3}
+                  min={0.8}
+                  max={1.2}
                   step={0.05}
                   value={speechPitch}
                   onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
@@ -253,11 +311,24 @@ export const VoiceView: React.FC = () => {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => handleTestVoice(assignedVoiceId, sampleTestText)}
-                className="w-full py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
+                onClick={() => handleTestVoice(assignedVoiceId, customTestText)}
+                className={`w-full py-2 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer ${
+                  isPlayingSample === assignedVoiceId
+                    ? 'bg-amber-600 hover:bg-amber-500 animate-pulse'
+                    : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500'
+                }`}
               >
-                <Play className="w-3.5 h-3.5" />
-                <span>Phát Âm Thử Nghiệm Ngay</span>
+                {isPlayingSample === assignedVoiceId ? (
+                  <>
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <span>Dừng Đọc Thử Nghiệm</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5" />
+                    <span>Phát Âm Thử Nghiệm Giọng Đang Chọn</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
