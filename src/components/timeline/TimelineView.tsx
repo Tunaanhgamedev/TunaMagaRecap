@@ -329,6 +329,10 @@ export const TimelineView: React.FC = () => {
           shiftY = (Math.random() - 0.5) * 6;
         }
 
+        // Compute canvas aspect ratio (used by both backdrop and main panel draw)
+        const aspectCanvas = canvas.width / canvas.height;
+        const aspectCrop = cropW / cropH;
+
         // 1. Draw Blurred Backdrop filling left & right (Eliminate black pillarbox)
         if (blurredBackground) {
           ctx.save();
@@ -384,9 +388,6 @@ export const TimelineView: React.FC = () => {
         ctx.scale(scale, scale);
 
         // Aspect fit / cover within canvas viewport
-        const aspectCanvas = canvas.width / canvas.height;
-        const aspectCrop = cropW / cropH;
-
         let drawW = canvas.width;
         let drawH = canvas.height;
 
