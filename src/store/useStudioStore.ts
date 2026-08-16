@@ -31,6 +31,7 @@ import {
   AIPluginConfig,
   CompilationConfig,
   ChapterVideoEntry,
+  PronunciationRule,
 } from '../types/studio';
 
 interface StudioState {
@@ -115,12 +116,20 @@ interface StudioState {
   generateAIScript: (mode: ScriptMode) => Promise<void>;
   updateScriptContent: (content: string) => void;
 
-  // Voice TTS
+  // Voice TTS & Pronunciation Dictionary
   voiceActors: VoiceActor[];
   assignedVoiceId: string;
   setAssignedVoiceId: (id: string) => void;
   isSynthesizingTTS: boolean;
   synthesizeVoiceAudio: () => void;
+  customPronunciationRules: PronunciationRule[];
+  selectedGenreDictionary: string;
+  isExtractingTerms: boolean;
+  setCustomPronunciationRules: (rules: PronunciationRule[]) => void;
+  addPronunciationRule: (rule: Omit<PronunciationRule, 'id'>) => void;
+  removePronunciationRule: (id: string) => void;
+  setSelectedGenreDictionary: (genre: string) => void;
+  autoExtractTermsWithAI: () => Promise<void>;
 
   // Subtitles
   subtitles: SubtitleItem[];
@@ -2216,6 +2225,82 @@ export const useStudioStore = create<StudioState>()(
   assignedVoiceId: 'vi-VN-NamMinhNeural',
   setAssignedVoiceId: (id) => set({ assignedVoiceId: id }),
   isSynthesizingTTS: false,
+  customPronunciationRules: (() => {
+    try {
+      const saved = localStorage.getItem('tuna_custom_pronunciation_rules');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })(),
+  selectedGenreDictionary: 'all',
+  isExtractingTerms: false,
+  setSelectedGenreDictionary: (genre) => set({ selectedGenreDictionary: genre }),
+  setCustomPronunciationRules: (rules) => {
+    set({ customPronunciationRules: rules });
+    try {
+      localStorage.setItem('tuna_custom_pronunciation_rules', JSON.stringify(rules));
+    } catch (e) {}
+  },
+  addPronunciationRule: (rule) => {
+    const newRule: PronunciationRule = {
+      id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      ...rule,
+    };
+    const updated = [newRule, ...get().customPronunciationRules];
+    get().setCustomPronunciationRules(updated);
+  },
+  removePronunciationRule: (id) => {
+    const updated = get().customPronunciationRules.filter((r) => r.id !== id);
+    get().setCustomPronunciationRules(updated);
+  },
+  autoExtractTermsWithAI: async () => {
+    set({ isExtractingTerms: true });
+    try {
+      const { scriptData, selectedProject, selectedGenreDictionary, geminiApiKey, apiKeys } = get();
+      const scriptText = scriptData?.content || '';
+      if (!scriptText) return;
+
+      const res = await fetch('/api/tts/extract-terms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scriptText,
+          seriesName: selectedProject?.seriesName || 'Manga',
+          genre: selectedGenreDictionary || 'manhwa',
+          apiKey: geminiApiKey || apiKeys?.gemini?.apiKey || '',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && Array.isArray(data.terms)) {
+        const currentRules = get().customPronunciationRules;
+        const currentTerms = new Set(currentRules.map((r) => r.term.toLowerCase().trim()));
+        const newRules: PronunciationRule[] = [];
+
+        for (const t of data.terms) {
+          if (t.term && t.reading && !currentTerms.has(t.term.toLowerCase().trim())) {
+            newRules.push({
+              id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              term: t.term,
+              reading: t.reading,
+              category: t.category || 'character',
+              note: t.note || 'AI tự động trích xuất',
+            });
+            currentTerms.add(t.term.toLowerCase().trim());
+          }
+        }
+
+        if (newRules.length > 0) {
+          get().setCustomPronunciationRules([...newRules, ...currentRules]);
+        }
+      }
+    } catch (err) {
+      console.warn('[Auto Extract Terms Error]:', err);
+    } finally {
+      set({ isExtractingTerms: false });
+    }
+  },
   synthesizeVoiceAudio: async () => {
     set({ isSynthesizingTTS: true });
     try {

@@ -381,3 +381,13 @@ export interface AIPluginConfig {
   modelName: string;
   status: 'connected' | 'unconfigured' | 'error';
 }
+
+export interface PronunciationRule {
+  id: string;
+  term: string;
+  reading: string;
+  category?: 'character' | 'skill' | 'realm' | 'system' | 'general';
+  genre?: string;
+  note?: string;
+}
+

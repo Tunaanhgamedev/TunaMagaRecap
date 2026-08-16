@@ -11,6 +11,7 @@ import { CapCutGenerator } from './story/CapCutGenerator.js';
 import { ocrExtractText } from './ocr/MangaOCREngine.js';
 import { AIVisionEngine } from './ocr/AIVisionEngine.js';
 import { EdgeTtsService } from './tts/edgeTtsService.js';
+import { GENRE_DICTIONARIES } from './tts/textNormalizer.js';
 
 const PORT = 3001;
 const prisma = new PrismaClient();
@@ -637,6 +638,8 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         const voice = payload.voice || 'vi-VN-NamMinhNeural';
         const rate = payload.rate || '+15%';
         const pitch = payload.pitch || '+0Hz';
+        const genre = payload.genre || '';
+        const customDictionary = payload.customDictionary || [];
 
         if (!text || typeof text !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -650,6 +653,8 @@ async function resolveAndFetchImageBuffer(imageUrl) {
           voice,
           rate,
           pitch,
+          genre,
+          customDictionary,
         });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -663,6 +668,120 @@ async function resolveAndFetchImageBuffer(imageUrl) {
         console.error('[Server TTS Error]:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message || 'Lỗi tổng hợp giọng nói AI.' }));
+      }
+    });
+    return;
+  }
+
+  // 5g. GET Built-In Pronunciation Dictionaries (Genre Packs)
+  if (pathname === '/api/tts/dictionary' && req.method === 'GET') {
+    const formattedPacks = {};
+    for (const genre in GENRE_DICTIONARIES) {
+      formattedPacks[genre] = GENRE_DICTIONARIES[genre].map(([regex, reading]) => {
+        // Extract plain string from regex if possible
+        const strPattern = regex.source.replace(/\\b/g, '').replace(/\\s\+/g, ' ').replace(/\[- \]\?/g, ' ').trim();
+        return {
+          term: strPattern,
+          reading,
+        };
+      });
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        success: true,
+        genres: [
+          { id: 'tutien', name: 'Tu Tiên / Ma Hoàng / Tiên Hiệp', icon: '🐉', count: formattedPacks.tutien?.length || 0 },
+          { id: 'thosan', name: 'Thợ Săn / Hệ Thống / Hồi Quy (Solo Leveling, ORV)', icon: '⚡', count: formattedPacks.thosan?.length || 0 },
+          { id: 'shonen', name: 'Manga Shonen / Isekai / Chuyển Sinh', icon: '⚔️', count: formattedPacks.shonen?.length || 0 },
+          { id: 'dothi', name: 'Đô Thị / Giang Hồ / Báo Thù (Lookism)', icon: '🏙️', count: formattedPacks.dothi?.length || 0 },
+          { id: 'gaming', name: 'Esports / Game Thủ / MMORPG', icon: '🎮', count: formattedPacks.gaming?.length || 0 },
+        ],
+        dictionaries: formattedPacks,
+      })
+    );
+    return;
+  }
+
+  // 5h. POST AI Auto-Extract & Transliterate Terms from Chapter Script
+  if (pathname === '/api/tts/extract-terms' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const scriptText = payload.scriptText || '';
+        const seriesName = payload.seriesName || '';
+        const genre = payload.genre || '';
+        const apiKey = payload.apiKey || process.env.GEMINI_API_KEY || '';
+
+        if (!scriptText || scriptText.length < 10) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Kịch bản quá ngắn để phân tích.' }));
+          return;
+        }
+
+        let detectedTerms = [];
+
+        if (apiKey) {
+          try {
+            const { GoogleGenerativeAI } = await import('@google/generative-ai');
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+            const prompt = `
+Bạn là chuyên gia ngôn ngữ và đạo diễn lồng tiếng video Review Manga/Manhwa/Manhua chuyên nghiệp trên YouTube.
+Hãy quét kịch bản sau của bộ truyện "${seriesName}" (thể loại: ${genre}) và tìm ra TOÀN BỘ các Tên nhân vật nước ngoài (Anh/Hàn/Nhật/Pinyin), Tên chiêu thức, Tên tổ chức/quân đoàn, và Thuật ngữ gaming/hệ thống.
+
+Nhiệm vụ: Hãy tạo bảng phiên âm tiếng Việt tự nhiên 100% để Text-to-Speech (Microsoft Edge Neural TTS) đọc lên mượt mà, đúng chuẩn người Việt nghe hiểu và không bị ngọng hay lơ lớ.
+
+Kịch bản cần quét:
+"""
+${scriptText.slice(0, 3500)}
+"""
+
+Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
+[
+  { "term": "Tên gốc trong truyện", "reading": "Phiên âm tiếng Việt tự nhiên", "category": "character" | "skill" | "system" | "realm", "note": "Ghi chú ngắn" }
+]
+`;
+
+            const response = await model.generateContent(prompt);
+            const textResp = response.response.text();
+            const jsonMatch = textResp.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              detectedTerms = JSON.parse(jsonMatch[0]);
+            }
+          } catch (e) {
+            console.log('[Extract Terms AI Fallback]', e.message);
+          }
+        }
+
+        // Fallback rule-based detection if AI didn't return
+        if (detectedTerms.length === 0) {
+          const capitalizedWords = scriptText.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
+          const uniqueWords = [...new Set(capitalizedWords)].slice(0, 10);
+          detectedTerms = uniqueWords.map(w => ({
+            term: w,
+            reading: w,
+            category: 'character',
+            note: 'Phát hiện tự động',
+          }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            success: true,
+            count: detectedTerms.length,
+            terms: detectedTerms,
+          })
+        );
+      } catch (err) {
+        console.error('[Extract Terms Error]:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
       }
     });
     return;

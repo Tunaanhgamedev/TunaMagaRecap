@@ -50,6 +50,8 @@ export async function synthesizeVoiceAudioApi(options: {
   voice?: string;
   rate?: number | string;
   pitch?: number | string;
+  genre?: string;
+  customDictionary?: Array<{ term: string; reading: string }>;
 }): Promise<TTSResponse | null> {
   const cleanText = sanitizeTextForSpeech(options.text);
   if (!cleanText) return null;
@@ -63,6 +65,8 @@ export async function synthesizeVoiceAudioApi(options: {
         voice: options.voice || 'vi-VN-NamMinhNeural',
         rate: options.rate || '+15%',
         pitch: options.pitch || '+0Hz',
+        genre: options.genre || '',
+        customDictionary: options.customDictionary || [],
       }),
     });
 
@@ -108,14 +112,10 @@ class VoiceAudioEngine {
     if (this.cachedVoices.length === 0) return null;
 
     const viVoices = this.cachedVoices.filter(
-      (v) => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('vietnamese')
+      (v) => v.lang.startsWith('vi') || v.name.toLowerCase().includes('vietnam')
     );
 
     if (viVoices.length > 0) {
-      if (voiceId.includes('hoaimy') || voiceId.includes('female') || voiceId.includes('nu')) {
-        const femaleMatch = viVoices.find((v) => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('hoai') || v.name.toLowerCase().includes('nu'));
-        if (femaleMatch) return femaleMatch;
-      }
       return viVoices[0];
     }
 
@@ -123,7 +123,7 @@ class VoiceAudioEngine {
   }
 
   /**
-   * Plays realistic human Vietnamese narration via Edge Neural TTS with browser speech fallback
+   * Speak narrative text using Microsoft Edge Neural TTS Backend (with instant memory cache & fallback)
    */
   public async speak(
     text: string,
@@ -131,8 +131,12 @@ class VoiceAudioEngine {
     rate: number = 1.15,
     pitch: number = 1.0,
     volume: number = 0.85,
-    onEnd?: () => void
-  ) {
+    onEnd?: () => void,
+    options?: {
+      genre?: string;
+      customDictionary?: Array<{ term: string; reading: string }>;
+    }
+  ): Promise<void> {
     const cleanText = sanitizeTextForSpeech(text);
     if (!cleanText) {
       if (onEnd) onEnd();
@@ -150,7 +154,9 @@ class VoiceAudioEngine {
     this.isSpeakingActive = true;
 
     // Check memory cache first for instant playback
-    const cacheKey = `${voiceId}_${rate}_${pitch}_${cleanText}`;
+    const genreKey = options?.genre || 'all';
+    const dictHash = options?.customDictionary?.length ? `_dict${options.customDictionary.length}` : '';
+    const cacheKey = `${voiceId}_${rate}_${pitch}_${genreKey}${dictHash}_${cleanText}`;
     const cachedAudioSrc = this.memoryCache.get(cacheKey);
 
     if (cachedAudioSrc) {
@@ -166,6 +172,8 @@ class VoiceAudioEngine {
         voice: voiceId,
         rate: rateStr,
         pitch: '+0Hz',
+        genre: options?.genre,
+        customDictionary: options?.customDictionary,
       });
 
       // If user started a newer speech while waiting, cancel this one

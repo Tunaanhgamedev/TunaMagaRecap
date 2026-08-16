@@ -1,43 +1,65 @@
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { normalizeRecapText, splitTextIntoChunks } from './textNormalizer.js';
 
-const CACHE_DIR = path.resolve(process.cwd(), 'server', 'cache', 'audio');
+const CACHE_DIR = path.join(process.cwd(), 'server', 'cache', 'audio');
 
-// Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
-function synthesizeChunk(tts, text, rate, pitch) {
-  return new Promise((resolve, reject) => {
-    const buffers = [];
+/**
+ * Streaming synthesis for a single text chunk with automatic retry
+ */
+async function synthesizeChunkWithRetry(chunkText, voice, rate, pitch, retries = 2) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
     try {
-      const readable = tts.toStream(text, { rate, pitch });
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
 
-      readable.audioStream.on('data', (data) => buffers.push(data));
-      readable.audioStream.on('end', () => resolve(Buffer.concat(buffers)));
-      readable.audioStream.on('error', (err) => reject(err));
+      const readable = tts.toStream(chunkText, {
+        rate: rate || '+15%',
+        pitch: pitch || '+0Hz',
+      });
+
+      const buffers = [];
+      const buffer = await new Promise((resolve, reject) => {
+        readable.audioStream.on('data', (chunk) => buffers.push(chunk));
+        readable.audioStream.on('end', () => resolve(Buffer.concat(buffers)));
+        readable.audioStream.on('error', (err) => reject(err));
+      });
+
+      if (buffer && buffer.length > 0) {
+        return buffer;
+      }
     } catch (err) {
-      reject(err);
+      lastErr = err;
+      if (attempt <= retries) {
+        console.warn(`[EdgeTTS] Chunk attempt ${attempt} failed (${err.message}), retrying...`);
+        await new Promise((r) => setTimeout(r, 400));
+      }
     }
-  });
+  }
+  throw lastErr || new Error('Không thể kết nối đến máy chủ Edge Neural TTS.');
 }
 
 export class EdgeTtsService {
   /**
-   * Synthesizes natural Vietnamese narration via Microsoft Edge Neural TTS with disk caching
+   * Synthesize text to MP3 with disk caching and phonetic text normalization
    */
   static async synthesize({
     text,
     voice = 'vi-VN-NamMinhNeural',
     rate = '+15%',
     pitch = '+0Hz',
+    genre = '',
+    customDictionary = [],
   }) {
     // 1. Normalize text (replace foreign names, gaming terms, strip markdown/director notes)
-    const cleanedText = normalizeRecapText(text);
+    const cleanedText = normalizeRecapText(text, { genre, customDictionary });
     if (!cleanedText) {
       throw new Error('Văn bản trống sau khi chuẩn hóa.');
     }
@@ -103,11 +125,8 @@ export class EdgeTtsService {
     const chunks = splitTextIntoChunks(cleanedText, 700);
     const audioBuffers = [];
 
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(selectedVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-
     for (const chunk of chunks) {
-      const chunkBuffer = await synthesizeChunk(tts, chunk, formattedRate, formattedPitch);
+      const chunkBuffer = await synthesizeChunkWithRetry(chunk, selectedVoice, formattedRate, formattedPitch, 2);
       if (chunkBuffer && chunkBuffer.length > 0) {
         audioBuffers.push(chunkBuffer);
       }
