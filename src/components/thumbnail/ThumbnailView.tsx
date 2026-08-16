@@ -887,12 +887,10 @@ export const ThumbnailView: React.FC = () => {
                   style={{
                     fontSize: isPortrait ? '2.2rem' : 'clamp(1.8rem, 4.2vw, 3.8rem)',
                     lineHeight: '1.05',
-                    WebkitTextStroke: '3.5px #000000',
-                    color: 'transparent',
-                    background: `linear-gradient(to bottom, ${getTitleGradient(currentThumbnail.titleStyle)})`,
-                    WebkitBackgroundClip: 'text',
-                    backgroundClip: 'text',
-                    textShadow: '0 4px 8px rgba(0,0,0,0.9), 0 8px 16px rgba(0,0,0,0.8)',
+                    WebkitTextStroke: '4px #000000',
+                    color: getTitleGradient(currentThumbnail.titleStyle).split(', ')[0],
+                    textShadow: '0 4px 0 #000, 0 6px 0 #000, 0 8px 12px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,1)',
+                    paintOrder: 'stroke fill',
                   }}
                 >
                   {currentThumbnail.mainTitle}
