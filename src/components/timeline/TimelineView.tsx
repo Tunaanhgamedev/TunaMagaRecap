@@ -70,6 +70,7 @@ export const TimelineView: React.FC = () => {
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const lastSpokenPanelIdRef = useRef<string>('');
   const [isExporting, setIsExporting] = useState(false);
+  const [blurredBackground, setBlurredBackground] = useState(true);
   const [activePanelInfo, setActivePanelInfo] = useState<{
     pageIndex: number;
     panelIndex: number;
@@ -328,8 +329,57 @@ export const TimelineView: React.FC = () => {
           shiftY = (Math.random() - 0.5) * 6;
         }
 
-        // Draw cropped panel onto video canvas
+        // 1. Draw Blurred Backdrop filling left & right (Eliminate black pillarbox)
+        if (blurredBackground) {
+          ctx.save();
+          // Heavy Gaussian blur + subtle cinematic contrast
+          ctx.filter = 'blur(30px) brightness(0.65) saturate(1.25)';
+
+          const bgAspect = cropW / cropH;
+          let bgDrawW = canvas.width;
+          let bgDrawH = canvas.height;
+
+          if (bgAspect > aspectCanvas) {
+            bgDrawH = canvas.height;
+            bgDrawW = canvas.height * bgAspect;
+          } else {
+            bgDrawW = canvas.width;
+            bgDrawH = canvas.width / bgAspect;
+          }
+
+          // Overscale by 14% to prevent blur fringes at viewport boundaries
+          const overscale = 1.14;
+          ctx.drawImage(
+            img,
+            cropX,
+            cropY,
+            cropW,
+            cropH,
+            (canvas.width - bgDrawW * overscale) / 2,
+            (canvas.height - bgDrawH * overscale) / 2,
+            bgDrawW * overscale,
+            bgDrawH * overscale
+          );
+          ctx.restore();
+
+          // 2. Soft Dark Side Vignette for Depth & Focus
+          ctx.save();
+          const sideVignette = ctx.createLinearGradient(0, 0, canvas.width, 0);
+          sideVignette.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+          sideVignette.addColorStop(0.2, 'rgba(0, 0, 0, 0.05)');
+          sideVignette.addColorStop(0.8, 'rgba(0, 0, 0, 0.05)');
+          sideVignette.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+          ctx.fillStyle = sideVignette;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#080a0f';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 3. Draw Main Animated Panel in Center with Camera Motion Effects
         ctx.save();
+        ctx.filter = 'none';
         ctx.translate(canvas.width / 2 + shiftX, canvas.height / 2 + shiftY);
         ctx.scale(scale, scale);
 
@@ -346,6 +396,14 @@ export const TimelineView: React.FC = () => {
         } else {
           drawH = canvas.height;
           drawW = canvas.height * aspectCrop;
+        }
+
+        // Deep drop shadow on the central panel for maximum pop and depth
+        if (blurredBackground) {
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+          ctx.shadowBlur = 24;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 6;
         }
 
         ctx.drawImage(img, cropX, cropY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
@@ -387,7 +445,7 @@ export const TimelineView: React.FC = () => {
       lastSpokenPanelIdRef.current = '';
       stopNarrationAudio();
     }
-  }, [currentTime, isPlaying, panelTimeline, aspectRatio, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
+  }, [currentTime, isPlaying, panelTimeline, aspectRatio, blurredBackground, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
 
   // CapCut 1-Click Export Function
   const handleExportCapCutDraft = () => {
@@ -595,6 +653,20 @@ export const TimelineView: React.FC = () => {
               <span>9:16 Shorts/TikTok</span>
             </button>
           </div>
+
+          {/* Blurred Background Toggle Button */}
+          <button
+            onClick={() => setBlurredBackground((prev) => !prev)}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer shadow-sm active:scale-95 ${
+              blurredBackground
+                ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 border-purple-400 text-white shadow-purple-900/30'
+                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+            }`}
+            title="Bật/Tắt hiệu ứng nền mờ 2 bên (Tránh viền đen)"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${blurredBackground ? 'text-amber-300' : 'text-slate-500'}`} />
+            <span>{blurredBackground ? 'Nền Mờ 2 Bên (BẬT)' : 'Nền Đen Cũ'}</span>
+          </button>
 
           {/* Export CapCut */}
           <button
