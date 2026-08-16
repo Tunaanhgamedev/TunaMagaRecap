@@ -373,6 +373,9 @@ export interface ThumbnailConfig {
     saturation: number; // 80 - 200
     vignette: number; // 0 - 100
   };
+  textPosition?: 'bottom-center' | 'left-half' | 'bottom-left';
+  textRotation?: number; // -10 to 10 degrees
+  splitMode?: boolean; // Before vs After mode
 }
 
 export interface AIPluginConfig {
