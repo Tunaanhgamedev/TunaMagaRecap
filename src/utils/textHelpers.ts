@@ -1,4 +1,4 @@
-export const transformTextCase = (str: string, caseType: 'upper' | 'lower' | 'title' | 'sentence'): string => {
+export const transformTextCase = (str: string, caseType: 'upper' | 'lower' | 'title' | 'sentence' | 'none'): string => {
   if (!str) return '';
   if (caseType === 'upper') return str.toUpperCase();
   if (caseType === 'lower') return str.toLowerCase();

@@ -358,6 +358,9 @@ export interface ThumbnailConfig {
   stickers?: string[];
   activeStickers?: string[];
   aiElements?: AIVisualElement[];
+  slotFocus?: ('top' | 'center' | 'bottom')[];
+  slotZooms?: number[];
+  progressionBadge?: string;
   filterSettings?: {
     brightness: number; // 80 - 150
     contrast: number; // 80 - 180

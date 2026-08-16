@@ -274,6 +274,78 @@ export const AI_PRESET_ASSETS: Array<{
       <text x="125" y="195" fill="#38bdf8" font-size="20" font-weight="900" font-family="sans-serif" text-anchor="middle" letter-spacing="3">SKILL EX</text>
     </svg>`,
   },
+  {
+    id: 'ai_red_eye_flare',
+    name: '🔴 Mắt Đỏ Sát Khí (Red Eye Flare / Omae Wa)',
+    category: 'effect',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="16" fill="%23ef4444"/><line x1="10" y1="50" x2="90" y2="50" stroke="%23f87171" stroke-width="4"/><line x1="50" y1="10" x2="50" y2="90" stroke="%23f87171" stroke-width="4"/></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+      <defs>
+        <radialGradient id="redEyeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="25%" stop-color="#ef4444"/>
+          <stop offset="70%" stop-color="#dc2626" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#991b1b" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="150" cy="150" r="100" fill="url(#redEyeGlow)"/>
+      <line x1="10" y1="150" x2="290" y2="150" stroke="#fca5a5" stroke-width="8" stroke-linecap="round" filter="drop-shadow(0 0 15px #ef4444)"/>
+      <line x1="150" y1="10" x2="150" y2="290" stroke="#fca5a5" stroke-width="8" stroke-linecap="round" filter="drop-shadow(0 0 15px #ef4444)"/>
+      <circle cx="150" cy="150" r="22" fill="#ffffff" filter="drop-shadow(0 0 8px #ffffff)"/>
+    </svg>`,
+  },
+  {
+    id: 'ai_cyan_eye_flare',
+    name: '💠 Mắt Xanh Thợ Săn (Hunter Mana Eye Glow)',
+    category: 'effect',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="16" fill="%2306b6d4"/><line x1="10" y1="50" x2="90" y2="50" stroke="%2338bdf8" stroke-width="4"/><line x1="50" y1="10" x2="50" y2="90" stroke="%2338bdf8" stroke-width="4"/></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+      <defs>
+        <radialGradient id="cyanEyeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="30%" stop-color="#38bdf8"/>
+          <stop offset="75%" stop-color="#0284c7" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="150" cy="150" r="110" fill="url(#cyanEyeGlow)"/>
+      <line x1="15" y1="150" x2="285" y2="150" stroke="#bae6fd" stroke-width="7" stroke-linecap="round" filter="drop-shadow(0 0 12px #06b6d4)"/>
+      <line x1="150" y1="15" x2="150" y2="285" stroke="#bae6fd" stroke-width="7" stroke-linecap="round" filter="drop-shadow(0 0 12px #06b6d4)"/>
+      <circle cx="150" cy="150" r="20" fill="#ffffff" filter="drop-shadow(0 0 8px #ffffff)"/>
+    </svg>`,
+  },
+  {
+    id: 'ai_question_marks',
+    name: '❓ Dấu Hỏi Vàng Giật Gân (Shocked ???)',
+    category: 'badge',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="70" fill="%23facc15" font-size="50" font-weight="900" text-anchor="middle" stroke="%23000" stroke-width="3">???</text></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 160" fill="none">
+      <text x="125" y="115" fill="#facc15" font-size="110" font-weight="900" font-family="'Arial Black', Impact, sans-serif" text-anchor="middle" stroke="#000000" stroke-width="14" stroke-linejoin="round" filter="drop-shadow(0 8px 12px rgba(0,0,0,0.9))">???</text>
+    </svg>`,
+  },
+  {
+    id: 'ai_versus_badge',
+    name: '⚔️ Biểu Tượng VS Rực Lửa (Battle Clash)',
+    category: 'badge',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23ef4444"/><text x="50" y="65" fill="%23fff" font-size="34" font-weight="900" text-anchor="middle">VS</text></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" fill="none">
+      <circle cx="130" cy="130" r="115" fill="#991b1b" stroke="#facc15" stroke-width="10" filter="drop-shadow(0 0 25px #ef4444)"/>
+      <polygon points="130,20 155,90 230,90 170,135 195,205 130,165 65,205 90,135 30,90 105,90" fill="#f97316" opacity="0.5"/>
+      <text x="130" y="170" fill="#ffffff" font-size="120" font-weight="900" font-family="'Arial Black', Impact, sans-serif" text-anchor="middle" stroke="#000000" stroke-width="16" stroke-linejoin="round">VS</text>
+    </svg>`,
+  },
+  {
+    id: 'ai_rank_progression_box',
+    name: '📈 Bảng Tiến Hóa Cấp F ➔ SSS (Level Evolution)',
+    category: 'badge',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="40" rx="8" fill="%231e1b4b" stroke="%2338bdf8" stroke-width="3"/><text x="50" y="56" fill="%23facc15" font-size="12" font-weight="bold" text-anchor="middle">F ➔ SSS</text></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" fill="none">
+      <rect x="8" y="8" width="344" height="104" rx="18" fill="#030712" fill-opacity="0.9" stroke="#38bdf8" stroke-width="6" filter="drop-shadow(0 0 20px rgba(6,182,212,0.8))"/>
+      <text x="70" y="70" fill="#94a3b8" font-size="44" font-weight="900" font-family="'Arial Black', sans-serif" text-anchor="middle" stroke="#000" stroke-width="4">CẤP F</text>
+      <path d="M140 60 L200 60 L185 45 M200 60 L185 75" stroke="#facc15" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="275" y="72" fill="#facc15" font-size="48" font-weight="900" font-family="'Arial Black', sans-serif" text-anchor="middle" stroke="#000" stroke-width="6" filter="drop-shadow(0 0 12px #eab308)">SSS</text>
+    </svg>`,
+  },
 ];
 
 // Viral High-CTR Stickers
@@ -288,6 +360,111 @@ export const CTR_STICKERS: string[] = [
   '⚔️ TRỌN BỘ 10 TIẾNG',
   '🏆 VÔ ĐỊCH HẠ GIỚI',
   '⚡ HỆ THỐNG BUG GAME',
+];
+
+// Viral YouTube Manga Review Templates (Proven High CTR Formulas)
+export interface ViralTitleTemplate {
+  id: string;
+  category: 'badao' | 'harem' | 'thosan' | 'tutien' | 'baothu';
+  categoryLabel: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  theme: ThumbnailTheme;
+  titleStyle: ThumbnailTitleStyle;
+}
+
+export const VIRAL_TITLE_TEMPLATES: ViralTitleTemplate[] = [
+  {
+    id: 'chutich_giangheo',
+    category: 'badao',
+    categoryLabel: '👑 Bá Đạo / Giấu Nghề',
+    title: 'CHỦ TỊCH KHÔNG THÈM GIẢ NGHÈO NỮA',
+    subtitle: 'VẢ MẶT TOÀN BỘ NHỮNG KẺ KHINH THƯỜNG',
+    badge: '🔥 BÁ ĐẠO VÔ ĐỊCH',
+    theme: 'golden_immortal',
+    titleStyle: 'fiery_orange',
+  },
+  {
+    id: 'vo_toi_xich_long',
+    category: 'harem',
+    categoryLabel: '💘 Harem / Manhwa Waifu',
+    title: 'VỢ TÔI LÀ XÍCH LONG',
+    subtitle: 'MẮC CHỨNG SỢ GIAO TIẾP VÔ CÙNG ĐÁNG YÊU',
+    badge: '1 - 9 CHAP',
+    theme: 'solo_awakening',
+    titleStyle: 'fiery_orange',
+  },
+  {
+    id: 'tan_binh_anh_hung',
+    category: 'badao',
+    categoryLabel: '👑 Bá Đạo / Giấu Nghề',
+    title: 'MỘT TÂN BINH HỌC VIỆN',
+    subtitle: 'LẠI LÀ ANH HÙNG MẠNH NHẤT LỊCH SỬ',
+    badge: '😱 BẤT NGỜ CHƯA',
+    theme: 'speed_action',
+    titleStyle: 'pure_white',
+  },
+  {
+    id: 'sung_thu_sss',
+    category: 'thosan',
+    categoryLabel: '⚡ Thợ Săn / Hệ Thống',
+    title: 'CHỈ MÌNH TA SỞ HỮU',
+    subtitle: 'SỦNG THÚ TRIỆU HỒI CẤP SSS VÔ ĐỊCH',
+    badge: '🔥 SSS-RANK',
+    theme: 'solo_awakening',
+    titleStyle: 'fiery_orange',
+  },
+  {
+    id: 'he_thong_bug_game',
+    category: 'thosan',
+    categoryLabel: '⚡ Thợ Săn / Hệ Thống',
+    title: 'THỢ SĂN CẤP F THỨC TỈNH',
+    subtitle: 'HỆ THỐNG BUG GAME BAN THƯỞNG VÔ HẠN',
+    badge: '⚡ BUG SERVER',
+    theme: 'cyber_system',
+    titleStyle: 'toxic_green',
+  },
+  {
+    id: 'trung_sinh_bao_thu',
+    category: 'baothu',
+    categoryLabel: '🩸 Báo Thù / Chuyển Sinh',
+    title: 'BỊ PHẢN BỘI TÀN NHẪN',
+    subtitle: 'TRÙNG SINH VỀ 10 NĂM TRƯỚC TẬN DIỆT KẺ THÙ',
+    badge: '💀 HUYẾT THÙ',
+    theme: 'blood_fury',
+    titleStyle: 'crimson_blood',
+  },
+  {
+    id: 'do_kiep_that_bai',
+    category: 'tutien',
+    categoryLabel: '🐉 Tu Tiên / Đô Thị',
+    title: 'ĐỘ KIẾP THẤT BẠI',
+    subtitle: 'CHUYỂN SINH THÀNH CHÀNG RỂ PHẾ VẬT VÔ DANH',
+    badge: '🐉 HOÀNG KIM',
+    theme: 'golden_immortal',
+    titleStyle: 'gold_3d',
+  },
+  {
+    id: 'bi_duoi_khoi_to_doi',
+    category: 'badao',
+    categoryLabel: '👑 Bá Đạo / Giấu Nghề',
+    title: 'SAU KHI BỊ ĐUỔI KHỎI TỔ ĐỘI',
+    subtitle: 'TÔI MỞ KHÓA BÍ THUẬT THẦN CẤP CẤM KỴ',
+    badge: '🔞 CẤM THUẬT',
+    theme: 'magic_overlord',
+    titleStyle: 'crimson_blood',
+  },
+];
+
+// Progression Badges
+export const PROGRESSION_BADGES = [
+  '⚡ [ CẤP F ➔ CẤP SSS ]',
+  '👑 [ LEVEL 1 ➔ LEVEL 999 ]',
+  '💥 [ PHẾ VẬT ➔ BÁ CHỦ ]',
+  '💀 [ 0.0001% TỶ LỆ SỐNG ]',
+  '🏆 [ CHIẾN LỰC 999.999+ ]',
+  '💎 [ TRỌN BỘ 10 TIẾNG ]',
 ];
 
 export function createDefaultThumbnailConfig(
@@ -323,3 +500,4 @@ export function createDefaultThumbnailConfig(
     },
   };
 }
+

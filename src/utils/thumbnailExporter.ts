@@ -186,20 +186,28 @@ async function drawMainCharacters(
     try {
       const img = await loadImage(imagesUrls[i]);
       const aspect = img.width / img.height;
+      const zoom = config.slotZooms?.[i] || 1.0;
+      const focus = config.slotFocus?.[i] || 'top';
       
-      // Calculate how to cover the slice width & full height (object-cover)
-      let targetH = height;
+      // Calculate how to cover the slice width & full height (object-cover) with zoom
+      let targetH = height * zoom;
       let targetW = targetH * aspect;
       
       if (targetW < sliceWidth) {
-        targetW = sliceWidth;
+        targetW = sliceWidth * zoom;
         targetH = targetW / aspect;
       }
       
-      const srcX = (img.width - (sliceWidth / targetW) * img.width) / 2;
-      const srcY = 0;
-      const srcW = (sliceWidth / targetW) * img.width;
-      const srcH = (height / targetH) * img.height;
+      let srcW = (sliceWidth / targetW) * img.width;
+      let srcH = (height / targetH) * img.height;
+      let srcX = (img.width - srcW) / 2;
+      
+      let srcY = 0;
+      if (focus === 'center') {
+        srcY = Math.max(0, (img.height - srcH) / 2);
+      } else if (focus === 'bottom') {
+        srcY = Math.max(0, img.height - srcH);
+      }
 
       ctx.save();
       
@@ -208,8 +216,8 @@ async function drawMainCharacters(
         ctx.beginPath();
         ctx.moveTo(i * sliceWidth, 0);
         ctx.lineTo(i * sliceWidth, height);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#000000';
         ctx.stroke();
       }
       
@@ -426,6 +434,31 @@ function drawChapterPillAndTimestamp(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(chapterText, 40 + (textWidth + 40) / 2, 40 + 28);
+
+  // Progression Badge Top-Right (Optional)
+  if (config.progressionBadge) {
+    const progText = config.progressionBadge.toUpperCase();
+    ctx.font = '900 28px "Arial Black", Impact, sans-serif';
+    const progWidth = ctx.measureText(progText).width;
+    const progX = width - progWidth - 70;
+    const progY = 40;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.shadowColor = 'rgba(6, 182, 212, 0.8)';
+    ctx.shadowBlur = 15;
+    roundRect(ctx, progX, progY, progWidth + 36, 56, 12);
+    ctx.fill();
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#06b6d4';
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#facc15';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(progText, progX + (progWidth + 36) / 2, progY + 28);
+  }
 
   // Timestamp Bottom-Right
   const timeText = '12:34';
