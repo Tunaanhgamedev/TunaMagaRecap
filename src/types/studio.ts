@@ -348,6 +348,7 @@ export interface ThumbnailConfig {
   titleStyle?: ThumbnailTitleStyle;
   overlayEffect?: ThumbnailOverlayEffect;
   characterSecondaryImage?: string;
+  characterImages?: string[];
   aiArtworkUrl?: string;
   characterPosition?: 'right' | 'left' | 'center' | 'split';
   characterScale?: number; // 50 to 150

@@ -251,6 +251,29 @@ export const AI_PRESET_ASSETS: Array<{
       </g>
     </svg>`,
   },
+  {
+    id: 'ai_attention_arrow',
+    name: '🎯 Mũi Tên Đỏ Giật Gân (Clickbait Arrow)',
+    category: 'effect',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 70 L55 35 L50 20 L85 20 L85 55 L70 50 L35 85 Z" fill="%23ef4444" stroke="%23fff" stroke-width="4"/></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+      <path d="M40 220 L150 110 L135 70 L240 70 L240 175 L200 160 L90 270 Z" fill="#ef4444" stroke="#ffffff" stroke-width="12" stroke-linejoin="round" filter="drop-shadow(0 10px 15px rgba(0,0,0,0.8))"/>
+      <path d="M50 215 L145 120 L138 90 L220 90 L220 172 L190 165 L95 260 Z" fill="#f87171" opacity="0.6"/>
+    </svg>`,
+  },
+  {
+    id: 'ai_floating_skill_badge',
+    name: '🃏 Thẻ Kỹ Năng / Biểu Tượng Cấp SSS',
+    category: 'badge',
+    thumbnailUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="%231e1b4b" stroke="%23a855f7" stroke-width="4"/><text x="50" y="58" fill="%23e879f9" font-size="22" font-weight="bold" text-anchor="middle">SSS</text></svg>',
+    svgContent: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 250" fill="none">
+      <rect x="20" y="20" width="210" height="210" rx="24" fill="#030712" stroke="#38bdf8" stroke-width="8" filter="drop-shadow(0 0 25px #0284c7)"/>
+      <rect x="35" y="35" width="180" height="180" rx="16" fill="#0f172a" stroke="#67e8f9" stroke-width="3" stroke-dasharray="8 6"/>
+      <circle cx="125" cy="110" r="50" fill="#0284c7" fill-opacity="0.3"/>
+      <path d="M125 70 L140 100 L170 105 L148 126 L153 156 L125 142 L97 156 L102 126 L80 105 L110 100 Z" fill="#facc15" filter="drop-shadow(0 0 10px #eab308)"/>
+      <text x="125" y="195" fill="#38bdf8" font-size="20" font-weight="900" font-family="sans-serif" text-anchor="middle" letter-spacing="3">SKILL EX</text>
+    </svg>`,
+  },
 ];
 
 // Viral High-CTR Stickers

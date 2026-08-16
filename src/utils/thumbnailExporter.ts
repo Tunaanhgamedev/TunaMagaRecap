@@ -20,45 +20,34 @@ export async function exportThumbnailToBlob(config: ThumbnailConfig): Promise<Bl
   // 1. Draw Background
   drawBackground(ctx, width, height, config);
 
-  // 2. Draw Secondary AI Artwork / Monster / Background image if available
-  if (config.aiArtworkUrl) {
-    await drawImageLayer(ctx, config.aiArtworkUrl, 0, 0, width, height, 0.6, 'screen');
-  }
-  if (config.characterSecondaryImage) {
-    const secX = isPortrait ? width * 0.1 : width * 0.35;
-    const secY = height * 0.15;
-    const secW = width * 0.55;
-    const secH = height * 0.8;
-    await drawImageLayer(ctx, config.characterSecondaryImage, secX, secY, secW, secH, 0.75, 'screen');
-  }
+  // 2. Draw Multi-Character Layout
+  await drawMainCharacters(ctx, width, height, config);
 
-  // 3. Draw Overlays & AI Effects (Speed lines, Lightning, Embers, Magic Circle, System HUD)
+  // 3. Draw Overlay Effects (Speed lines, lightning, embers, magic runes, system hud)
   drawOverlayEffects(ctx, width, height, config);
 
-  // 4. Draw Main Character Cutout
-  if (config.characterImage) {
-    await drawMainCharacter(ctx, width, height, config);
-  }
+  // 4. Draw Custom AI Elements (Floating skill cards, red attention arrow, aura, system windows)
+  await drawAIElements(ctx, width, height, config);
 
-  // 5. Draw Vignette & Lighting Contrast
+  // 5. Draw Bottom Gradient Overlay
+  const gradient = ctx.createLinearGradient(0, height * 0.52, 0, height);
+  gradient.addColorStop(0, 'transparent');
+  gradient.addColorStop(0.35, 'rgba(0, 0, 0, 0.7)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, height * 0.52, width, height * 0.48);
+
+  // 6. Draw Vignette (Subtle cinematic depth)
   drawVignette(ctx, width, height, config.filterSettings?.vignette ?? 40);
 
-  // 6. Draw AI Visual Elements (Custom elements)
-  if (config.aiElements && config.aiElements.length > 0) {
-    for (const elem of config.aiElements) {
-      const elemX = (elem.x / 100) * width;
-      const elemY = (elem.y / 100) * height;
-      const elemW = (width * 0.4) * elem.scale;
-      const elemH = (height * 0.4) * elem.scale;
-      await drawImageLayer(ctx, elem.url, elemX - elemW / 2, elemY - elemH / 2, elemW, elemH, elem.opacity, elem.blendMode || 'screen');
-    }
-  }
-
-  // 7. Draw Stickers & Badges
+  // 7. Draw Stickers (Optional)
   drawStickers(ctx, width, height, config);
 
-  // 8. Draw 3D Metallic / Glowing Typography
-  drawEpicTypography(ctx, width, height, config);
+  // 8. Draw Chapter Pill & Timestamp
+  drawChapterPillAndTimestamp(ctx, width, height, config);
+
+  // 9. Draw Giant Text at Bottom
+  drawEpicTypographyBottom(ctx, width, height, config);
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob), 'image/png', 0.98);
@@ -181,51 +170,94 @@ async function drawImageLayer(
   }
 }
 
-async function drawMainCharacter(
+async function drawMainCharacters(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   config: ThumbnailConfig
 ) {
-  try {
-    const img = await loadImage(config.characterImage);
-    const scale = (config.characterScale || 100) / 100;
-    const aspect = img.width / img.height;
+  const imagesUrls = config.characterImages || (config.characterImage ? [config.characterImage] : []);
+  if (imagesUrls.length === 0) return;
+  
+  const count = imagesUrls.length;
+  const sliceWidth = width / count;
 
-    let targetH = height * 0.95 * scale;
-    let targetW = targetH * aspect;
+  for (let i = 0; i < count; i++) {
+    try {
+      const img = await loadImage(imagesUrls[i]);
+      const aspect = img.width / img.height;
+      
+      // Calculate how to cover the slice width & full height (object-cover)
+      let targetH = height;
+      let targetW = targetH * aspect;
+      
+      if (targetW < sliceWidth) {
+        targetW = sliceWidth;
+        targetH = targetW / aspect;
+      }
+      
+      const srcX = (img.width - (sliceWidth / targetW) * img.width) / 2;
+      const srcY = 0;
+      const srcW = (sliceWidth / targetW) * img.width;
+      const srcH = (height / targetH) * img.height;
 
-    let posX = width - targetW - width * 0.03;
-    let posY = height - targetH;
-
-    if (config.characterPosition === 'left') {
-      posX = width * 0.03;
-    } else if (config.characterPosition === 'center') {
-      posX = (width - targetW) / 2;
+      ctx.save();
+      
+      // Draw border separator if not first
+      if (i > 0) {
+        ctx.beginPath();
+        ctx.moveTo(i * sliceWidth, 0);
+        ctx.lineTo(i * sliceWidth, height);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.stroke();
+      }
+      
+      ctx.beginPath();
+      ctx.rect(i * sliceWidth, 0, sliceWidth, height);
+      ctx.clip();
+      
+      // Filters
+      const b = config.filterSettings?.brightness ?? 105;
+      const c = config.filterSettings?.contrast ?? 125;
+      const s = config.filterSettings?.saturation ?? 130;
+      ctx.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+      
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, i * sliceWidth, 0, sliceWidth, height);
+      
+      ctx.restore();
+    } catch (err) {
+      console.warn('Could not draw character image on canvas:', err);
     }
+  }
+}
 
-    ctx.save();
+async function drawAIElements(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  config: ThumbnailConfig
+) {
+  if (!config.aiElements || config.aiElements.length === 0) return;
 
-    // Character outer glowing rim
-    if (config.characterGlow) {
-      ctx.shadowColor = config.glowColor || '#38bdf8';
-      ctx.shadowBlur = 40;
+  for (const elem of config.aiElements) {
+    try {
+      const img = await loadImage(elem.url);
+      const posX = (elem.x / 100) * width;
+      const posY = (elem.y / 100) * height;
+      const baseW = width * 0.35 * (elem.scale || 1.0);
+      const baseH = (baseW / (img.width || 1)) * (img.height || 1);
+
+      ctx.save();
+      ctx.globalAlpha = elem.opacity ?? 0.9;
+      if (elem.blendMode && elem.blendMode !== 'normal') {
+        ctx.globalCompositeOperation = elem.blendMode as GlobalCompositeOperation;
+      }
+      ctx.drawImage(img, posX - baseW / 2, posY - baseH / 2, baseW, baseH);
+      ctx.restore();
+    } catch (err) {
+      console.warn('Failed to draw AI Element on canvas:', elem.name, err);
     }
-
-    if (config.characterBlend && config.characterBlend !== 'normal') {
-      ctx.globalCompositeOperation = config.characterBlend as GlobalCompositeOperation;
-    }
-
-    // Apply brightness & contrast filters
-    const b = config.filterSettings?.brightness ?? 100;
-    const c = config.filterSettings?.contrast ?? 100;
-    const s = config.filterSettings?.saturation ?? 100;
-    ctx.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
-
-    ctx.drawImage(img, posX, posY, targetW, targetH);
-    ctx.restore();
-  } catch (err) {
-    console.warn('Could not draw character image on canvas:', err);
   }
 }
 
@@ -367,94 +399,116 @@ function drawStickers(ctx: CanvasRenderingContext2D, width: number, height: numb
   ctx.restore();
 }
 
-function drawEpicTypography(
+function drawChapterPillAndTimestamp(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  config: ThumbnailConfig
+) {
+  ctx.save();
+  // Pill Top-Left
+  const chapterText = config.badge || 'CHAP 1';
+  ctx.font = '900 32px "Arial Black", Impact, sans-serif';
+  const textWidth = ctx.measureText(chapterText).width;
+  
+  ctx.fillStyle = '#dc2626'; // red-600
+  ctx.shadowColor = 'rgba(220, 38, 38, 0.8)';
+  ctx.shadowBlur = 10;
+  roundRect(ctx, 40, 40, textWidth + 40, 56, 28);
+  ctx.fill();
+  
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.stroke();
+  
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(chapterText, 40 + (textWidth + 40) / 2, 40 + 28);
+
+  // Timestamp Bottom-Right
+  const timeText = '12:34';
+  ctx.font = 'bold 24px Arial, sans-serif';
+  const timeWidth = ctx.measureText(timeText).width;
+  const timeX = width - timeWidth - 60;
+  const timeY = height - 70;
+  
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.shadowBlur = 10;
+  roundRect(ctx, timeX, timeY, timeWidth + 30, 40, 6);
+  ctx.fill();
+  
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.stroke();
+  
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(timeText, timeX + (timeWidth + 30) / 2, timeY + 20);
+  
+  ctx.restore();
+}
+
+function drawEpicTypographyBottom(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   config: ThumbnailConfig
 ) {
   const isPortrait = config.aspectRatio === '9:16';
-  const leftX = width * 0.05;
-  let currentY = isPortrait ? height * 0.55 : height * 0.36;
-
+  
   ctx.save();
-
-  // 1. Draw Badge
-  if (config.badge) {
-    ctx.save();
-    ctx.translate(leftX, currentY);
-    ctx.rotate(-0.03); // Slight energetic slant
-
-    // Badge background box
-    ctx.fillStyle = getBadgeColor(config.badgeStyle || 'gold_metallic');
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-    ctx.shadowBlur = 16;
-    ctx.shadowOffsetY = 6;
-    roundRect(ctx, 0, -38, Math.min(width * 0.55, 380), 52, 10);
-    ctx.fill();
-
-    // Badge text
-    ctx.font = '900 24px "Arial Black", Impact, sans-serif';
-    ctx.fillStyle = '#020617';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(config.badge.toUpperCase(), 16, -12);
-    ctx.restore();
-
-    currentY += 80;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  
+  let currentY = height - 40; // start from bottom up
+  
+  // 1. Draw Subtitle (above bottom margin)
+  if (config.subtitle) {
+    const subtitle = config.subtitle.toUpperCase();
+    const subFontSize = isPortrait ? 32 : 46;
+    ctx.font = `900 ${subFontSize}px "Arial Black", Montserrat, sans-serif`;
+    
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText(subtitle, width / 2, currentY);
+    
+    ctx.fillStyle = config.glowColor || '#38bdf8';
+    ctx.fillText(subtitle, width / 2, currentY);
+    
+    currentY -= (subFontSize + 10);
   }
 
   // 2. Draw 3D Main Title
   if (config.mainTitle) {
     const title = config.mainTitle.toUpperCase();
-    const fontSize = isPortrait ? 68 : Math.min(94, Math.max(54, Math.floor(width / title.length * 1.5)));
-    ctx.font = `italic 900 ${fontSize}px "Arial Black", Impact, sans-serif`;
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-
-    // Extruded 3D Shadow Layers
+    // Use clamp-like logic for font size
+    const fontSize = isPortrait ? 60 : Math.min(140, Math.max(80, Math.floor(width / title.length * 1.4)));
+    ctx.font = `900 ${fontSize}px "Arial Black", Impact, sans-serif`;
+    
+    // Heavy black outline / stroke
+    ctx.lineWidth = 20;
+    ctx.strokeStyle = '#000000';
+    ctx.lineJoin = 'round';
+    ctx.strokeText(title, width / 2, currentY);
+    
+    // 3D Shadow Layers (extruded downwards slightly)
     ctx.fillStyle = '#000000';
-    for (let offset = 12; offset >= 1; offset--) {
-      ctx.fillText(title, leftX + offset, currentY + offset);
+    for (let offset = 8; offset >= 1; offset--) {
+      ctx.fillText(title, width / 2, currentY + offset);
     }
-
-    // Heavy black outline
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = '#000000';
-    ctx.lineJoin = 'miter';
-    ctx.miterLimit = 2;
-    ctx.strokeText(title, leftX, currentY);
-
-    // Gradient fill on text
-    const titleGrad = ctx.createLinearGradient(leftX, currentY, leftX, currentY + fontSize);
-    applyTitleGradient(titleGrad, config.titleStyle || 'gold_3d');
-    ctx.fillStyle = titleGrad;
-    ctx.fillText(title, leftX, currentY);
-
-    currentY += fontSize + 18;
-  }
-
-  // 3. Draw Subtitle
-  if (config.subtitle) {
-    const subtitle = config.subtitle.toUpperCase();
-    const subFontSize = isPortrait ? 36 : 46;
-    ctx.font = `900 ${subFontSize}px "Arial Black", Montserrat, sans-serif`;
-    ctx.textBaseline = 'top';
-
-    // Background highlight bar for subtitle
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    const textWidth = ctx.measureText(subtitle).width;
-    roundRect(ctx, leftX - 10, currentY - 6, textWidth + 24, subFontSize + 14, 8);
-    ctx.fill();
-
-    // Heavy outline
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = '#000000';
-    ctx.strokeText(subtitle, leftX, currentY);
-
-    // Glowing text fill
-    ctx.fillStyle = config.glowColor || '#67e8f9';
-    ctx.fillText(subtitle, leftX, currentY);
+    
+    // Gradient fill or flat color based on style
+    if (config.titleStyle === 'fiery_orange') {
+      ctx.fillStyle = '#fbbf24';
+    } else {
+      ctx.fillStyle = '#ffffff';
+    }
+    ctx.fillText(title, width / 2, currentY);
   }
 
   ctx.restore();

@@ -21,6 +21,11 @@ import {
   Plus,
   Trash2,
   Cpu,
+  Link as LinkIcon,
+  ArrowLeft,
+  ArrowRight,
+  X,
+  ImagePlus,
 } from 'lucide-react';
 import {
   THUMBNAIL_THEMES,
@@ -40,11 +45,25 @@ import {
 export const ThumbnailView: React.FC = () => {
   const { thumbnail, setThumbnailConfig, setActiveTab, selectedProject, pages } = useStudioStore();
 
-  const [activeControlTab, setActiveControlTab] = useState<'theme' | 'character' | 'typography' | 'ai_prompt'>('theme');
+  const [activeControlTab, setActiveControlTab] = useState<'theme' | 'character' | 'typography' | 'ai_prompt'>('character');
   const [isExporting, setIsExporting] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInputText, setUrlInputText] = useState('');
+  
+  // Custom uploaded or pasted external images
+  const [customImages, setCustomImages] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('tuna_custom_thumb_images');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const secondaryFileInputRef = useRef<HTMLInputElement>(null);
+  const externalPanelInputRef = useRef<HTMLInputElement>(null);
 
   // Fallback initialize if thumbnail is null
   const currentThumbnail =
@@ -54,6 +73,13 @@ export const ThumbnailView: React.FC = () => {
       selectedProject?.chapterNumber || 1,
       pages[0]?.imageUrl || ''
     );
+
+  const saveCustomImages = (newImages: string[]) => {
+    setCustomImages(newImages);
+    try {
+      localStorage.setItem('tuna_custom_thumb_images', JSON.stringify(newImages));
+    } catch (e) {}
+  };
 
   const handleApplyTheme = (themeId: ThumbnailTheme) => {
     const theme = THUMBNAIL_THEMES[themeId];
@@ -99,6 +125,64 @@ export const ThumbnailView: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Upload an external image directly into the gallery & active collage
+  const handleUploadExternalPanel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      if (!url) return;
+      
+      const updated = [url, ...customImages.filter(i => i !== url)];
+      saveCustomImages(updated);
+
+      // Automatically add to active collage if space allows
+      const currentImages = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+      if (currentImages.length < 4) {
+        setThumbnailConfig({ characterImages: [...currentImages, url] });
+      } else {
+        const newImages = [...currentImages];
+        newImages[newImages.length - 1] = url;
+        setThumbnailConfig({ characterImages: newImages });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Add external image from direct URL
+  const handleAddUrlImage = () => {
+    const trimmed = urlInputText.trim();
+    if (!trimmed) return;
+    
+    const updated = [trimmed, ...customImages.filter(i => i !== trimmed)];
+    saveCustomImages(updated);
+
+    const currentImages = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+    if (currentImages.length < 4) {
+      setThumbnailConfig({ characterImages: [...currentImages, trimmed] });
+    } else {
+      const newImages = [...currentImages];
+      newImages[newImages.length - 1] = trimmed;
+      setThumbnailConfig({ characterImages: newImages });
+    }
+
+    setUrlInputText('');
+    setShowUrlInput(false);
+  };
+
+  const handleDeleteCustomImage = (url: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const updated = customImages.filter(i => i !== url);
+    saveCustomImages(updated);
+
+    const currentImages = currentThumbnail.characterImages || [];
+    if (currentImages.includes(url)) {
+      setThumbnailConfig({ characterImages: currentImages.filter(i => i !== url) });
+    }
+  };
+
   const handleAddAIElement = (assetId: string) => {
     const asset = AI_PRESET_ASSETS.find((a) => a.id === assetId);
     if (!asset) return;
@@ -107,12 +191,12 @@ export const ThumbnailView: React.FC = () => {
       id: `elem_${Date.now()}`,
       name: asset.name,
       url: `data:image/svg+xml;utf8,${encodeURIComponent(asset.svgContent)}`,
-      x: 75,
-      y: 50,
+      x: 50,
+      y: 40,
       scale: 1.0,
-      opacity: 0.85,
+      opacity: 0.9,
       type: 'aura',
-      blendMode: 'screen',
+      blendMode: 'normal',
     };
 
     const currentElems = currentThumbnail.aiElements || [];
@@ -131,6 +215,50 @@ export const ThumbnailView: React.FC = () => {
     } else {
       setThumbnailConfig({ activeStickers: [...current, sticker] });
     }
+  };
+
+  const toggleCharacterImage = (url: string) => {
+    const currentImages = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+    if (currentImages.includes(url)) {
+      setThumbnailConfig({ characterImages: currentImages.filter(i => i !== url) });
+    } else {
+      if (currentImages.length < 4) {
+        setThumbnailConfig({ characterImages: [...currentImages, url] });
+      } else {
+        const newImages = [...currentImages];
+        newImages[3] = url;
+        setThumbnailConfig({ characterImages: newImages });
+      }
+    }
+  };
+
+  // Reorder slots in the collage
+  const handleReorderSlot = (index: number, direction: 'left' | 'right') => {
+    const currentImages = [...(currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []))];
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentImages.length) return;
+
+    const temp = currentImages[index];
+    currentImages[index] = currentImages[targetIndex];
+    currentImages[targetIndex] = temp;
+    setThumbnailConfig({ characterImages: currentImages });
+  };
+
+  const handleRemoveSlot = (index: number) => {
+    const currentImages = [...(currentThumbnail.characterImages || [])];
+    currentImages.splice(index, 1);
+    setThumbnailConfig({ characterImages: currentImages });
+  };
+
+  // Preset Layout Selector (1 to 4 panels)
+  const handleSetLayoutPreset = (count: number) => {
+    const allAvailable = [
+      ...customImages,
+      ...(pages || []).map(p => p.imageUrl),
+    ];
+    if (allAvailable.length === 0) return;
+    const selected = allAvailable.slice(0, count);
+    setThumbnailConfig({ characterImages: selected });
   };
 
   const getAIPrompt = () => {
@@ -247,25 +375,34 @@ export const ThumbnailView: React.FC = () => {
                 }%) saturate(${currentThumbnail.filterSettings?.saturation ?? 130}%)`,
               }}
             >
-              {/* 1. Ambient Glow Burst */}
-              <div
-                className="absolute right-10 top-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-3xl opacity-40 pointer-events-none"
-                style={{ backgroundColor: currentThumbnail.glowColor || '#06b6d4' }}
-              />
+              {/* Multi-Character Background Layout with Crisp Dividers */}
+              {(() => {
+                const images = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+                if (images.length === 0) return null;
+                return (
+                  <div className="absolute inset-0 flex">
+                    {images.map((imgUrl, i) => (
+                      <div key={i} className="flex-1 h-full relative overflow-hidden border-r-2 md:border-r-4 border-black shadow-[0_0_12px_rgba(0,0,0,0.8)] last:border-r-0">
+                        <img
+                          src={imgUrl}
+                          alt={`Character panel ${i + 1}`}
+                          className="w-full h-full object-cover object-top"
+                          style={{
+                            filter: `brightness(${currentThumbnail.filterSettings?.brightness ?? 105}%) contrast(${
+                              currentThumbnail.filterSettings?.contrast ?? 125
+                            }%) saturate(${currentThumbnail.filterSettings?.saturation ?? 130}%)`,
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
 
-              {/* 2. Secondary AI Monster / Opponent Silhouette Layer */}
-              {currentThumbnail.characterSecondaryImage && (
-                <img
-                  src={currentThumbnail.characterSecondaryImage}
-                  alt="Secondary Boss / Monster"
-                  className="absolute right-12 bottom-4 h-[80%] max-w-[50%] object-contain opacity-50 mix-blend-screen pointer-events-none filter drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]"
-                />
-              )}
-
-              {/* 3. AI Overlay Graphic Effects */}
+              {/* Overlay FX Graphic Layer */}
               {currentThumbnail.overlayEffect === 'speed_lines' && (
                 <div
-                  className="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen"
+                  className="absolute inset-0 pointer-events-none opacity-45 mix-blend-screen"
                   style={{
                     backgroundImage: `repeating-conic-gradient(from 0deg at 70% 50%, rgba(255,255,255,0.4) 0deg 2deg, transparent 2deg 10deg)`,
                   }}
@@ -278,14 +415,14 @@ export const ThumbnailView: React.FC = () => {
                     <path
                       d="M160 0 L190 70 L170 85 L220 150 L195 160 L240 225"
                       stroke="#38bdf8"
-                      strokeWidth="2.5"
+                      strokeWidth="3"
                       filter="drop-shadow(0 0 6px #06b6d4)"
                       opacity="0.9"
                     />
                     <path
                       d="M320 0 L340 50 L325 60 L360 120"
                       stroke="#67e8f9"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                       filter="drop-shadow(0 0 4px #38bdf8)"
                       opacity="0.8"
                     />
@@ -308,7 +445,7 @@ export const ThumbnailView: React.FC = () => {
               )}
 
               {currentThumbnail.overlayEffect === 'system_hud' && (
-                <div className="absolute inset-2 border border-cyan-500/40 rounded-lg pointer-events-none">
+                <div className="absolute inset-2 border-2 border-cyan-500/40 rounded-lg pointer-events-none">
                   <div className="absolute top-0 left-0 w-8 h-2 bg-cyan-500" />
                   <div className="absolute top-0 left-0 w-2 h-8 bg-cyan-500" />
                   <div className="absolute bottom-0 right-0 w-8 h-2 bg-cyan-500" />
@@ -319,161 +456,198 @@ export const ThumbnailView: React.FC = () => {
                 </div>
               )}
 
-              {/* 4. Custom Inserted AI Visual Elements */}
+              {/* Custom AI Visual Elements (Floating Skill Cards, Hologram, Red Arrow) */}
               {currentThumbnail.aiElements?.map((elem) => (
                 <img
                   key={elem.id}
                   src={elem.url}
                   alt={elem.name}
-                  className="absolute pointer-events-none select-none transition-all"
+                  className="absolute pointer-events-none select-none transition-all z-10"
                   style={{
                     left: `${elem.x}%`,
                     top: `${elem.y}%`,
-                    transform: `translate(-50%, -50%) scale(${elem.scale})`,
-                    opacity: elem.opacity,
-                    mixBlendMode: (elem.blendMode as any) || 'screen',
-                    maxWidth: '60%',
-                    maxHeight: '60%',
+                    transform: `translate(-50%, -50%) scale(${elem.scale || 1.0})`,
+                    opacity: elem.opacity ?? 0.9,
+                    mixBlendMode: (elem.blendMode as any) || 'normal',
+                    maxWidth: '45%',
+                    maxHeight: '45%',
                   }}
                 />
               ))}
 
-              {/* 5. Main Hero Character Image Cutout */}
-              {currentThumbnail.characterImage && (
-                <img
-                  src={currentThumbnail.characterImage}
-                  alt="Main Character"
-                  className={`absolute bottom-0 object-contain transition-all duration-300 ${
-                    currentThumbnail.characterPosition === 'left'
-                      ? 'left-4'
-                      : currentThumbnail.characterPosition === 'center'
-                      ? 'left-1/2 -translate-x-1/2'
-                      : 'right-2'
-                  }`}
-                  style={{
-                    height: `${currentThumbnail.characterScale || 105}%`,
-                    maxHeight: '98%',
-                    filter: currentThumbnail.characterGlow
-                      ? `drop-shadow(0 0 25px ${currentThumbnail.glowColor || '#38bdf8'}) drop-shadow(0 15px 20px rgba(0,0,0,0.9))`
-                      : 'drop-shadow(0 15px 25px rgba(0,0,0,0.9))',
-                    mixBlendMode: (currentThumbnail.characterBlend as any) || 'normal',
-                  }}
-                />
-              )}
-
-              {/* 6. Dark Vignette Rim */}
-              <div
-                className="absolute inset-0 pointer-events-none rounded-xl"
+              {/* Bottom Gradient Overlay */}
+              <div 
+                className="absolute inset-x-0 bottom-0 h-[48%] pointer-events-none z-10"
                 style={{
-                  boxShadow: `inset 0 0 ${
-                    (currentThumbnail.filterSettings?.vignette ?? 40) * 1.5
-                  }px rgba(0,0,0,0.85)`,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%)',
                 }}
               />
 
-              {/* 7. Active Stickers Strip */}
-              <div className="absolute top-3 left-3 z-20 flex flex-wrap gap-1.5 max-w-[60%]">
-                {currentThumbnail.activeStickers?.map((stk, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-600/90 text-white font-black text-[10px] uppercase tracking-wider shadow-lg border border-red-400/40 backdrop-blur-sm transform -rotate-1"
-                  >
-                    {stk}
-                  </span>
-                ))}
+              {/* Chapter Pill (Top-Left) */}
+              <div className="absolute top-3 left-3 z-20">
+                <div className="bg-red-600 text-white font-black text-xs md:text-sm px-2.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(220,38,38,0.8)] border border-white/30 tracking-wider uppercase">
+                  {currentThumbnail.badge || `1 - ${selectedProject?.chapterNumber || 9}`}
+                </div>
               </div>
 
-              {/* 8. 3D Glowing Text & High CTR Badge Overlay */}
-              <div
-                className={`absolute z-20 space-y-2 left-4 ${
-                  isPortrait ? 'bottom-8 max-w-[92%]' : 'bottom-6 max-w-[62%]'
-                }`}
-              >
-                {/* Slanted Badge */}
-                {currentThumbnail.badge && (
-                  <div className="inline-block transform -rotate-2">
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-lg font-black text-xs md:text-sm uppercase tracking-wider shadow-2xl border ${
-                        currentThumbnail.badgeStyle === 'neon_cyan'
-                          ? 'bg-cyan-400 text-slate-950 border-cyan-200 shadow-cyan-500/40'
-                          : currentThumbnail.badgeStyle === 'blood_red'
-                          ? 'bg-red-600 text-white border-red-300 shadow-red-600/50'
-                          : currentThumbnail.badgeStyle === 'purple_void'
-                          ? 'bg-purple-600 text-white border-purple-300 shadow-purple-600/50'
-                          : currentThumbnail.badgeStyle === 'flaming_orange'
-                          ? 'bg-orange-500 text-slate-950 border-orange-300 shadow-orange-500/50'
-                          : currentThumbnail.badgeStyle === 'emerald_god'
-                          ? 'bg-emerald-400 text-slate-950 border-emerald-200 shadow-emerald-500/40'
-                          : 'bg-yellow-400 text-slate-950 border-yellow-200 shadow-yellow-500/50'
-                      }`}
-                    >
-                      {currentThumbnail.badge}
-                    </span>
-                  </div>
-                )}
+              {/* Duration Timestamp (Bottom-Right) */}
+              <div className="absolute bottom-3 right-3 z-20">
+                <div className="bg-black/90 text-white font-mono font-black text-[11px] px-1.5 py-0.5 rounded border border-white/20 shadow-xl">
+                  {selectedProject?.durationEst ? `${Math.floor(selectedProject.durationEst / 60)}:${(selectedProject.durationEst % 60).toString().padStart(2, '0')}` : '3:16:01'}
+                </div>
+              </div>
 
-                {/* 3D Extruded Title */}
+              {/* Giant Bottom Text Title (YouTube Recap Style) */}
+              <div className="absolute inset-x-0 bottom-4 z-20 px-3 flex flex-col items-center text-center">
                 <h2
-                  className={`font-black tracking-tight leading-none uppercase italic ${
-                    isPortrait ? 'text-3xl' : 'text-3xl lg:text-5xl'
-                  }`}
+                  className="font-black uppercase w-full tracking-tight"
                   style={{
-                    textShadow:
-                      '0 1px 0 #000, 0 2px 0 #000, 0 3px 0 #000, 0 4px 0 #000, 0 6px 12px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)',
-                    WebkitTextStroke: '2px #000000',
+                    fontSize: isPortrait ? '2.2rem' : 'clamp(1.8rem, 4.2vw, 3.8rem)',
+                    lineHeight: '1.05',
+                    WebkitTextStroke: '3.5px #000000',
+                    color: currentThumbnail.titleStyle === 'fiery_orange' ? '#fbbf24' : currentThumbnail.titleStyle === 'crimson_blood' ? '#ef4444' : currentThumbnail.titleStyle === 'neon_cyan' ? '#38bdf8' : '#ffffff',
+                    textShadow: '0 4px 8px rgba(0,0,0,0.9), 0 8px 16px rgba(0,0,0,0.8)',
                   }}
                 >
-                  <span
-                    className={
-                      currentThumbnail.titleStyle === 'electric_blue'
-                        ? 'bg-gradient-to-b from-cyan-200 via-sky-400 to-blue-600 bg-clip-text text-transparent'
-                        : currentThumbnail.titleStyle === 'fiery_orange'
-                        ? 'bg-gradient-to-b from-yellow-200 via-orange-400 to-red-600 bg-clip-text text-transparent'
-                        : currentThumbnail.titleStyle === 'crimson_blood'
-                        ? 'bg-gradient-to-b from-rose-200 via-red-500 to-rose-900 bg-clip-text text-transparent'
-                        : currentThumbnail.titleStyle === 'toxic_green'
-                        ? 'bg-gradient-to-b from-emerald-200 via-green-400 to-teal-700 bg-clip-text text-transparent'
-                        : currentThumbnail.titleStyle === 'pure_white'
-                        ? 'text-white'
-                        : 'bg-gradient-to-b from-yellow-100 via-amber-400 to-yellow-600 bg-clip-text text-transparent'
-                    }
-                  >
-                    {currentThumbnail.mainTitle}
-                  </span>
+                  {currentThumbnail.mainTitle}
                 </h2>
-
-                {/* High Contrast Subtitle */}
                 {currentThumbnail.subtitle && (
-                  <div className="inline-block bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-md border border-slate-700 shadow-xl">
-                    <p
-                      className="text-xs md:text-sm font-black tracking-wide uppercase"
-                      style={{ color: currentThumbnail.glowColor || '#67e8f9' }}
-                    >
-                      {currentThumbnail.subtitle}
-                    </p>
-                  </div>
+                  <p
+                    className="font-black uppercase mt-0.5 tracking-tight"
+                    style={{
+                      fontSize: isPortrait ? '1.3rem' : 'clamp(1.1rem, 2.5vw, 2.2rem)',
+                      WebkitTextStroke: '2.5px #000000',
+                      color: currentThumbnail.titleStyle === 'fiery_orange' ? '#ffffff' : currentThumbnail.glowColor || '#fbbf24',
+                      textShadow: '0 3px 6px rgba(0,0,0,0.9)',
+                    }}
+                  >
+                    {currentThumbnail.subtitle}
+                  </p>
                 )}
               </div>
             </div>
 
-            {/* Quick Page Picker as Hero Cutout */}
-            {pages && pages.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-slate-800/80">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
-                  <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Chọn Nhanh Trang Truyện Làm Nhân Vật Bìa ({pages.length} trang)</span>
+            {/* Quick Multi-Source Image Picker Strip (Manga Pages + Custom Uploads) */}
+            <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-400">
+                <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                  <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Kho Ảnh Ghép Thumbnail ({pages.length + customImages.length} ảnh)</span>
+                  <span className="text-[10px] text-pink-400 bg-pink-950/60 px-1.5 py-0.2 rounded border border-pink-800/50">
+                    Đã chọn: {(currentThumbnail.characterImages || []).length || 1}/4
                   </span>
-                  <span className="text-[10px] text-slate-400">Click vào ảnh để gán làm Hero Thumbnail</span>
-                </div>
+                </span>
+                
+                {/* Upload & URL Buttons */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => externalPanelInputRef.current?.click()}
+                    className="flex items-center gap-1 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-md transition-all active:scale-95"
+                    title="Tải ảnh PNG/JPG ngoài từ máy tính vào khung ghép"
+                  >
+                    <ImagePlus className="w-3 h-3" />
+                    <span>+ Tải Ảnh Ngoài</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={externalPanelInputRef}
+                    onChange={handleUploadExternalPanel}
+                    accept="image/*"
+                    className="hidden"
+                  />
 
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                  {pages.map((p, idx) => (
+                  <button
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-[10px] px-2 py-1 rounded-lg border border-slate-700 transition-all"
+                    title="Dán đường dẫn ảnh trên mạng (Pinterest, Google, AI)"
+                  >
+                    <LinkIcon className="w-3 h-3" />
+                    <span>+ Dán Link URL</span>
+                  </button>
+
+                  <button
+                    onClick={() => setThumbnailConfig({ characterImages: [] })}
+                    className="text-slate-400 hover:text-white text-[10px] px-2 py-1 rounded bg-slate-900 border border-slate-800"
+                    title="Bỏ chọn toàn bộ khung ảnh"
+                  >
+                    Bỏ Chọn
+                  </button>
+                </div>
+              </div>
+
+              {/* Inline URL Input Box */}
+              {showUrlInput && (
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border border-cyan-500/40 animate-in fade-in duration-200">
+                  <input
+                    type="url"
+                    placeholder="Dán link ảnh trực tiếp (https://...jpg, png, webp)..."
+                    value={urlInputText}
+                    onChange={(e) => setUrlInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrlImage()}
+                    className="flex-1 bg-slate-950 text-xs text-white px-2.5 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                  <button
+                    onClick={handleAddUrlImage}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    Thêm Ảnh
+                  </button>
+                  <button
+                    onClick={() => setShowUrlInput(false)}
+                    className="text-slate-400 hover:text-white p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Image Horizontal Scroll Strip */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                {/* 1. Custom Uploaded External Images (Highlighted with Purple/Pink Border) */}
+                {customImages.map((imgUrl, cIdx) => {
+                  const currentImages = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+                  const isSelected = currentImages.includes(imgUrl);
+                  return (
+                    <div key={`custom-${cIdx}`} className="relative flex-shrink-0 group">
+                      <button
+                        onClick={() => toggleCharacterImage(imgUrl)}
+                        className={`w-18 h-24 rounded-lg overflow-hidden border-2 transition-all block relative ${
+                          isSelected
+                            ? 'border-purple-400 shadow-lg shadow-purple-500/40 scale-105 ring-2 ring-purple-400/50'
+                            : 'border-purple-700/60 hover:border-purple-400 opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={imgUrl} alt={`Custom ${cIdx + 1}`} className="w-full h-full object-cover" />
+                        <span className="absolute top-0 inset-x-0 bg-purple-900/90 text-[8px] font-black text-center py-0.5 text-purple-200 uppercase">
+                          Ảnh Ngoài
+                        </span>
+                        {isSelected && (
+                          <div className="absolute bottom-1 right-1 bg-purple-500 text-white rounded-full p-0.5 shadow-lg">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteCustomImage(imgUrl, e)}
+                        className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 z-10"
+                        title="Xóa ảnh ngoài này khỏi thư viện"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* 2. Manga Chapter Pages */}
+                {pages.map((p, idx) => {
+                  const currentImages = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+                  const isSelected = currentImages.includes(p.imageUrl);
+                  return (
                     <button
                       key={p.id || idx}
-                      onClick={() => setThumbnailConfig({ characterImage: p.imageUrl })}
+                      onClick={() => toggleCharacterImage(p.imageUrl)}
                       className={`relative flex-shrink-0 w-16 h-24 rounded-lg overflow-hidden border-2 transition-all group ${
-                        currentThumbnail.characterImage === p.imageUrl
+                        isSelected
                           ? 'border-pink-500 shadow-lg shadow-pink-500/30 scale-105'
                           : 'border-slate-800 hover:border-slate-600 opacity-70 hover:opacity-100'
                       }`}
@@ -482,11 +656,16 @@ export const ThumbnailView: React.FC = () => {
                       <span className="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[9px] font-bold text-center py-0.5 text-white">
                         T.{idx + 1}
                       </span>
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 bg-pink-500 text-white rounded-full p-0.5 shadow-lg">
+                          <Check className="w-3 h-3" />
+                        </div>
+                      )}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -494,6 +673,17 @@ export const ThumbnailView: React.FC = () => {
         <div className="lg:col-span-4 space-y-3">
           {/* Navigation Control Tabs */}
           <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+            <button
+              onClick={() => setActiveControlTab('character')}
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+                activeControlTab === 'character'
+                  ? 'bg-slate-800 text-pink-400 shadow-sm font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Khung & Ảnh AI</span>
+            </button>
             <button
               onClick={() => setActiveControlTab('theme')}
               className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
@@ -504,17 +694,6 @@ export const ThumbnailView: React.FC = () => {
             >
               <Palette className="w-3.5 h-3.5" />
               <span>Chủ Đề & FX</span>
-            </button>
-            <button
-              onClick={() => setActiveControlTab('character')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
-                activeControlTab === 'character'
-                  ? 'bg-slate-800 text-pink-400 shadow-sm font-bold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Ảnh AI & Hero</span>
             </button>
             <button
               onClick={() => setActiveControlTab('typography')}
@@ -540,7 +719,177 @@ export const ThumbnailView: React.FC = () => {
             </button>
           </div>
 
-          {/* TAB 1: THEMES & VISUAL EFFECTS */}
+          {/* TAB 1: CHARACTER & COLLAGE SLOTS */}
+          {activeControlTab === 'character' && (
+            <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-950/70 space-y-4">
+              {/* Preset Layout Styles (1 to 4 Panels) */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                    <span>Bố Cục Ghép Khung (1 - 4 Nhân Vật)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">1-Click đổi kiểu</span>
+                </label>
+
+                <div className="grid grid-cols-2 gap-1.5 text-xs font-bold">
+                  {[
+                    { count: 1, label: '1 Khung Solo', desc: 'Ảnh chính bao trọn' },
+                    { count: 2, label: '2 Khung Đối Đầu', desc: 'MC vs Đối Thủ' },
+                    { count: 3, label: '3 Khung Triệu View', desc: 'Chuẩn YouTube recap' },
+                    { count: 4, label: '4 Khung Dàn Nhân Vật', desc: 'Harem / Bang Hội' },
+                  ].map((preset) => {
+                    const currentCount = (currentThumbnail.characterImages || []).length || 1;
+                    const isSelected = currentCount === preset.count;
+                    return (
+                      <button
+                        key={preset.count}
+                        onClick={() => handleSetLayoutPreset(preset.count)}
+                        className={`p-2 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'border-pink-500 bg-pink-950/40 text-pink-300 ring-1 ring-pink-500'
+                            : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-black">
+                          <span>{preset.label}</span>
+                          {isSelected && <Check className="w-3 h-3 text-pink-400" />}
+                        </div>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{preset.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Active Collage Slots Manager */}
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                  <span>Các Khung Đang Ghép:</span>
+                  <button
+                    onClick={() => externalPanelInputRef.current?.click()}
+                    className="text-[10px] text-pink-400 hover:text-pink-300 flex items-center gap-1 font-bold"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Thêm Ảnh Ngoài</span>
+                  </button>
+                </div>
+
+                {/* Slots List */}
+                {(() => {
+                  const slots = currentThumbnail.characterImages || (currentThumbnail.characterImage ? [currentThumbnail.characterImage] : []);
+                  if (slots.length === 0) {
+                    return (
+                      <div className="p-3 text-center bg-slate-900/50 rounded-xl border border-slate-800 text-[11px] text-slate-400">
+                        Chưa chọn ảnh nào. Bấm vào ảnh bên dưới hoặc nút "Thêm Ảnh Ngoài" để ghép vào thumbnail.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-1.5">
+                      {slots.map((slotUrl, sIdx) => (
+                        <div
+                          key={sIdx}
+                          className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800 gap-2"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-5 h-5 rounded-md bg-pink-950 text-pink-300 border border-pink-800/60 font-mono font-black text-[10px] flex items-center justify-center flex-shrink-0">
+                              #{sIdx + 1}
+                            </span>
+                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-700 flex-shrink-0">
+                              <img src={slotUrl} alt={`Khung ${sIdx + 1}`} className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-[10px] text-slate-300 font-bold truncate">
+                              {customImages.includes(slotUrl) ? 'Ảnh Tải Ngoài' : `Trang Truyện`}
+                            </span>
+                          </div>
+
+                          {/* Action Buttons: Move Left, Move Right, Remove */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => handleReorderSlot(sIdx, 'left')}
+                              disabled={sIdx === 0}
+                              className="p-1 rounded bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30"
+                              title="Đổi sang trái"
+                            >
+                              <ArrowLeft className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleReorderSlot(sIdx, 'right')}
+                              disabled={sIdx === slots.length - 1}
+                              className="p-1 rounded bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30"
+                              title="Đổi sang phải"
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveSlot(sIdx)}
+                              className="p-1 rounded bg-red-950/60 text-red-400 hover:text-red-300 border border-red-900/40 ml-1"
+                              title="Xóa khung này"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Built-in AI Vector Element Presets */}
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Layer AI Giật Gân (Clickbait Icons & Auras)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">Click để chèn</span>
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {AI_PRESET_ASSETS.map((asset) => (
+                    <button
+                      key={asset.id}
+                      onClick={() => handleAddAIElement(asset.id)}
+                      className="p-2 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800 hover:border-cyan-500/60 text-left transition-all group"
+                    >
+                      <div className="w-full h-10 bg-slate-950/80 rounded-lg flex items-center justify-center overflow-hidden mb-1 border border-slate-800/60">
+                        <img src={asset.thumbnailUrl} alt={asset.name} className="h-7 object-contain" />
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-200 group-hover:text-cyan-300 line-clamp-1">
+                        {asset.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active Layer Elements Manager */}
+                {currentThumbnail.aiElements && currentThumbnail.aiElements.length > 0 && (
+                  <div className="space-y-1.5 pt-2">
+                    <span className="text-[10px] font-bold text-slate-400">Layer Đang Chèn Trên Thumbnail:</span>
+                    {currentThumbnail.aiElements.map((elem) => (
+                      <div
+                        key={elem.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs"
+                      >
+                        <span className="text-[10px] text-white font-bold">{elem.name}</span>
+                        <button
+                          onClick={() => handleRemoveAIElement(elem.id)}
+                          className="text-red-400 hover:text-red-300 p-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: THEMES & VISUAL EFFECTS */}
           {activeControlTab === 'theme' && (
             <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 bg-slate-950/70 space-y-4">
               {/* Preset Manga Theme Grid */}
