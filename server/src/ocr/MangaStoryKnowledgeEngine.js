@@ -123,6 +123,52 @@ export const GENRE_CONFIGS = {
     name: 'Shonen / Phiêu Lưu Hành Động',
     keywords: ['phiêu lưu', 'shonen', 'hành động', 'đồng đội', 'bảo vệ', 'ước mơ', 'vua', 'đại hải trình', 'nhẫn giả', 'anh hùng'],
     visualTrope: 'Bầu trời rộng mở rực rỡ ánh bình minh, nụ cười tự tin của nhân vật chính cùng những người đồng đội kề vai sát cánh.',
+    combatStyle: 'Những đòn tấn công mang theo ý chí mãnh liệt, sức mạnh bùng nổ từ sự quyết tâm bảo vệ những người mình yêu thương.',
+    sfxBgm: '[BGM: Nhạc rock/pop sôi động đầy năng lượng, tiếng trống dồn dập theo nhịp chiến đấu]',
+    actionBeats: [
+      'Ngọn lửa ý chí bùng cháy tột đỉnh, cú đấm quyết định phá tan mọi rào cản phía trước.',
+      'Đồng đội kề vai sát cánh, từng người đều cống hiến hết mình cho mục tiêu chung.',
+      'Khoảnh khắc vượt qua giới hạn bản thân, sức mạnh tiềm ẩn được giải phóng hoàn toàn.',
+      'Chiến thắng rực rỡ nhờ sự đoàn kết, chứng minh rằng tình bạn là sức mạnh vô địch.',
+    ],
+  },
+};
+
+// Helper: Clean and normalize raw dialogue data
+export function cleanRawDialogues(dialogues) {
+  if (!Array.isArray(dialogues)) return [];
+  return dialogues
+    .filter((d) => d && (d.text || d.translatedText || d.originalText))
+    .map((d) => ({
+      ...d,
+      speaker: d.speaker || 'Nhân vật',
+      text: d.translatedText || d.text || d.originalText || '',
+      translatedText: d.translatedText || d.text || '',
+      pageIndex: d.pageIndex || 1,
+    }));
+}
+
+// Helper: Detect manga genre from series name and dialogues
+function detectMangaGenre(seriesName, dialogues, hintGenre) {
+  if (hintGenre && GENRE_CONFIGS[hintGenre]) {
+    return { genreKey: hintGenre, config: GENRE_CONFIGS[hintGenre] };
+  }
+
+  const combined = `${seriesName} ${dialogues.map((d) => d.text).join(' ')}`.toLowerCase();
+  let bestKey = 'general_shonen';
+  let bestScore = 0;
+
+  for (const [key, cfg] of Object.entries(GENRE_CONFIGS)) {
+    const score = cfg.keywords.filter((kw) => combined.includes(kw)).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = key;
+    }
+  }
+
+  return { genreKey: bestKey, config: GENRE_CONFIGS[bestKey] };
+}
+
 export function generateUniversalMangaScript({
   seriesName = 'Bộ Truyện Tuyệt Đỉnh',
   chapterNumber = 1,
