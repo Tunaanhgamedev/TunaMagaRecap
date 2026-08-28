@@ -32,11 +32,37 @@ import {
   CompilationConfig,
   ChapterVideoEntry,
   PronunciationRule,
+  DiscoveredChapter,
+  DiscoveredSeries,
+  BatchScrapeProgress,
+  SeriesFolder,
 } from '../types/studio';
 
 interface StudioState {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+
+  // Library Subtabs (Single Chapter vs Batch Series vs Folders)
+  librarySubTab: 'single' | 'batch_series' | 'folders';
+  setLibrarySubTab: (tab: 'single' | 'batch_series' | 'folders') => void;
+
+  // Batch Series Discovery & Chapter Folders
+  discoveredSeries: DiscoveredSeries | null;
+  discoveredChapters: DiscoveredChapter[];
+  selectedChapterUrls: string[];
+  isDiscoveringSeries: boolean;
+  isBatchScraping: boolean;
+  batchScrapeProgress: BatchScrapeProgress | null;
+  seriesFolders: SeriesFolder[];
+  selectedSeriesName: string | null;
+  setSelectedSeriesName: (name: string | null) => void;
+  discoverSeriesFromUrl: (url: string) => Promise<void>;
+  toggleSelectChapter: (url: string) => void;
+  selectAllChapters: () => void;
+  deselectAllChapters: () => void;
+  selectChapterRange: (startChap: number, endChap: number) => void;
+  startBatchScrape: () => Promise<void>;
+  fetchSeriesFolders: () => Promise<void>;
 
   // Auto URL Scraper
   mangaUrlInput: string;
@@ -238,6 +264,163 @@ export const useStudioStore = create<StudioState>()(
     (set, get) => ({
   activeTab: 'dashboard',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  librarySubTab: 'single',
+  setLibrarySubTab: (tab) => set({ librarySubTab: tab }),
+
+  discoveredSeries: null,
+  discoveredChapters: [],
+  selectedChapterUrls: [],
+  isDiscoveringSeries: false,
+  isBatchScraping: false,
+  batchScrapeProgress: null,
+  seriesFolders: [],
+  selectedSeriesName: null,
+  setSelectedSeriesName: (name) => set({ selectedSeriesName: name }),
+
+  discoverSeriesFromUrl: async (url: string) => {
+    const rawUrl = url.trim();
+    if (!rawUrl) {
+      set({ scrapeStatusMessage: '⚠️ Vui lòng nhập link bộ truyện cần quét!' });
+      return;
+    }
+    set({
+      isDiscoveringSeries: true,
+      scrapeStatusMessage: '🔍 Đang quét và tìm tất cả các chapter của bộ truyện...',
+    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/manga/discover-series`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: rawUrl }),
+      });
+      const data = await res.json();
+      if (data.success && data.series && Array.isArray(data.chapters)) {
+        const defaultSelected = data.chapters.map((c: any) => c.url);
+        set({
+          isDiscoveringSeries: false,
+          discoveredSeries: data.series,
+          discoveredChapters: data.chapters,
+          selectedChapterUrls: defaultSelected,
+          scrapeStatusMessage: `🎉 Tìm thấy ${data.totalChapters} chapter của truyện "${data.series.name}"!`,
+        });
+      } else {
+        throw new Error(data.error || 'Không tìm thấy chapter');
+      }
+    } catch (err: any) {
+      set({
+        isDiscoveringSeries: false,
+        scrapeStatusMessage: `❌ Lỗi quét chapter: ${err.message}`,
+      });
+    }
+  },
+
+  toggleSelectChapter: (url: string) => {
+    const current = get().selectedChapterUrls;
+    if (current.includes(url)) {
+      set({ selectedChapterUrls: current.filter((u) => u !== url) });
+    } else {
+      set({ selectedChapterUrls: [...current, url] });
+    }
+  },
+
+  selectAllChapters: () => {
+    const allUrls = get().discoveredChapters.map((c) => c.url);
+    set({ selectedChapterUrls: allUrls });
+  },
+
+  deselectAllChapters: () => {
+    set({ selectedChapterUrls: [] });
+  },
+
+  selectChapterRange: (startChap: number, endChap: number) => {
+    const min = Math.min(startChap, endChap);
+    const max = Math.max(startChap, endChap);
+    const matchedUrls = get()
+      .discoveredChapters.filter((c) => (c.chapterNumber || 0) >= min && (c.chapterNumber || 0) <= max)
+      .map((c) => c.url);
+    set({ selectedChapterUrls: matchedUrls });
+  },
+
+  startBatchScrape: async () => {
+    const state = get();
+    const { discoveredSeries, discoveredChapters, selectedChapterUrls } = state;
+    if (!discoveredSeries || selectedChapterUrls.length === 0) {
+      set({ scrapeStatusMessage: '⚠️ Vui lòng chọn ít nhất 1 chapter để cào!' });
+      return;
+    }
+
+    const chaptersToScrape = discoveredChapters.filter((c) =>
+      selectedChapterUrls.includes(c.url)
+    );
+
+    set({
+      isBatchScraping: true,
+      batchScrapeProgress: {
+        isRunning: true,
+        seriesName: discoveredSeries.name,
+        current: 0,
+        total: chaptersToScrape.length,
+        currentChapter: chaptersToScrape[0]?.title || '',
+        percent: 0,
+      },
+      scrapeStatusMessage: `⚡ Đang bắt đầu cào hàng loạt ${chaptersToScrape.length} chapter...`,
+    });
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/manga/batch-scrape`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seriesName: discoveredSeries.name,
+          coverUrl: discoveredSeries.coverUrl,
+          chapters: chaptersToScrape,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      // Poll progress every 1.5 seconds
+      const interval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${API_BASE_URL}/manga/batch-status`);
+          const status = await statusRes.json();
+          set({
+            batchScrapeProgress: status,
+            scrapeStatusMessage: status.isRunning
+              ? `⏳ Đang cào [${status.current}/${status.total}] ${status.currentChapter} (${status.percent}%)...`
+              : `✅ Hoàn tất cào hàng loạt ${status.total} chapter cho ${discoveredSeries.name}!`,
+          });
+
+          if (!status.isRunning) {
+            clearInterval(interval);
+            set({ isBatchScraping: false });
+            // Refresh series folders & projects
+            get().fetchProjectsFromBackend();
+            get().fetchSeriesFolders();
+          }
+        } catch (e) {
+          clearInterval(interval);
+          set({ isBatchScraping: false });
+        }
+      }, 1500);
+    } catch (err: any) {
+      set({
+        isBatchScraping: false,
+        scrapeStatusMessage: `❌ Lỗi cào hàng loạt: ${err.message}`,
+      });
+    }
+  },
+
+  fetchSeriesFolders: async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/series`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.series)) {
+        set({ seriesFolders: data.series });
+      }
+    } catch (err) {}
+  },
 
   mangaUrlInput: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html',
   setMangaUrlInput: (url) => set({ mangaUrlInput: url }),

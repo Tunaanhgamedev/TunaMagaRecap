@@ -394,3 +394,41 @@ export interface PronunciationRule {
   note?: string;
 }
 
+export interface DiscoveredChapter {
+  chapterNumber: number;
+  title: string;
+  url: string;
+  isScraped?: boolean;
+  projectId?: string | null;
+  pageCount?: number;
+}
+
+export interface DiscoveredSeries {
+  name: string;
+  coverUrl: string;
+  rawCoverUrl?: string;
+  sourceUrl: string;
+  author?: string;
+  seriesSlug?: string;
+}
+
+export interface BatchScrapeProgress {
+  isRunning: boolean;
+  seriesName: string;
+  current: number;
+  total: number;
+  currentChapter: string;
+  percent: number;
+  completedProjects?: any[];
+  errors?: { chapter: string; error: string }[];
+}
+
+export interface SeriesFolder {
+  seriesName: string;
+  coverUrl: string;
+  totalChapters: number;
+  chapters: Project[];
+  updatedAt?: string;
+}
+
+
