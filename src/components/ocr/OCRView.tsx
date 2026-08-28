@@ -76,6 +76,9 @@ export const OCRView: React.FC = () => {
     toggleItalicToAll,
     addNarrationPanel,
     cleanPageNoise,
+    cleanPageBubbles,
+    cleanAllPagesBubbles,
+    isCleaningBubbles,
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
@@ -478,7 +481,28 @@ export const OCRView: React.FC = () => {
               className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-teal-300 border border-teal-800/80 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-              <span>✨ Dọn Sạch Ký Tự Rác</span>
+              <span>✨ Dọn Ký Tự Rác</span>
+            </button>
+
+            {/* AI Speech Bubble Cleaner & Inpainting (Single Page) */}
+            <button
+              onClick={() => cleanPageBubbles(activePageIndex)}
+              disabled={isCleaningBubbles}
+              title="Tẩy sạch chữ cũ trong bóng thoại trên trang này, trả lại nền tranh sạch nguyên bản"
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-purple-700 to-pink-700 hover:from-purple-600 hover:to-pink-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isCleaningBubbles ? "Đang Tẩy Bóng..." : "🪄 Tẩy Sạch Bóng Thoại"}</span>
+            </button>
+
+            {/* AI Speech Bubble Cleaner & Inpainting (All Pages) */}
+            <button
+              onClick={() => cleanAllPagesBubbles()}
+              disabled={isCleaningBubbles}
+              title="Tự động tẩy sạch toàn bộ bóng thoại của tất cả các trang trong chapter"
+              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-pink-300 border border-pink-800/80 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <span>🪄 Tẩy Toàn Bộ {pages.length} Trang</span>
             </button>
 
             {/* AI Vision API Key Config Button */}
@@ -923,7 +947,7 @@ export const OCRView: React.FC = () => {
             >
               <div className="relative inline-block">
                 <img
-                  src={getProxyImageUrl((currentPage as any).rawImageUrl || currentPage.imageUrl, "https://truyenqqko.com/")}
+                  src={currentPage.cleanedImageUrl || getProxyImageUrl((currentPage as any).rawImageUrl || currentPage.imageUrl, "https://truyenqqko.com/")}
                   alt={`Page ${currentPage.pageIndex}`}
                   className="block max-w-full max-h-[580px] w-auto h-auto object-contain rounded shadow-lg pointer-events-none"
                   onError={(e) => {

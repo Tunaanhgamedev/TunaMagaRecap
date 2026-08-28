@@ -100,6 +100,7 @@ export interface MangaPage {
   pageIndex: number;
   imageUrl: string;
   rawImageUrl?: string;
+  cleanedImageUrl?: string;
   ocrProcessed?: boolean;
   panels: Panel[];
 }

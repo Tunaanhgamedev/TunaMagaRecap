@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { voiceAudioEngine } from '../utils/audioSynthesizer';
 import { cinematicSoundEngine } from '../utils/sfxEngine';
+import { bubbleInpaintingEngine } from '../utils/inpaintingEngine';
 import { API_BASE_URL } from '../utils/constants';
 import { transformTextCase, cleanNoiseFromText } from '../utils/textHelpers';
 import { createDefaultThumbnailConfig } from '../utils/thumbnailPresets';
@@ -122,6 +123,9 @@ interface StudioState {
   addNarrationPanel: (pageIdx: number) => void;
   cleanPageNoise: (pageIdx: number) => void;
   cleanAllPagesNoise: () => void;
+  cleanPageBubbles: (pageIdx: number) => Promise<void>;
+  cleanAllPagesBubbles: () => Promise<void>;
+  isCleaningBubbles: boolean;
   replacePagePanels: (pageIdx: number, panels: Panel[]) => void;
   batchOCRAllPages: () => Promise<void>;
   isBatchOCRLoading: boolean;
@@ -1857,6 +1861,91 @@ export const useStudioStore = create<StudioState>()(
         pages: updatedPages,
         scrapeStatusMessage: '✨ Đã lọc sạch toàn bộ ký tự rác cho tất cả các trang!',
       };
+    });
+  },
+
+  isCleaningBubbles: false,
+
+  cleanPageBubbles: async (pageIdx: number) => {
+    const state = get();
+    const page = state.pages[pageIdx];
+    if (!page) return;
+
+    set({ isCleaningBubbles: true });
+    try {
+      // Gather all speech bubble bboxes on this page
+      const bubbles: Array<{ x: number; y: number; w: number; h: number }> = [];
+      page.panels.forEach((panel) => {
+        panel.dialogues.forEach((d) => {
+          if (d.bbox && d.bbox.w > 0 && d.bbox.h > 0) {
+            bubbles.push(d.bbox);
+          }
+        });
+      });
+
+      if (bubbles.length === 0) {
+        set({
+          isCleaningBubbles: false,
+          scrapeStatusMessage: `ℹ️ Trang ${page.pageIndex} chưa có toạ độ bóng thoại. Hãy chạy AI Vision OCR trước!`,
+        });
+        return;
+      }
+
+      // Load image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const imgSrc = page.rawImageUrl || page.imageUrl;
+      const proxyUrl =
+        imgSrc.startsWith('data:') || imgSrc.startsWith('blob:')
+          ? imgSrc
+          : `${API_BASE_URL}/proxy-image?url=${encodeURIComponent(imgSrc)}&referer=${encodeURIComponent(page.imageUrl || '')}`;
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => {
+          img.src = page.imageUrl;
+          img.onload = () => resolve();
+          img.onerror = reject;
+        };
+        img.src = proxyUrl;
+      });
+
+      const cleanedDataUrl = await bubbleInpaintingEngine.inpaintPageImage(img, bubbles);
+
+      set((s) => {
+        const updatedPages = [...s.pages];
+        if (updatedPages[pageIdx]) {
+          updatedPages[pageIdx] = {
+            ...updatedPages[pageIdx],
+            cleanedImageUrl: cleanedDataUrl,
+          };
+        }
+        return {
+          pages: updatedPages,
+          isCleaningBubbles: false,
+          scrapeStatusMessage: `✨ Đã tẩy sạch ${bubbles.length} bóng thoại cho Trang ${page.pageIndex}!`,
+        };
+      });
+    } catch (e: any) {
+      console.error('[CleanBubbles Error]', e);
+      set({
+        isCleaningBubbles: false,
+        scrapeStatusMessage: `❌ Lỗi tẩy bóng thoại: ${e.message}`,
+      });
+    }
+  },
+
+  cleanAllPagesBubbles: async () => {
+    const { pages, cleanPageBubbles } = get();
+    if (pages.length === 0) return;
+
+    set({ isCleaningBubbles: true });
+    for (let i = 0; i < pages.length; i++) {
+      await cleanPageBubbles(i);
+    }
+    set({
+      isCleaningBubbles: false,
+      scrapeStatusMessage: `🎉 Đã tẩy sạch bóng thoại cho toàn bộ ${pages.length} trang!`,
     });
   },
   replacePagePanels: (pageIdx, newPanels) => {
