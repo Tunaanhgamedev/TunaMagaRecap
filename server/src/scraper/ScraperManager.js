@@ -314,6 +314,53 @@ export class ScraperManager {
       }
     }
 
+    // Detect highest chapter number exclusively from matched series chapters
+    let maxChapterNumber = 1;
+    for (const c of chapters) {
+      if (c.chapterNumber && c.chapterNumber > maxChapterNumber) {
+        maxChapterNumber = Math.floor(c.chapterNumber);
+      }
+    }
+
+    // If latest chapter number is higher than the count of chapters found in HTML (lazy-loaded),
+    // automatically generate the complete sequence from Chapter 1 to Chapter N!
+    if (maxChapterNumber > chapters.length && maxChapterNumber <= 2500) {
+      const chapterMap = new Map();
+      for (const c of chapters) {
+        if (c.chapterNumber && !chapterMap.has(Math.floor(c.chapterNumber))) {
+          chapterMap.set(Math.floor(c.chapterNumber), c);
+        }
+      }
+
+      let origin = 'https://nettruyen.africa';
+      try {
+        origin = new URL(rawUrl).origin;
+      } catch (e) {}
+
+      const fullChapterList = [];
+      for (let i = 1; i <= maxChapterNumber; i++) {
+        if (chapterMap.has(i)) {
+          fullChapterList.push(chapterMap.get(i));
+        } else {
+          let genUrl = `${origin}/truyen-tranh/${seriesSlug}/chapter-${i}`;
+          if (rawUrl.includes('thuviensach')) {
+            genUrl = rawUrl.replace(/-chap-\d+\.html/, `-chap-${i}.html`);
+          } else if (rawUrl.includes('truyenqq')) {
+            genUrl = `${origin}/truyen-tranh/${seriesSlug}-chap-${i}.html`;
+          }
+
+          fullChapterList.push({
+            chapterNumber: i,
+            title: `Chapter ${i}`,
+            url: genUrl,
+          });
+        }
+      }
+
+      chapters.length = 0;
+      chapters.push(...fullChapterList);
+    }
+
     // If no chapters found and it's a chapter URL, at least include current chapter
     if (chapters.length === 0) {
       const cMatch = rawUrl.match(/(?:chap|chapter|chuong)[-_]?(\d+)/i);
