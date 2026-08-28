@@ -28,7 +28,7 @@ import {
   X,
   Zap,
   Radio,
-  Youtube,
+  PlaySquare,
 } from 'lucide-react';
 import { YouTubePublisherModal } from '../youtube/YouTubePublisherModal';
 
@@ -757,7 +757,7 @@ export const TimelineView: React.FC = () => {
             onClick={() => setIsYouTubeModalOpen(true)}
             className="flex items-center space-x-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Youtube className="w-3.5 h-3.5" />
+            <PlaySquare className="w-3.5 h-3.5" />
             <span>🚀 Đăng YouTube</span>
           </button>
 

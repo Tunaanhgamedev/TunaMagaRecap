@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
 import {
   X,
-  Youtube,
+  PlaySquare,
   Upload,
   Sparkles,
   Calendar,
@@ -92,7 +92,7 @@ export const YouTubePublisherModal: React.FC<YouTubePublisherModalProps> = ({
         <div className="p-4 bg-gradient-to-r from-red-950/80 via-slate-900 to-slate-900 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white shadow-md">
-              <Youtube className="w-5 h-5" />
+              <PlaySquare className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white flex items-center space-x-2">
