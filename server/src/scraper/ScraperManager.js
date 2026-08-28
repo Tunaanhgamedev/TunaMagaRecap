@@ -174,6 +174,174 @@ export class ScraperManager {
       chapterNumber: info.chapterNumber,
     };
   }
+
+  async discoverSeries(url) {
+    const rawUrl = (url || '').trim();
+    if (!rawUrl) throw new Error('Vui lòng nhập link truyện.');
+
+    const adapter = this.findAdapter(rawUrl);
+    if (adapter && typeof adapter.discoverSeries === 'function') {
+      return await adapter.discoverSeries(rawUrl);
+    }
+
+    // Universal Series & Chapter Discovery
+    let domain = 'google.com';
+    try {
+      domain = new URL(rawUrl).hostname;
+    } catch (e) {}
+
+    const res = await fetch(rawUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Referer': `https://${domain}/`,
+      },
+    });
+
+    const html = res.ok ? await res.text() : '';
+
+    // Extract Series Slug from URL
+    let seriesSlug = '';
+    try {
+      const uObj = new URL(rawUrl);
+      const parts = uObj.pathname.split('/').filter(Boolean);
+      for (const part of parts) {
+        if (
+          part !== 'truyen-tranh' &&
+          part !== 'series' &&
+          part !== 'comic' &&
+          part !== 'manga' &&
+          !part.startsWith('chapter-') &&
+          !part.startsWith('chap-') &&
+          !/^\d+$/.test(part)
+        ) {
+          seriesSlug = part.replace(/-\d+$/, '').replace(/\.html$/, '');
+          break;
+        }
+      }
+    } catch (e) {}
+
+    // 1. Extract Series Title
+    let title = 'Truyện Tranh';
+    const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+    const titleTag = html.match(/<title>([^<]+)<\/title>/i);
+    const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const rawTitle = (ogTitle && ogTitle[1]) || (titleTag && titleTag[1]) || (h1 && h1[1]) || '';
+
+    if (rawTitle) {
+      title = rawTitle
+        .replace(/Truyện Tranh\s*/gi, '')
+        .replace(/Đọc Truyện\s*/gi, '')
+        .replace(/[-|].*(NetTruyen|TruyenQQ|BlogTruyen|ThuVienSach|Asura|MangaDex|DanTruyen|MieuTruyen).*/gi, '')
+        .replace(/-?\s*Chap(?:ter)?\s*\d+.*/gi, '')
+        .replace(/Tiếng Việt.*/gi, '')
+        .trim();
+    }
+
+    // 2. Extract Cover
+    let coverUrl = '';
+    const ogImg = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+    if (ogImg) {
+      coverUrl = ogImg[1];
+    } else {
+      const coverImgMatch = html.match(/<img[^>]+class=["'][^"']*(?:cover|avatar|thumb|image)[^"']*["'][^>]+(?:src|data-src)=["']([^"']+)["']/i);
+      if (coverImgMatch) coverUrl = coverImgMatch[1];
+    }
+    if (coverUrl.startsWith('//')) coverUrl = 'https:' + coverUrl;
+    else if (coverUrl.startsWith('/')) coverUrl = `https://${domain}${coverUrl}`;
+
+    // 3. Find if there is a main series page link if this was a chapter page
+    let seriesUrl = rawUrl;
+    let seriesHtml = html;
+
+    const seriesLinkMatch = html.match(/href=["'](https?:\/\/[^"']*(?:truyen-tranh|comic|manga)\/[a-zA-Z0-9-]+-\d+)["']/i);
+    if (seriesLinkMatch && seriesLinkMatch[1] && !seriesLinkMatch[1].includes('chapter') && !seriesLinkMatch[1].includes('chap-')) {
+      try {
+        const sRes = await fetch(seriesLinkMatch[1], {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Referer': `https://${domain}/`,
+          },
+        });
+        if (sRes.ok) {
+          seriesHtml = await sRes.text();
+          seriesUrl = seriesLinkMatch[1];
+        }
+      } catch (e) {}
+    }
+
+    // 4. Extract Chapters
+    const chapters = [];
+    const combinedHtml = seriesHtml + '\n' + html;
+
+    const regexList = [
+      /class=["'][^"']*chapter[^"']*["'][^>]*>[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+      /<a[^>]+href=["']([^"']*(?:chapter|chuong|chap)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi,
+      /<option[^>]+value=["']([^"']*(?:chapter|chuong|chap)[^"']*)["'][^>]*>([\s\S]*?)<\/option>/gi,
+    ];
+
+    for (const regex of regexList) {
+      let m;
+      while ((m = regex.exec(combinedHtml)) !== null) {
+        const href = m[1].trim();
+        const text = m[2].replace(/<[^>]+>/g, '').trim();
+
+        if (
+          href &&
+          !href.startsWith('javascript:') &&
+          !href.includes('${') &&
+          !href.includes('#') &&
+          !href.includes('fb.com') &&
+          !href.includes('facebook') &&
+          (!seriesSlug || href.includes(seriesSlug)) &&
+          (text.toLowerCase().includes('chap') || text.toLowerCase().includes('chương') || href.includes('chapter') || href.includes('chap-'))
+        ) {
+          let full = href.startsWith('http') ? href : `${new URL(rawUrl).origin}${href.startsWith('/') ? '' : '/'}${href}`;
+
+          const numMatch = text.match(/(?:chap|chapter|chương|c)\s*(\d+(?:\.\d+)?)/i) ||
+                           full.match(/(?:chap|chapter|chương|c)[-_\s]?(\d+(?:\.\d+)?)/i);
+          const num = numMatch ? parseFloat(numMatch[1]) : 1;
+
+          const cleanTitle = text.length > 50 ? `Chapter ${num}` : (text || `Chapter ${num}`);
+
+          if (!chapters.some((c) => c.url === full || (c.chapterNumber === num && num > 0))) {
+            chapters.push({
+              chapterNumber: num,
+              title: cleanTitle,
+              url: full,
+            });
+          }
+        }
+      }
+    }
+
+    // If no chapters found and it's a chapter URL, at least include current chapter
+    if (chapters.length === 0) {
+      const cMatch = rawUrl.match(/(?:chap|chapter|chuong)[-_]?(\d+)/i);
+      const num = cMatch ? parseInt(cMatch[1], 10) : 1;
+      chapters.push({
+        chapterNumber: num,
+        title: `Chapter ${num}`,
+        url: rawUrl,
+      });
+    }
+
+    // Sort ascending by chapterNumber
+    chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
+
+    return {
+      success: true,
+      adapterName: adapter ? adapter.name : 'Universal Scanner',
+      series: {
+        name: title,
+        coverUrl: coverUrl ? `/api/proxy-image?url=${encodeURIComponent(coverUrl)}&referer=${encodeURIComponent(rawUrl)}` : '',
+        rawCoverUrl: coverUrl,
+        sourceUrl: seriesUrl,
+        seriesSlug,
+      },
+      totalChapters: chapters.length,
+      chapters,
+    };
+  }
 }
 
 export const scraperManager = new ScraperManager();

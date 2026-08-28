@@ -289,6 +289,219 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 4b. POST Discover Series & Scan All Chapters
+  if (pathname === '/api/manga/discover-series' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const mangaUrl = payload.url || '';
+
+        if (!mangaUrl.trim()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Vui lòng cung cấp đường dẫn truyện để quét.' }));
+          return;
+        }
+
+        console.log(`[Discover API] 🔍 Bắt đầu dò tìm toàn bộ chapter từ: ${mangaUrl}`);
+        const discovered = await scraperManager.discoverSeries(mangaUrl);
+
+        // Check which chapters are already scraped in database
+        let existingProjects = [];
+        try {
+          existingProjects = await prisma.project.findMany({
+            where: { seriesName: discovered.series.name },
+            select: { id: true, chapterNumber: true, episodeTitle: true, durationEst: true }
+          });
+        } catch (e) {
+          existingProjects = db.projects.filter((p) => p.seriesName === discovered.series.name);
+        }
+
+        const enrichedChapters = discovered.chapters.map((ch) => {
+          const existing = existingProjects.find((p) => p.chapterNumber === ch.chapterNumber);
+          return {
+            ...ch,
+            isScraped: !!existing,
+            projectId: existing ? existing.id : null,
+          };
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          series: discovered.series,
+          totalChapters: enrichedChapters.length,
+          chapters: enrichedChapters,
+        }));
+      } catch (err) {
+        console.error('[API Error] discover-series error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // Global batch scraping progress tracker
+  if (pathname === '/api/manga/batch-status' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(global.batchScrapeProgress || { isRunning: false, current: 0, total: 0, percent: 0 }));
+    return;
+  }
+
+  // 4c. POST Batch Scrape Chapters
+  if (pathname === '/api/manga/batch-scrape' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const { seriesName, chapters } = payload;
+
+        if (!Array.isArray(chapters) || chapters.length === 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Danh sách chapter cần cào không hợp lệ.' }));
+          return;
+        }
+
+        global.batchScrapeProgress = {
+          isRunning: true,
+          seriesName: seriesName || 'Truyện Tranh',
+          current: 0,
+          total: chapters.length,
+          currentChapter: chapters[0]?.title || '',
+          percent: 0,
+          completedProjects: [],
+          errors: [],
+        };
+
+        // Respond immediately with batch accepted
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: `Đã bắt đầu cào hàng loạt ${chapters.length} chapter trong nền.`,
+          total: chapters.length,
+        }));
+
+        // Execute batch in background
+        (async () => {
+          for (let i = 0; i < chapters.length; i++) {
+            const ch = chapters[i];
+            global.batchScrapeProgress.current = i + 1;
+            global.batchScrapeProgress.currentChapter = ch.title || `Chapter ${ch.chapterNumber}`;
+            global.batchScrapeProgress.percent = Math.round(((i + 1) / chapters.length) * 100);
+
+            try {
+              console.log(`[Batch Scraper] ⏳ [${i + 1}/${chapters.length}] Đang cào ${ch.title} (${ch.url})...`);
+              const scrapedData = await scraperManager.scrape(ch.url);
+
+              try {
+                const project = await prisma.project.create({
+                  data: {
+                    seriesName: scrapedData.project.seriesName || seriesName,
+                    chapterNumber: ch.chapterNumber || scrapedData.project.chapterNumber,
+                    episodeTitle: scrapedData.project.episodeTitle,
+                    status: 'ready',
+                    durationEst: scrapedData.project.durationEst,
+                    coverUrl: scrapedData.project.coverUrl,
+                  },
+                });
+                scrapedData.project.id = project.id;
+
+                if (scrapedData.pages && scrapedData.pages.length > 0) {
+                  await prisma.chapter.create({
+                    data: {
+                      projectId: project.id,
+                      number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
+                      title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
+                      pages: {
+                        create: scrapedData.pages.map((p, idx) => ({
+                          pageIndex: p.pageIndex || idx + 1,
+                          imageUrl: p.imageUrl || p.rawImageUrl || '',
+                        }))
+                      }
+                    }
+                  });
+                }
+              } catch (dbErr) {
+                console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
+              }
+
+              db.projects = [scrapedData.project, ...db.projects.filter((p) => p.id !== scrapedData.project.id && (p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber))];
+              saveDB(db);
+
+              global.batchScrapeProgress.completedProjects.push(scrapedData.project);
+            } catch (chErr) {
+              console.error(`[Batch Scraper] ❌ Lỗi cào ${ch.title}:`, chErr.message);
+              global.batchScrapeProgress.errors.push({ chapter: ch.title, error: chErr.message });
+            }
+
+            // Small delay to be polite to the target comic site
+            await new Promise((r) => setTimeout(r, 400));
+          }
+
+          global.batchScrapeProgress.isRunning = false;
+          console.log(`[Batch Scraper] ✅ Hoàn tất cào ${global.batchScrapeProgress.completedProjects.length}/${chapters.length} chapter cho ${seriesName}!`);
+        })().catch((err) => {
+          global.batchScrapeProgress.isRunning = false;
+          console.error('[Batch Scraper] Fatal error:', err);
+        });
+
+      } catch (err) {
+        console.error('[API Error] batch-scrape error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 4d. GET All Series Folders (Grouped by seriesName)
+  if (pathname === '/api/series' && req.method === 'GET') {
+    try {
+      let allProjects = [];
+      try {
+        allProjects = await prisma.project.findMany({
+          orderBy: { chapterNumber: 'asc' },
+        });
+      } catch (e) {
+        allProjects = db.projects;
+      }
+
+      // Group projects by seriesName
+      const seriesMap = new Map();
+      for (const p of allProjects) {
+        const sName = p.seriesName || 'Truyện Khác';
+        if (!seriesMap.has(sName)) {
+          seriesMap.set(sName, {
+            seriesName: sName,
+            coverUrl: p.coverUrl || '',
+            totalChapters: 0,
+            chapters: [],
+            updatedAt: p.updatedAt,
+          });
+        }
+        const sObj = seriesMap.get(sName);
+        sObj.totalChapters += 1;
+        sObj.chapters.push(p);
+      }
+
+      // Sort chapters inside each series by chapterNumber ascending
+      const seriesList = Array.from(seriesMap.values()).map((s) => ({
+        ...s,
+        chapters: s.chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)),
+      }));
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, series: seriesList }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
 async function resolveAndFetchImageBuffer(imageUrl) {
   if (!imageUrl) return null;
 
