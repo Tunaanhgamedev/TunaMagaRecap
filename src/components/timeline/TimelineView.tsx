@@ -28,7 +28,9 @@ import {
   X,
   Zap,
   Radio,
+  Youtube,
 } from 'lucide-react';
+import { YouTubePublisherModal } from '../youtube/YouTubePublisherModal';
 
 export const TimelineView: React.FC = () => {
   const {
@@ -91,6 +93,7 @@ export const TimelineView: React.FC = () => {
 
   // Multi-chapter merge modal state
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
   const [mergeBumpers, setMergeBumpers] = useState(true);
 
@@ -747,6 +750,15 @@ export const TimelineView: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" />
             <span>{isExporting ? 'Đang xuất...' : 'Xuất Video MP4'}</span>
+          </button>
+
+          {/* YouTube Direct Publisher Button */}
+          <button
+            onClick={() => setIsYouTubeModalOpen(true)}
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+          >
+            <Youtube className="w-3.5 h-3.5" />
+            <span>🚀 Đăng YouTube</span>
           </button>
 
           {/* Merge Chapters Button */}
@@ -1485,6 +1497,12 @@ export const TimelineView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* YouTube Direct Video Publisher & Premiere Scheduler Modal */}
+      <YouTubePublisherModal
+        isOpen={isYouTubeModalOpen}
+        onClose={() => setIsYouTubeModalOpen(false)}
+      />
     </div>
   );
 };

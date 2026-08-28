@@ -44,6 +44,7 @@ export const VoiceView: React.FC = () => {
   const [speechSpeed, setSpeechSpeed] = useState(1.15);
   const [speechPitch, setSpeechPitch] = useState(1.0);
   const [isPlayingSample, setIsPlayingSample] = useState<string | null>(null);
+  const [voiceLangFilter, setVoiceLangFilter] = useState<string>('all');
   const [customTestText, setCustomTestText] = useState(
     'Chào mừng các bạn đến với video recap chapter mới nhất! Hôm nay Sung Jinwoo sẽ chính thức thức tỉnh sức mạnh Chúa Tể Bóng Tối cấp SSS.'
   );
@@ -298,15 +299,53 @@ export const VoiceView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <h3 className="text-xs font-bold text-white flex items-center space-x-1.5">
                 <Mic className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Danh Sách Diễn Viên Lồng Tiếng AI (Neural Studio HD)</span>
+                <span>Diễn Viên Lồng Tiếng AI (Global Multi-Language HD)</span>
               </h3>
               <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
                 {voiceActors.length} Giọng Đọc Sẵn Sàng
               </span>
             </div>
 
+            {/* Global Language Filter Tabs */}
+            <div className="flex items-center space-x-1 overflow-x-auto pb-1 text-[10.5px]">
+              {[
+                { id: 'all', label: '🌐 Tất Cả' },
+                { id: 'vi', label: '🇻🇳 Tiếng Việt' },
+                { id: 'en', label: '🇺🇸 English (US RPM)' },
+                { id: 'ja', label: '🇯🇵 日本語 (Anime)' },
+                { id: 'ko', label: '🇰🇷 한국어 (Manhwa)' },
+                { id: 'es', label: '🇪🇸 Español' },
+              ].map((lang) => {
+                const isSel = voiceLangFilter === lang.id;
+                return (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => setVoiceLangFilter(lang.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold border transition-all shrink-0 cursor-pointer ${
+                      isSel
+                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-400 text-white shadow-md'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {voiceActors.map((actor) => {
+              {voiceActors
+                .filter((actor) => {
+                  if (voiceLangFilter === 'all') return true;
+                  if (voiceLangFilter === 'vi') return actor.id.startsWith('vi-') || actor.id.startsWith('v-vbee');
+                  if (voiceLangFilter === 'en') return actor.id.startsWith('en-') || actor.id.startsWith('v-eleven');
+                  if (voiceLangFilter === 'ja') return actor.id.startsWith('ja-');
+                  if (voiceLangFilter === 'ko') return actor.id.startsWith('ko-');
+                  if (voiceLangFilter === 'es') return actor.id.startsWith('es-');
+                  return true;
+                })
+                .map((actor) => {
                 const isSelected = assignedVoiceId === actor.id;
                 const isPlayingThis = isPlayingSample === actor.id;
 
