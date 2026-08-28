@@ -40,6 +40,7 @@ import {
   SeriesFolder,
   SoundEffectType,
   MoodBgmType,
+  VFXType,
 } from '../types/studio';
 
 interface StudioState {
@@ -201,6 +202,10 @@ interface StudioState {
   bgmMood: MoodBgmType;
   setBgmMood: (mood: MoodBgmType) => void;
   triggerSFX: (type: SoundEffectType) => void;
+
+  // 2.5D Motion Comic VFX Overlays
+  vfxOverlay: VFXType;
+  setVFXOverlay: (vfx: VFXType) => void;
 
   // Workflow Graph
   nodes: WorkflowNode[];
@@ -2940,6 +2945,8 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
   triggerSFX: (type) => {
     cinematicSoundEngine.playSFX(type);
   },
+  vfxOverlay: 'none',
+  setVFXOverlay: (vfxOverlay) => set({ vfxOverlay }),
 
   isAutoPipelineRunning: false,
   pipelineStep: 0,

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
 import { API_BASE_URL, getProxyImageUrl } from '../../utils/constants';
 import { cinematicSoundEngine } from '../../utils/sfxEngine';
-import { MoodBgmType, SoundEffectType } from '../../types/studio';
+import { motionComicVFXEngine } from '../../utils/vfxEngine';
+import { MoodBgmType, SoundEffectType, VFXType } from '../../types/studio';
 import {
   Play,
   Pause,
@@ -60,6 +61,8 @@ export const TimelineView: React.FC = () => {
     bgmMood,
     setBgmMood,
     triggerSFX,
+    vfxOverlay,
+    setVFXOverlay,
     projects,
     compilationConfig,
     isCompilationMode,
@@ -428,6 +431,36 @@ export const TimelineView: React.FC = () => {
 
         ctx.drawImage(img, cropX, cropY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
+
+        // 4. Render 2.5D Motion Comic VFX Particle Overlay (Embers, Aura Smoke, Speed Lines, Eye Flare, Rain)
+        motionComicVFXEngine.renderVFX(ctx, canvas.width, canvas.height, vfxOverlay, Date.now());
+
+        // 5. Render TikTok / Shorts High-Retention Viral Captions
+        if (activeItem.dialogueText) {
+          ctx.save();
+          const isPortrait = aspectRatio === '9:16';
+          const fontSize = isPortrait ? 36 : 28;
+          ctx.font = `900 ${fontSize}px "Montserrat", "Arial Black", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          const textY = isPortrait ? canvas.height * 0.78 : canvas.height * 0.88;
+          const textX = canvas.width / 2;
+
+          // Thick solid black outline (TikTok Viral Punch Style)
+          ctx.lineJoin = 'round';
+          ctx.miterLimit = 2;
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = isPortrait ? 10 : 7;
+          ctx.strokeText(activeItem.dialogueText, textX, textY, canvas.width * 0.9);
+
+          // Glowing Solid Neon Yellow Fill
+          ctx.fillStyle = '#fde047';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+          ctx.shadowBlur = 10;
+          ctx.fillText(activeItem.dialogueText, textX, textY, canvas.width * 0.9);
+          ctx.restore();
+        }
       };
 
       renderFrame();
@@ -818,7 +851,73 @@ export const TimelineView: React.FC = () => {
                 />
               </div>
 
-              {/* Row 2: Comprehensive Audio & Volume Control Bar */}
+              {/* Row 2: 2.5D Motion Comic VFX Particles & Aspect Ratio Selector */}
+              <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-violet-900/40 text-xs">
+                {/* VFX Selector */}
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-[10.5px] font-bold text-violet-300 flex items-center space-x-1">
+                    <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                    <span>✨ VFX Particles (60 FPS):</span>
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    {[
+                      { id: 'none', label: 'Tắt VFX' },
+                      { id: 'ember_sparks', label: '🔥 Tàn Lửa' },
+                      { id: 'aura_smoke', label: '🔮 Hào Quang' },
+                      { id: 'speed_lines', label: '⚡ Tốc Độ' },
+                      { id: 'eye_flare', label: '👁️ Mắt Lóe' },
+                      { id: 'rain_storm', label: '🌧️ Mưa Sấm' },
+                    ].map((item) => {
+                      const isSel = vfxOverlay === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setVFXOverlay(item.id as VFXType)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                            isSel
+                              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-400 text-white shadow-sm'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Quick 16:9 / 9:16 Ratio Selector */}
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-[10px] font-bold text-slate-400">Khung Hình:</span>
+                  <button
+                    type="button"
+                    onClick={() => setAspectRatio('16:9')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer flex items-center space-x-1 ${
+                      aspectRatio === '16:9'
+                        ? 'bg-cyan-950 border-cyan-600 text-cyan-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Tv className="w-3 h-3" />
+                    <span>16:9 (YouTube)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAspectRatio('9:16')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer flex items-center space-x-1 ${
+                      aspectRatio === '9:16'
+                        ? 'bg-pink-950 border-pink-600 text-pink-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Smartphone className="w-3 h-3" />
+                    <span>9:16 (TikTok/Shorts)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 3: Comprehensive Audio & Volume Control Bar */}
               <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-950/90 px-3 py-2 rounded-lg border border-slate-800 text-xs">
                 {/* Master Volume Controls */}
                 <div className="flex items-center space-x-2">

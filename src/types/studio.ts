@@ -450,5 +450,13 @@ export type MoodBgmType =
   | 'phonk_hype'
   | 'chill_recap';
 
+export type VFXType =
+  | 'none'
+  | 'ember_sparks'
+  | 'aura_smoke'
+  | 'speed_lines'
+  | 'eye_flare'
+  | 'rain_storm';
+
 
 
