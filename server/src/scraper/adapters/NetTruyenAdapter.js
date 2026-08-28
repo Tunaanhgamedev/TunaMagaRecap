@@ -1,6 +1,13 @@
 export const NetTruyenAdapter = {
   name: 'NetTruyen Adapter',
-  domains: ['nettruyen.com', 'nettruyenco.com', 'nettruyenmax.com', 'nhattruyen.com', 'nhattruyento.com'],
+  domains: [
+    'nettruyen.com', 'nettruyenco.com', 'nettruyenmax.com', 'nettruyenvip.com',
+    'nettruyengo.com', 'nettruyenfull.com', 'nettruyenhay.com', 'nettruyenmoi.com',
+    'nhattruyen.com', 'nhattruyento.com', 'nhattruyenplus.com',
+    'truyentranhlh.net', 'truyentranhlh.com',
+    'doctruyen3q.com', 'doctruyen3q.net',
+    'truyentranhtuan.com',
+  ],
 
   canHandle(url) {
     const lower = (url || '').toLowerCase();

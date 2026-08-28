@@ -2,15 +2,36 @@ import { ThuVienSachAdapter } from './adapters/ThuVienSachAdapter.js';
 import { TruyenQQAdapter } from './adapters/TruyenQQAdapter.js';
 import { NetTruyenAdapter } from './adapters/NetTruyenAdapter.js';
 import { AsuraScansAdapter } from './adapters/AsuraScansAdapter.js';
+import { BlogTruyenAdapter } from './adapters/BlogTruyenAdapter.js';
+import { MieuTruyenAdapter } from './adapters/MieuTruyenAdapter.js';
+import { DanTruyenAdapter } from './adapters/DanTruyenAdapter.js';
+import { CatsComicAdapter } from './adapters/CatsComicAdapter.js';
+import { KhoTruyenAdapter } from './adapters/KhoTruyenAdapter.js';
+import { MangaDexAdapter } from './adapters/MangaDexAdapter.js';
+import { WebtoonAdapter } from './adapters/WebtoonAdapter.js';
+import { MangaToonAdapter } from './adapters/MangaToonAdapter.js';
+import { MangaKakalotAdapter } from './adapters/MangaKakalotAdapter.js';
 import { GenericAdapter } from './adapters/GenericAdapter.js';
 
 export class ScraperManager {
   constructor() {
     this.adapters = [
+      // Vietnamese sites
       ThuVienSachAdapter,
       TruyenQQAdapter,
       NetTruyenAdapter,
+      BlogTruyenAdapter,
+      MieuTruyenAdapter,
+      DanTruyenAdapter,
+      CatsComicAdapter,
+      KhoTruyenAdapter,
+      // International sites
       AsuraScansAdapter,
+      MangaDexAdapter,
+      WebtoonAdapter,
+      MangaToonAdapter,
+      MangaKakalotAdapter,
+      // Fallback
       GenericAdapter, // Always last as fallback
     ];
   }
@@ -23,6 +44,18 @@ export class ScraperManager {
       }
     }
     return GenericAdapter;
+  }
+
+  getSupportedSites() {
+    const sites = [];
+    for (const adapter of this.adapters) {
+      if (adapter.name === 'Generic Universal HTML5 Adapter') continue;
+      sites.push({
+        name: adapter.name,
+        domains: adapter.domains || [],
+      });
+    }
+    return sites;
   }
 
   async scrape(url) {

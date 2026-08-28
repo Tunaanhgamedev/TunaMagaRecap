@@ -1,6 +1,11 @@
 export const TruyenQQAdapter = {
   name: 'TruyenQQ Adapter',
-  domains: ['truyenqqko.com', 'truyenqq.com', 'truyenqqviet.com', 'truyenqqpro.com', 'truyenqqto.com', 'truyenvua.com'],
+  domains: [
+    'truyenqqko.com', 'truyenqq.com', 'truyenqqviet.com', 'truyenqqpro.com',
+    'truyenqqto.com', 'truyenqqhot.com', 'truyenqqmoi.com',
+    'truyenvua.com', 'truyenvuatv.com',
+    'truyenmoi.com', 'truyenmoi.net',
+  ],
 
   canHandle(url) {
     const lower = (url || '').toLowerCase();
