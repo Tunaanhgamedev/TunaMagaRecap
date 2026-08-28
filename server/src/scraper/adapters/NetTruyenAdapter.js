@@ -3,6 +3,7 @@ export const NetTruyenAdapter = {
   domains: [
     'nettruyen.com', 'nettruyenco.com', 'nettruyenmax.com', 'nettruyenvip.com',
     'nettruyengo.com', 'nettruyenfull.com', 'nettruyenhay.com', 'nettruyenmoi.com',
+    'nettruyen.africa', 'nettruyen.me', 'nettruyen.top', 'nettruyen.us',
     'nhattruyen.com', 'nhattruyento.com', 'nhattruyenplus.com',
     'truyentranhlh.net', 'truyentranhlh.com',
     'doctruyen3q.com', 'doctruyen3q.net',
@@ -11,7 +12,14 @@ export const NetTruyenAdapter = {
 
   canHandle(url) {
     const lower = (url || '').toLowerCase();
-    return this.domains.some((d) => lower.includes(d));
+    return (
+      lower.includes('nettruyen') ||
+      lower.includes('nhattruyen') ||
+      lower.includes('truyentranhlh') ||
+      lower.includes('doctruyen3q') ||
+      lower.includes('truyentranhtuan') ||
+      this.domains.some((d) => lower.includes(d))
+    );
   },
 
   async getMangaInfo(url) {

@@ -82,7 +82,6 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      let referer = customReferer || 'https://google.com/';
       let fullTargetUrl = targetImageUrl;
 
       if (targetImageUrl.startsWith('/')) {
@@ -94,26 +93,65 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      if (fullTargetUrl.includes('truyenvua') || fullTargetUrl.includes('truyenqq')) {
-        referer = 'https://truyenqqko.com/';
-      } else if (fullTargetUrl.includes('thuviensach')) {
-        referer = 'https://thuviensach.vn/';
-      } else if (fullTargetUrl.includes('nettruyen') || fullTargetUrl.includes('nhattruyen')) {
-        referer = 'https://nettruyenco.com/';
-      } else if (fullTargetUrl.includes('asura')) {
-        referer = 'https://asuracomic.net/';
+      const candidateReferers = [];
+      if (customReferer) {
+        candidateReferers.push(customReferer);
+        try {
+          candidateReferers.push(new URL(customReferer).origin + '/');
+        } catch (e) {}
       }
 
-      const imgRes = await fetch(fullTargetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-          'Referer': referer,
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        },
-      });
+      try {
+        const imgHost = new URL(fullTargetUrl).hostname;
+        candidateReferers.push(`https://${imgHost}/`);
+      } catch (e) {}
 
-      if (!imgRes.ok) {
-        throw new Error(`Upstream image server returned HTTP ${imgRes.status}`);
+      if (fullTargetUrl.includes('nettruyen') || fullTargetUrl.includes('viestorage') || (customReferer && customReferer.includes('nettruyen'))) {
+        candidateReferers.push('https://nettruyen.africa/');
+        candidateReferers.push('https://nettruyenco.com/');
+        candidateReferers.push('https://nhattruyen.com/');
+      }
+      if (fullTargetUrl.includes('truyenvua') || fullTargetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
+        candidateReferers.push('https://truyenqqko.com/');
+        candidateReferers.push('https://truyenvua.com/');
+      }
+      if (fullTargetUrl.includes('thuviensach')) {
+        candidateReferers.push('https://thuviensach.vn/');
+      }
+      if (fullTargetUrl.includes('asura')) {
+        candidateReferers.push('https://asuracomic.net/');
+      }
+      if (fullTargetUrl.includes('blogtruyen')) {
+        candidateReferers.push('https://blogtruyen.vn/');
+        candidateReferers.push('https://blogtruyenmoi.com/');
+      }
+      candidateReferers.push('https://google.com/');
+      candidateReferers.push('');
+
+      const uniqueReferers = Array.from(new Set(candidateReferers.filter((r) => r !== undefined)));
+
+      let imgRes = null;
+      let lastStatus = 502;
+      for (const ref of uniqueReferers) {
+        try {
+          const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          };
+          if (ref) headers['Referer'] = ref;
+
+          const testRes = await fetch(fullTargetUrl, { headers });
+          if (testRes.ok) {
+            imgRes = testRes;
+            break;
+          } else {
+            lastStatus = testRes.status;
+          }
+        } catch (e) {}
+      }
+
+      if (!imgRes) {
+        throw new Error(`Upstream image server returned HTTP ${lastStatus}`);
       }
 
       const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
@@ -255,46 +293,73 @@ async function resolveAndFetchImageBuffer(imageUrl) {
   if (!imageUrl) return null;
 
   let targetUrl = imageUrl;
-  let referer = 'https://google.com/';
+  let customReferer = null;
 
-  if (imageUrl.startsWith('/api/proxy-image')) {
+  if (imageUrl.startsWith('/api/proxy-image') || imageUrl.includes('/api/proxy-image')) {
     try {
       const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
       const realUrl = proxyUrl.searchParams.get('url');
       if (realUrl) {
         targetUrl = realUrl;
-        referer = proxyUrl.searchParams.get('referer') || 'https://google.com/';
+        customReferer = proxyUrl.searchParams.get('referer');
       }
     } catch (e) {}
   }
 
-  if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq')) {
-    referer = 'https://truyenqqko.com/';
-  } else if (targetUrl.includes('thuviensach')) {
-    referer = 'https://thuviensach.vn/';
-  } else if (targetUrl.includes('nettruyen') || targetUrl.includes('nhattruyen')) {
-    referer = 'https://nettruyenco.com/';
-  } else if (targetUrl.includes('asura')) {
-    referer = 'https://asuracomic.net/';
+  const candidateReferers = [];
+  if (customReferer) {
+    candidateReferers.push(customReferer);
+    try {
+      candidateReferers.push(new URL(customReferer).origin + '/');
+    } catch (e) {}
   }
 
   try {
-    const imgRes = await fetch(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Referer': referer,
-        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-      },
-    });
+    const imgHost = new URL(targetUrl).hostname;
+    candidateReferers.push(`https://${imgHost}/`);
+  } catch (e) {}
 
-    if (imgRes.ok) {
-      const arrayBuffer = await imgRes.arrayBuffer();
-      return Buffer.from(arrayBuffer);
-    }
-  } catch (e) {
-    console.warn(`[Image Fetcher] Failed to download image from ${targetUrl}:`, e.message);
+  if (targetUrl.includes('nettruyen') || targetUrl.includes('viestorage') || (customReferer && customReferer.includes('nettruyen'))) {
+    candidateReferers.push('https://nettruyen.africa/');
+    candidateReferers.push('https://nettruyenco.com/');
+    candidateReferers.push('https://nhattruyen.com/');
+  }
+  if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
+    candidateReferers.push('https://truyenqqko.com/');
+    candidateReferers.push('https://truyenvua.com/');
+  }
+  if (targetUrl.includes('thuviensach')) {
+    candidateReferers.push('https://thuviensach.vn/');
+  }
+  if (targetUrl.includes('asura')) {
+    candidateReferers.push('https://asuracomic.net/');
+  }
+  if (targetUrl.includes('blogtruyen')) {
+    candidateReferers.push('https://blogtruyen.vn/');
+    candidateReferers.push('https://blogtruyenmoi.com/');
+  }
+  candidateReferers.push('https://google.com/');
+  candidateReferers.push('');
+
+  const uniqueReferers = Array.from(new Set(candidateReferers.filter((r) => r !== undefined)));
+
+  for (const ref of uniqueReferers) {
+    try {
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      };
+      if (ref) headers['Referer'] = ref;
+
+      const imgRes = await fetch(targetUrl, { headers });
+      if (imgRes.ok) {
+        const arrayBuffer = await imgRes.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      }
+    } catch (e) {}
   }
 
+  console.warn(`[Image Fetcher] All referers failed to download image from ${targetUrl}`);
   return null;
 }
 

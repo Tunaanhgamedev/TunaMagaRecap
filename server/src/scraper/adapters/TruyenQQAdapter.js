@@ -2,14 +2,19 @@ export const TruyenQQAdapter = {
   name: 'TruyenQQ Adapter',
   domains: [
     'truyenqqko.com', 'truyenqq.com', 'truyenqqviet.com', 'truyenqqpro.com',
-    'truyenqqto.com', 'truyenqqhot.com', 'truyenqqmoi.com',
+    'truyenqqto.com', 'truyenqqhot.com', 'truyenqqmoi.com', 'truyenqq.top',
     'truyenvua.com', 'truyenvuatv.com',
     'truyenmoi.com', 'truyenmoi.net',
   ],
 
   canHandle(url) {
     const lower = (url || '').toLowerCase();
-    return this.domains.some((d) => lower.includes(d));
+    return (
+      lower.includes('truyenqq') ||
+      lower.includes('truyenvua') ||
+      lower.includes('truyenmoi') ||
+      this.domains.some((d) => lower.includes(d))
+    );
   },
 
   async getMangaInfo(url) {

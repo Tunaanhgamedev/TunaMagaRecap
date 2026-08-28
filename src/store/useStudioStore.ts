@@ -2703,6 +2703,7 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
       name: 'manga-studio-storage-v3',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        activeTab: state.activeTab,
         pages: state.pages,
         projects: state.projects,
         selectedProject: state.selectedProject,
