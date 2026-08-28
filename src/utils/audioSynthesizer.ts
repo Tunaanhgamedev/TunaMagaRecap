@@ -4,6 +4,8 @@
  * Produces 100% natural, human-like Vietnamese narration for Manga/Manhwa Recaps with ZERO robotic artifacts.
  */
 
+import { cinematicSoundEngine } from './sfxEngine';
+
 export interface TTSResponse {
   fileName: string;
   filePath: string;
@@ -201,10 +203,14 @@ class VoiceAudioEngine {
       this.currentAudio = audio;
       audio.volume = this.currentVolume;
 
+      // Duck background music while speaking
+      cinematicSoundEngine.duckBgm(true);
+
       audio.onended = () => {
         if (!requestId || this.currentRequestId === requestId) {
           this.isSpeakingActive = false;
           this.currentAudio = null;
+          cinematicSoundEngine.duckBgm(false);
           if (onEnd) onEnd();
         }
       };
@@ -214,6 +220,7 @@ class VoiceAudioEngine {
         if (!requestId || this.currentRequestId === requestId) {
           this.isSpeakingActive = false;
           this.currentAudio = null;
+          cinematicSoundEngine.duckBgm(false);
           if (onEnd) onEnd();
         }
       };
@@ -222,11 +229,13 @@ class VoiceAudioEngine {
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
           console.warn('[VoiceAudioEngine] Audio play promise interrupted:', err);
+          cinematicSoundEngine.duckBgm(false);
         });
       }
     } catch (e) {
       console.warn('[VoiceAudioEngine] HTMLAudioElement error:', e);
       this.isSpeakingActive = false;
+      cinematicSoundEngine.duckBgm(false);
       if (onEnd) onEnd();
     }
   }
@@ -261,6 +270,8 @@ class VoiceAudioEngine {
         utterance.voice = resolvedVoice;
       }
 
+      cinematicSoundEngine.duckBgm(true);
+
       this.activeUtterances.push(utterance);
       if (this.activeUtterances.length > 10) {
         this.activeUtterances.shift();
@@ -268,6 +279,8 @@ class VoiceAudioEngine {
 
       utterance.onend = () => {
         this.isSpeakingActive = false;
+        this.currentUtterance = null;
+        cinematicSoundEngine.duckBgm(false);
         const idx = this.activeUtterances.indexOf(utterance);
         if (idx !== -1) this.activeUtterances.splice(idx, 1);
         if (onEnd) onEnd();
@@ -275,6 +288,8 @@ class VoiceAudioEngine {
 
       utterance.onerror = () => {
         this.isSpeakingActive = false;
+        this.currentUtterance = null;
+        cinematicSoundEngine.duckBgm(false);
         const idx = this.activeUtterances.indexOf(utterance);
         if (idx !== -1) this.activeUtterances.splice(idx, 1);
         if (onEnd) onEnd();
@@ -285,6 +300,7 @@ class VoiceAudioEngine {
     } catch (err) {
       console.warn('[VoiceAudioEngine] Fallback speech error:', err);
       this.isSpeakingActive = false;
+      cinematicSoundEngine.duckBgm(false);
       if (onEnd) onEnd();
     }
   }
@@ -292,6 +308,7 @@ class VoiceAudioEngine {
   public stop() {
     this.currentRequestId++;
     this.isSpeakingActive = false;
+    cinematicSoundEngine.duckBgm(false);
 
     if (this.currentAudio) {
       try {

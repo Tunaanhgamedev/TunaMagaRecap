@@ -431,4 +431,23 @@ export interface SeriesFolder {
   updatedAt?: string;
 }
 
+export type SoundEffectType =
+  | 'slash'
+  | 'heavy_impact'
+  | 'thunder'
+  | 'system_ding'
+  | 'magic_cast'
+  | 'whoosh'
+  | 'power_up'
+  | 'heartbeat';
+
+export type MoodBgmType =
+  | 'epic_battle'
+  | 'mysterious_lore'
+  | 'tension_suspense'
+  | 'emotional_sad'
+  | 'phonk_hype'
+  | 'chill_recap';
+
+
 

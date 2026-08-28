@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { voiceAudioEngine } from '../utils/audioSynthesizer';
+import { cinematicSoundEngine } from '../utils/sfxEngine';
 import { API_BASE_URL } from '../utils/constants';
 import { transformTextCase, cleanNoiseFromText } from '../utils/textHelpers';
 import { createDefaultThumbnailConfig } from '../utils/thumbnailPresets';
@@ -36,6 +37,8 @@ import {
   DiscoveredSeries,
   BatchScrapeProgress,
   SeriesFolder,
+  SoundEffectType,
+  MoodBgmType,
 } from '../types/studio';
 
 interface StudioState {
@@ -191,6 +194,9 @@ interface StudioState {
   setBgmVolume: (volume: number) => void;
   isBgmMuted: boolean;
   setIsBgmMuted: (isBgmMuted: boolean) => void;
+  bgmMood: MoodBgmType;
+  setBgmMood: (mood: MoodBgmType) => void;
+  triggerSFX: (type: SoundEffectType) => void;
 
   // Workflow Graph
   nodes: WorkflowNode[];
@@ -2821,10 +2827,30 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
       voiceAudioEngine.stop();
     }
   },
-  bgmVolume: 50,
-  setBgmVolume: (bgmVolume) => set({ bgmVolume }),
+  bgmVolume: 40,
+  setBgmVolume: (bgmVolume) => {
+    set({ bgmVolume });
+    cinematicSoundEngine.setBgmVolume(bgmVolume / 100);
+  },
   isBgmMuted: false,
-  setIsBgmMuted: (isBgmMuted) => set({ isBgmMuted }),
+  setIsBgmMuted: (isBgmMuted) => {
+    set({ isBgmMuted });
+    if (isBgmMuted) {
+      cinematicSoundEngine.stopBgm();
+    } else if (get().isPlaying && get().bgmVolume > 0) {
+      cinematicSoundEngine.startMoodBgm(get().bgmMood);
+    }
+  },
+  bgmMood: 'epic_battle',
+  setBgmMood: (bgmMood) => {
+    set({ bgmMood });
+    if (get().isPlaying && !get().isBgmMuted && get().bgmVolume > 0) {
+      cinematicSoundEngine.startMoodBgm(bgmMood);
+    }
+  },
+  triggerSFX: (type) => {
+    cinematicSoundEngine.playSFX(type);
+  },
 
   isAutoPipelineRunning: false,
   pipelineStep: 0,

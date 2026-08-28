@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
 import { API_BASE_URL, getProxyImageUrl } from '../../utils/constants';
+import { cinematicSoundEngine } from '../../utils/sfxEngine';
+import { MoodBgmType, SoundEffectType } from '../../types/studio';
 import {
   Play,
   Pause,
@@ -23,6 +25,8 @@ import {
   Sliders,
   GitMerge,
   X,
+  Zap,
+  Radio,
 } from 'lucide-react';
 
 export const TimelineView: React.FC = () => {
@@ -53,6 +57,9 @@ export const TimelineView: React.FC = () => {
     setBgmVolume,
     isBgmMuted,
     setIsBgmMuted,
+    bgmMood,
+    setBgmMood,
+    triggerSFX,
     projects,
     compilationConfig,
     isCompilationMode,
@@ -227,6 +234,18 @@ export const TimelineView: React.FC = () => {
       </div>
     );
   }
+
+  // Start / Stop Mood BGM when isPlaying changes
+  useEffect(() => {
+    if (isPlaying) {
+      if (!isBgmMuted && bgmVolume > 0) {
+        cinematicSoundEngine.startMoodBgm(bgmMood);
+      }
+    } else {
+      cinematicSoundEngine.stopBgm();
+      stopNarrationAudio();
+    }
+  }, [isPlaying, isBgmMuted, bgmVolume, bgmMood]);
 
   // HTML5 Canvas High-Fidelity Video Render Loop
   useEffect(() => {
@@ -413,11 +432,20 @@ export const TimelineView: React.FC = () => {
 
       renderFrame();
 
-      // Trigger voice narration only if Voice AI is NOT muted and Master Volume > 0
+      // Trigger voice narration and AI auto-detected Sound FX
       const canSpeak = !isMuted && !isVoiceMuted && audioVolume > 0;
-      if (isPlaying && activeItem.dialogueText && lastSpokenPanelIdRef.current !== activeItem.id) {
+      if (isPlaying && lastSpokenPanelIdRef.current !== activeItem.id) {
         lastSpokenPanelIdRef.current = activeItem.id;
-        if (canSpeak) {
+
+        // Auto-detect and play Sound FX based on dialogue keywords
+        const autoSfx = cinematicSoundEngine.detectSfxFromText(activeItem.dialogueText);
+        if (autoSfx) {
+          cinematicSoundEngine.playSFX(autoSfx);
+        } else if (activeItem.cameraEffect === 'dramatic_zoom') {
+          cinematicSoundEngine.playSFX('whoosh');
+        }
+
+        if (canSpeak && activeItem.dialogueText) {
           playNarrationAudio(activeItem.dialogueText);
         } else {
           stopNarrationAudio();
@@ -983,21 +1011,27 @@ export const TimelineView: React.FC = () => {
                 </p>
               </div>
 
-              {/* 3. BGM Music Specific Control */}
-              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              {/* 3. BGM Music Specific Control with Mood Selector */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="font-semibold text-emerald-300 flex items-center space-x-1">
                     <Music className="w-3 h-3 text-emerald-400" />
                     <span>Nhạc Nền Manga (BGM)</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsBgmMuted(!isBgmMuted)}
-                    className="text-[10px] text-emerald-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    {isBgmMuted ? 'Bật Nhạc' : 'Tắt Nhạc'}
-                  </button>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-amber-950/70 border border-amber-800/60 text-amber-300 font-bold">
+                      ⚡ Ducking -18dB
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsBgmMuted(!isBgmMuted)}
+                      className="text-[10px] text-emerald-400 hover:underline font-semibold cursor-pointer"
+                    >
+                      {isBgmMuted ? 'Bật Nhạc' : 'Tắt Nhạc'}
+                    </button>
+                  </div>
                 </div>
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="range"
@@ -1015,6 +1049,72 @@ export const TimelineView: React.FC = () => {
                   <span className="text-[10px] font-mono text-slate-300 w-8 text-right">
                     {isBgmMuted ? '0%' : `${bgmVolume}%`}
                   </span>
+                </div>
+
+                {/* Mood BGM Selector */}
+                <div className="space-y-1 pt-1 border-t border-slate-800/80">
+                  <span className="text-[9.5px] font-bold text-slate-400 block">
+                    🎭 Mood Nhạc Nền:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'epic_battle', label: '⚔️ Chiến Đấu', desc: 'Epic Battle' },
+                      { id: 'mysterious_lore', label: '🔮 Bí Ẩn', desc: 'Mysterious' },
+                      { id: 'tension_suspense', label: '⚡ Kịch Tính', desc: 'Tension' },
+                      { id: 'emotional_sad', label: '🥀 Cảm Động', desc: 'Sad Piano' },
+                      { id: 'phonk_hype', label: '🔥 Phonk Hype', desc: 'TikTok Bass' },
+                      { id: 'chill_recap', label: '☕ Chill Lofi', desc: 'Relax Lore' },
+                    ].map((mood) => {
+                      const isSel = bgmMood === mood.id;
+                      return (
+                        <button
+                          key={mood.id}
+                          type="button"
+                          onClick={() => setBgmMood(mood.id as MoodBgmType)}
+                          className={`p-1 rounded text-center text-[9.5px] font-bold border transition-all cursor-pointer ${
+                            isSel
+                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400 text-white shadow-md'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          }`}
+                        >
+                          {mood.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Instant Anime Sound FX Launchpad */}
+              <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-amber-300 flex items-center space-x-1">
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span>🔊 Anime Sound FX (Tự động kích hoạt theo thoại)</span>
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-400">Click để test</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    { type: 'slash', label: '⚔️ Chém Kiếm' },
+                    { type: 'heavy_impact', label: '💥 Đấm Bốc' },
+                    { type: 'thunder', label: '⚡ Sấm Chớp' },
+                    { type: 'system_ding', label: '🔔 Level Up' },
+                    { type: 'magic_cast', label: '✨ Ma Pháp' },
+                    { type: 'whoosh', label: '💨 Tốc Biến' },
+                    { type: 'power_up', label: '🔥 Tụ Lực' },
+                    { type: 'heartbeat', label: '💓 Tim Đập' },
+                  ].map((sfx) => (
+                    <button
+                      key={sfx.type}
+                      type="button"
+                      onClick={() => triggerSFX(sfx.type as SoundEffectType)}
+                      className="p-1 bg-slate-900 hover:bg-amber-950/60 border border-slate-800 hover:border-amber-700/60 rounded text-[9.5px] font-bold text-slate-300 hover:text-amber-300 transition-all active:scale-95 cursor-pointer text-center truncate"
+                      title={`Kích hoạt âm thanh ${sfx.label}`}
+                    >
+                      {sfx.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
