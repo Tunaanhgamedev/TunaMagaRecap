@@ -3036,13 +3036,11 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
     set({ pipelineStep: 5, scrapeStatusMessage: '⚡ BƯỚC 5/6: Đang thiết kế Thumbnail 3D & sinh SEO Metadata YouTube...' });
     get().generateAISEO();
 
-    // Step 6: Assemble Timeline & Switch to Timeline View
+    // Step 6: Done — stay on current tab (user requested not to auto-switch)
     set({
       pipelineStep: 6,
       isAutoPipelineRunning: false,
-      scrapeStatusMessage: '🎉 HOÀN TẤT 100%! Đã tạo xong toàn bộ video recap. Đang mở Timeline & Trình xem trước...',
-      activeTab: 'timeline',
-      isPlaying: true,
+      scrapeStatusMessage: '🎉 HOÀN TẤT 100%! Đã tạo xong toàn bộ video recap. Bấm vào tab Timeline để xem trước video.',
     });
 
     // Play welcome narration
@@ -3053,7 +3051,6 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
       name: 'manga-studio-storage-v3',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        activeTab: state.activeTab,
         pages: state.pages,
         projects: state.projects,
         selectedProject: state.selectedProject,
