@@ -277,7 +277,7 @@ interface StudioState {
 export const useStudioStore = create<StudioState>()(
   persist(
     (set, get) => ({
-  activeTab: 'dashboard',
+  activeTab: 'library',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   librarySubTab: 'single',
