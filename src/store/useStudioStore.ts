@@ -3048,7 +3048,7 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
   },
 }),
     {
-      name: 'manga-studio-storage-v3',
+      name: 'manga-studio-storage-v4',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         pages: state.pages,
@@ -3061,6 +3061,14 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
         thumbnail: state.thumbnail,
         mangaUrlInput: state.mangaUrlInput,
       }),
+      merge: (persistedState: any, currentState) => {
+        // Never restore activeTab or isPlaying from localStorage
+        if (persistedState) {
+          delete persistedState.activeTab;
+          delete persistedState.isPlaying;
+        }
+        return { ...currentState, ...(persistedState as any) };
+      },
     }
   )
 );
