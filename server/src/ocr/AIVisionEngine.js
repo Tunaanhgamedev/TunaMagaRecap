@@ -115,23 +115,44 @@ Return ONLY a valid JSON object in this exact schema with no markdown code fence
  */
 export async function translateWithFreeGoogleTranslate(text, targetLang = 'vi') {
   if (!text || !text.trim()) return text;
+  const clean = text.trim();
+
+  // 1. High-speed Google Neural Translation via clients5 (fastest, no quota block)
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${encodeURIComponent(targetLang)}&q=${encodeURIComponent(clean)}`;
     const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        if (typeof data[0] === 'string') return data[0].trim();
+        if (Array.isArray(data[0]) && typeof data[0][0] === 'string') return data[0][0].trim();
+      }
+    }
+  } catch (e) {
+    console.warn('[Clients5 Translate] Error:', e.message);
+  }
+
+  // 2. Secondary fallback: MyMemory Translation API
+  try {
+    const myMemoryUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=auto|${encodeURIComponent(targetLang)}`;
+    const res = await fetch(myMemoryUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && Array.isArray(data[0])) {
-        const translatedSegments = data[0].map((item) => item[0]).filter(Boolean);
-        const result = translatedSegments.join('');
-        if (result && result.trim()) return result.trim();
+      if (data?.responseData?.translatedText) {
+        return data.responseData.translatedText.trim();
       }
     }
   } catch (e) {
-    console.warn('[Free Google Translate] Error:', e.message);
+    console.warn('[MyMemory Translate] Error:', e.message);
   }
-  return text;
+
+  return clean;
 }
 
 /**
@@ -149,13 +170,19 @@ export async function translateMangaWithGemini({
 
   // 1. Try Gemini AI translation if API key is provided
   if (key) {
-    const payloadItems = dialogues.map((d, idx) => ({
-      id: d.id || `dialogue-${idx}`,
-      original: d.originalText || d.text || '',
-      speaker: d.speaker || '',
-    }));
+    const CHUNK_SIZE = 15;
+    const translatedResults = [];
+    let geminiFailed = false;
 
-    const prompt = `You are a professional Manga/Manhwa Translator.
+    for (let c = 0; c < dialogues.length; c += CHUNK_SIZE) {
+      const chunk = dialogues.slice(c, c + CHUNK_SIZE);
+      const payloadItems = chunk.map((d, idx) => ({
+        id: d.id || `dialogue-${c + idx}`,
+        original: d.originalText || d.text || '',
+        speaker: d.speaker || '',
+      }));
+
+      const prompt = `You are a professional Manga/Manhwa Translator.
 Translate the following manga dialogue items faithfully into ${targetLang === 'vi' ? 'natural Vietnamese (Tiếng Việt)' : targetLang}.
 
 Translation Rules:
@@ -166,7 +193,7 @@ Translation Rules:
   "translations": [
     {
       "id": "dialogue-0",
-      "translated": "Câu dịch tiếng Việt chính xác"
+      "translated": "Bản dịch chính xác"
     }
   ]
 }
@@ -175,52 +202,65 @@ Items to translate:
 ${JSON.stringify(payloadItems, null, 2)}
 `;
 
-    for (const model of MODEL_CANDIDATES) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-            },
-          }),
-        });
+      let chunkDone = false;
+      for (const model of MODEL_CANDIDATES) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+              },
+            }),
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-          const clean = raw.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-          const parsed = JSON.parse(clean);
+          if (response.ok) {
+            const data = await response.json();
+            const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+            const clean = raw.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+            const parsed = JSON.parse(clean);
 
-          if (parsed && Array.isArray(parsed.translations)) {
-            const translationMap = new Map(
-              parsed.translations.map((t) => [String(t.id), t.translated])
-            );
+            if (parsed && Array.isArray(parsed.translations)) {
+              const translationMap = new Map(
+                parsed.translations.map((t) => [String(t.id), t.translated])
+              );
 
-            return dialogues.map((d, idx) => {
-              const id = d.id || `dialogue-${idx}`;
-              const translated = translationMap.get(id) || d.translatedText || d.text;
-              return {
-                ...d,
-                translatedText: String(translated),
-                text: String(translated),
-              };
-            });
+              for (let i = 0; i < chunk.length; i++) {
+                const d = chunk[i];
+                const id = d.id || `dialogue-${c + i}`;
+                const translated = translationMap.get(id) || d.translatedText || d.text;
+                translatedResults.push({
+                  ...d,
+                  translatedText: String(translated),
+                  text: String(translated),
+                });
+              }
+              chunkDone = true;
+              break;
+            }
           }
-        } else {
-          console.warn(`[Gemini Translate] Model ${model} returned status ${response.status}`);
+        } catch (err) {
+          console.warn(`[Gemini Translate ${model}] Error:`, err.message);
         }
-      } catch (err) {
-        console.error(`[Gemini Translate ${model}] Error:`, err.message);
       }
+
+      if (!chunkDone) {
+        geminiFailed = true;
+        break;
+      }
+    }
+
+    if (!geminiFailed && translatedResults.length === dialogues.length) {
+      console.log(`[Gemini Translate] ✅ Successfully translated ${translatedResults.length} dialogues with AI!`);
+      return translatedResults;
     }
   }
 
-  // 2. Free Google Translate fallback for 100% reliable translation without API key or rate limits
+  // 2. High-speed Free Google Translate fallback for 100% reliable translation
   console.log(`[Translate Engine] 🌐 Using Free Google Translate fallback for ${dialogues.length} dialogues...`);
   const translatedDialogues = await Promise.all(
     dialogues.map(async (d) => {

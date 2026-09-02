@@ -14,13 +14,21 @@ const LANGUAGES = [
 ];
 
 export const TranslationView: React.FC = () => {
-  const { scriptData, setActiveTab } = useStudioStore();
+  const {
+    scriptData,
+    setActiveTab,
+    updateScriptContent,
+    geminiApiKey,
+    translateAllDialogues,
+    targetLanguage,
+    setTargetLanguage,
+  } = useStudioStore();
   const [sourceLang, setSourceLang] = useState('vi');
-  const [targetLang, setTargetLang] = useState('en');
+  const [targetLang, setTargetLang] = useState(targetLanguage || 'en');
   const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedText, setTranslatedText] = useState(
-    'Sung Jin-Woo emerges from the shadows, wielding the Hunter Shortsword. "Arise, all of you!"'
-  );
+  const [isApplying, setIsApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const [translatedText, setTranslatedText] = useState('');
   const [copied, setCopied] = useState(false);
 
   if (!scriptData) {
@@ -47,14 +55,16 @@ export const TranslationView: React.FC = () => {
   const handleTranslate = async () => {
     if (!scriptData || !scriptData.content) return;
     setIsTranslating(true);
+    setApplied(false);
     try {
-      const res = await fetch('http://localhost:3001/api/translate', {
+      const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: scriptData.content,
           targetLanguage: targetLang,
           sourceLanguage: sourceLang,
+          apiKey: geminiApiKey,
         }),
       });
       const data = await res.json();
@@ -67,6 +77,22 @@ export const TranslationView: React.FC = () => {
       setTranslatedText(`❌ Lỗi kết nối máy chủ dịch: ${err.message}`);
     } finally {
       setIsTranslating(false);
+    }
+  };
+
+  const handleApplyToScript = async () => {
+    if (!translatedText || translatedText.startsWith('❌')) return;
+    setIsApplying(true);
+    try {
+      // 1. Update global script content
+      updateScriptContent(translatedText);
+      // 2. Set target language in store & sync dialogues
+      setTargetLanguage(targetLang as any);
+      await translateAllDialogues(targetLang as any);
+      setApplied(true);
+      setTimeout(() => setApplied(false), 3000);
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -94,15 +120,27 @@ export const TranslationView: React.FC = () => {
           <button
             onClick={handleTranslate}
             disabled={isTranslating}
-            className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <Sparkles className={`w-3.5 h-3.5 text-cyan-300 ${isTranslating ? 'animate-spin' : ''}`} />
             <span>{isTranslating ? 'Đang Dịch AI...' : 'Dịch Kịch Bản Ngay'}</span>
           </button>
 
+          {translatedText && !translatedText.startsWith('❌') && (
+            <button
+              onClick={handleApplyToScript}
+              disabled={isApplying}
+              className="flex items-center space-x-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Cập nhật văn bản dịch vào kịch bản chính & thoại của chapter"
+            >
+              {applied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Sparkles className="w-3.5 h-3.5" />}
+              <span>{applied ? '✓ Đã Áp Dụng Kịch Bản' : 'Áp Dụng Vào Kịch Bản'}</span>
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('voice')}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
             <span>Sang Studio Lồng Tiếng</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -135,7 +173,7 @@ export const TranslationView: React.FC = () => {
             <div className="flex items-center space-x-1.5">
               <select
                 value={targetLang}
-                onChange={(e) => setTargetLang(e.target.value)}
+                onChange={(e) => setTargetLang(e.target.value as any)}
                 className="bg-slate-900 text-xs font-bold text-cyan-300 border border-slate-800 rounded px-2 py-1 focus:outline-none"
               >
                 {LANGUAGES.map((l) => (
