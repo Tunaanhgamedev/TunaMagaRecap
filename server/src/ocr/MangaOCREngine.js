@@ -325,20 +325,19 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
     const { buffer: cleanedImage, width: imgWidth, height: imgHeight } =
       await inspectAndPreprocessMangaImage(imageSource);
 
-    // --- Sniff actual script before locking in the traineddata ---
-    const sniffed = await sniffScript(cleanedImage, requestedLang);
-    const effectiveLang = sniffed !== requestedLang ? sniffed : requestedLang;
+    const effectiveLang = requestedLang || 'ko';
     const tessLang = LANG_MAP[effectiveLang] || 'kor';
 
-    if (effectiveLang !== requestedLang) {
-      console.log(`[MangaOCR] ⚠️ Requested ${requestedLang} but sniffed ${effectiveLang} — switching traineddata to ${tessLang} to avoid glyph-mismatch garbage`);
-    }
+    console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with model: ${tessLang} (requested: ${requestedLang})`);
 
-    console.log(`[MangaOCR] 🔍 Analyzing page ${pageIndex} with single-script model: ${tessLang} (sniffed: ${sniffed}, requested: ${requestedLang})`);
+    // Check if local traineddata file exists in process.cwd()
+    const fs = await import('fs');
+    const path = await import('path');
+    const localTessFile = path.join(process.cwd(), `${tessLang}.traineddata`);
+    const hasLocalFile = fs.existsSync(localTessFile);
 
-    // Ensure we pass langPath: process.cwd() so Tesseract uses local .traineddata files
     const tessOptions = {
-      langPath: process.cwd(),
+      ...(hasLocalFile ? { langPath: process.cwd() } : {}),
       logger: (m) => {
         if (m.status === 'recognizing text' && Math.round(m.progress * 100) % 50 === 0) {
           console.log(`[MangaOCR Page ${pageIndex}] 📊 Progress: ${Math.round(m.progress * 100)}%`);
@@ -399,30 +398,18 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
     // Construct panels from recognized blocks
     const panels = [];
 
-    // Filter out garbled noise blocks (e.g., blood drops, shadows or art strokes misrecognized as symbols)
+    // Robust noise filter that preserves real comic text in all languages
     function isNoiseText(text, conf) {
-      if (!text || text.trim().length < 2) return true;
+      if (!text || text.trim().length === 0) return true;
+      const trimmed = text.trim();
       
-      const pureText = text.replace(/[^a-zA-Z0-9À-ỹ가-힣一-龥ぁ-ゔァ-ヴー\s]/g, '').trim();
-      if (!pureText) return true;
+      // If it has valid words or CJK characters, it is legitimate text
+      const hasMeaningfulLetters = /[\p{L}\p{N}]/u.test(trimmed);
+      if (!hasMeaningfulLetters) return true;
 
-      const words = pureText.split(/\s+/).filter(Boolean);
-      if (words.length === 0) return true;
-
-      // Count gibberish words like 'zZ', 'vềvx', 'ĐAl-e', 'NÂv', 'jẤN', 'lRĩ', 's4'
-      const gibberishCount = words.filter((w) => {
-        if (w.length >= 2 && /^[a-z]+[A-Z]+|[A-Z]+[a-z]+[A-Z]+/.test(w)) return true;
-        if (w.length >= 2 && /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]{2,}/i.test(w) && !/^(hư|thương|được|người|hoàng|vương|mình|nghĩ|truyện|nhất|thấp|tiếng|tiến|hiện)$/i.test(w)) return true;
-        if (/^[a-z0-9]{1,2}$/i.test(w) && !/^(là|tôi|nó|và|có|anh|cô|bạn|gì|bị|ra|vào|lên|đi|ăn|xem|nói|mà|về|sẽ|đã|được|khi|đó|thì|như|với|tại|từ|bởi|vì|vẫn|lại|rồi|hay|cho|đến|theo|thêm|ít|nhiều|to|nhỏ)$/i.test(w)) return true;
-        return false;
-      }).length;
-
-      // If more than 30% of words in the block are gibberish, it's drawing noise!
-      if (gibberishCount / words.length > 0.30) return true;
-
-      const letters = text.match(/[\p{L}\p{N}]/gu) || [];
-      if (letters.length / text.length < 0.45 && text.length > 3) return true;
-      if (conf < 60 && letters.length < 10) return true;
+      // Only reject if it's purely repeated random punctuation or single stray noise mark
+      if (/^[.,_\-~`'"|;:!?]{1,3}$/.test(trimmed)) return true;
+      if (conf < 25 && trimmed.length <= 2 && !/[\uAC00-\uD7AF\u4E00-\u9FFF\u3040-\u30FF]/.test(trimmed)) return true;
 
       return false;
     }

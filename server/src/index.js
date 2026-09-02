@@ -505,6 +505,14 @@ const server = http.createServer(async (req, res) => {
 async function resolveAndFetchImageBuffer(imageUrl) {
   if (!imageUrl) return null;
 
+  // 1. Direct Buffer extraction for base64 Data URLs (user uploaded images)
+  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+    const commaIndex = imageUrl.indexOf(',');
+    if (commaIndex !== -1) {
+      return Buffer.from(imageUrl.slice(commaIndex + 1), 'base64');
+    }
+  }
+
   let targetUrl = imageUrl;
   let customReferer = null;
 

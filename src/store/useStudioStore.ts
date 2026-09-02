@@ -1136,11 +1136,22 @@ export const useStudioStore = create<StudioState>()(
   activePageIndex: 0,
   setActivePageIndex: (idx) => set({ activePageIndex: idx }),
   autoDetectPanels: async (pageIdx) => {
+    const page = get().pages[pageIdx];
+    if (!page) return;
+    const imgUrl = (page as any).rawImageUrl || page.imageUrl;
+    if (!imgUrl) return;
+
     try {
       const res = await fetch(`${API_BASE_URL}/ocr/detect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageIndex: pageIdx + 1 }),
+        body: JSON.stringify({
+          pageIndex: pageIdx + 1,
+          imageUrl: imgUrl,
+          language: get().detectedLanguage || 'ko',
+          targetLanguage: get().targetLanguage || 'vi',
+          apiKey: get().geminiApiKey,
+        }),
       });
       const data = await res.json();
       if (data.success && data.panels) {
@@ -1148,25 +1159,33 @@ export const useStudioStore = create<StudioState>()(
           const updated = [...state.pages];
           if (updated[pageIdx]) {
             updated[pageIdx].panels = data.panels.map((p: any, i: number) => ({
-              id: `panel-${pageIdx}-${i + 1}`,
+              id: `panel-${pageIdx + 1}-${i + 1}`,
               pageIndex: pageIdx + 1,
               panelIndex: i + 1,
               bbox: p.bbox,
-              suggestedCameraEffect: p.suggestedCameraEffect,
-              aiDescription: p.aiDescription,
-              dialogues: p.dialogues.map((d: any, dIdx: number) => ({
-                id: `d-${Date.now()}-${dIdx}`,
-                panelId: `panel-${pageIdx}-${i + 1}`,
-                speaker: d.speaker,
-                text: d.text,
-                emotion: d.emotion,
+              suggestedCameraEffect: p.suggestedCameraEffect || 'dramatic_zoom',
+              aiDescription: p.aiDescription || `Trang ${pageIdx + 1}: Panel ${i + 1}`,
+              dialogues: (p.dialogues || []).map((d: any, dIdx: number) => ({
+                id: d.id || `d-${pageIdx + 1}-${i + 1}-${dIdx + 1}`,
+                panelId: `panel-${pageIdx + 1}-${i + 1}`,
+                speaker: d.speaker || 'Nhân vật',
+                text: d.text || '',
+                originalText: d.originalText || d.text || '',
+                translatedText: d.translatedText || d.text || '',
+                emotion: d.emotion || 'neutral',
               })),
             }));
+            updated[pageIdx].ocrProcessed = true;
           }
-          return { pages: updated };
+          return {
+            pages: updated,
+            scrapeStatusMessage: `✓ Đã nhận diện xong ${data.panels.length} khung thoại trên Trang ${pageIdx + 1}!`,
+          };
         });
       }
-    } catch (err) {}
+    } catch (err: any) {
+      console.warn('[autoDetectPanels Error]:', err.message);
+    }
   },
   updatePanelBBox: (pageIdx, panelId, bbox) => {
     set((state) => {
