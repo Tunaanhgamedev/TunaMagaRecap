@@ -42,12 +42,32 @@ export const VoiceView: React.FC = () => {
   } = useStudioStore();
 
   const [speechSpeed, setSpeechSpeed] = useState(1.15);
+  const SAMPLE_SENTENCES_BY_LANG: Record<string, string> = {
+    vi: 'Chào mừng các bạn đến với video recap chapter mới nhất! Hôm nay Sung Jinwoo sẽ chính thức thức tỉnh sức mạnh Chúa Tể Bóng Tối cấp SSS.',
+    en: 'Welcome to the latest manga recap! Today Sung Jin-Woo will awaken as the ultimate Shadow Monarch, commanding his immortal army!',
+    ja: '俺が影の君主だ。今こそ立ち上がれ、無敵の影の軍団よ！',
+    ko: '일어나라. 내가 바로 그림자의 군주다! 모든 그림자 군단은 내 명령에 복종하라.',
+    zh: '站起来！我即是君临天下的暗影君王，统领亿万暗影军团！',
+    es: '¡Bienvenidos al resumen del capítulo! Hoy Sung Jin-Woo despierta como el Monarca de las Sombras.',
+    fr: 'Bienvenue dans ce récapitulatif ! Sung Jin-Woo éveille le pouvoir suprême du Monarque des Ombres.',
+    de: 'Erhebt euch! Ich bin der Schattenmonarch und beherrsche die ewige Finsternis.',
+  };
+
   const [speechPitch, setSpeechPitch] = useState(1.0);
   const [isPlayingSample, setIsPlayingSample] = useState<string | null>(null);
   const [voiceLangFilter, setVoiceLangFilter] = useState<string>('all');
   const [customTestText, setCustomTestText] = useState(
     'Chào mừng các bạn đến với video recap chapter mới nhất! Hôm nay Sung Jinwoo sẽ chính thức thức tỉnh sức mạnh Chúa Tể Bóng Tối cấp SSS.'
   );
+
+  const getTestTextForActor = (actorId: string) => {
+    const lang = actorId.slice(0, 2);
+    const isDefault = Object.values(SAMPLE_SENTENCES_BY_LANG).includes(customTestText);
+    if (isDefault && SAMPLE_SENTENCES_BY_LANG[lang]) {
+      return SAMPLE_SENTENCES_BY_LANG[lang];
+    }
+    return customTestText || SAMPLE_SENTENCES_BY_LANG[lang] || SAMPLE_SENTENCES_BY_LANG.vi;
+  };
 
   // Dictionary Tab State
   const [dictTab, setDictTab] = useState<string>('all');
@@ -103,6 +123,15 @@ export const VoiceView: React.FC = () => {
         customDictionary: customPronunciationRules.map((r) => ({ term: r.term, reading: r.reading })),
       }
     );
+  };
+
+  const handleSelectActor = (actorId: string) => {
+    setAssignedVoiceId(actorId);
+    const lang = actorId.slice(0, 2);
+    const isDefault = Object.values(SAMPLE_SENTENCES_BY_LANG).includes(customTestText);
+    if (isDefault && SAMPLE_SENTENCES_BY_LANG[lang]) {
+      setCustomTestText(SAMPLE_SENTENCES_BY_LANG[lang]);
+    }
   };
 
   const handleTestPronunciation = async (termText: string) => {
@@ -311,17 +340,26 @@ export const VoiceView: React.FC = () => {
               {[
                 { id: 'all', label: '🌐 Tất Cả' },
                 { id: 'vi', label: '🇻🇳 Tiếng Việt' },
-                { id: 'en', label: '🇺🇸 English (US RPM)' },
-                { id: 'ja', label: '🇯🇵 日本語 (Anime)' },
-                { id: 'ko', label: '🇰🇷 한국어 (Manhwa)' },
+                { id: 'en', label: '🇺🇸 English' },
+                { id: 'ja', label: '🇯🇵 日本語' },
+                { id: 'ko', label: '🇰🇷 한국어' },
+                { id: 'zh', label: '🇨🇳 中文' },
                 { id: 'es', label: '🇪🇸 Español' },
+                { id: 'fr', label: '🇫🇷 Français' },
+                { id: 'de', label: '🇩🇪 Deutsch' },
               ].map((lang) => {
                 const isSel = voiceLangFilter === lang.id;
                 return (
                   <button
                     key={lang.id}
                     type="button"
-                    onClick={() => setVoiceLangFilter(lang.id)}
+                    onClick={() => {
+                      setVoiceLangFilter(lang.id);
+                      if (lang.id !== 'all' && SAMPLE_SENTENCES_BY_LANG[lang.id]) {
+                        const isDefault = Object.values(SAMPLE_SENTENCES_BY_LANG).includes(customTestText);
+                        if (isDefault) setCustomTestText(SAMPLE_SENTENCES_BY_LANG[lang.id]);
+                      }
+                    }}
                     className={`px-2.5 py-1 rounded-lg font-bold border transition-all shrink-0 cursor-pointer ${
                       isSel
                         ? 'bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-400 text-white shadow-md'
@@ -342,7 +380,10 @@ export const VoiceView: React.FC = () => {
                   if (voiceLangFilter === 'en') return actor.id.startsWith('en-') || actor.id.startsWith('v-eleven');
                   if (voiceLangFilter === 'ja') return actor.id.startsWith('ja-');
                   if (voiceLangFilter === 'ko') return actor.id.startsWith('ko-');
+                  if (voiceLangFilter === 'zh') return actor.id.startsWith('zh-');
                   if (voiceLangFilter === 'es') return actor.id.startsWith('es-');
+                  if (voiceLangFilter === 'fr') return actor.id.startsWith('fr-');
+                  if (voiceLangFilter === 'de') return actor.id.startsWith('de-');
                   return true;
                 })
                 .map((actor) => {
@@ -352,7 +393,7 @@ export const VoiceView: React.FC = () => {
                 return (
                   <div
                     key={actor.id}
-                    onClick={() => setAssignedVoiceId(actor.id)}
+                    onClick={() => handleSelectActor(actor.id)}
                     className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       isSelected
                         ? 'bg-violet-950/40 border-violet-500/80 ring-1 ring-violet-500/40 shadow-lg shadow-violet-500/10'
@@ -389,7 +430,7 @@ export const VoiceView: React.FC = () => {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleTestVoice(actor.id, customTestText);
+                          handleTestVoice(actor.id, getTestTextForActor(actor.id));
                         }}
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-lg shadow flex items-center space-x-1 transition-all active:scale-95 cursor-pointer ${
                           isPlayingThis
@@ -398,7 +439,7 @@ export const VoiceView: React.FC = () => {
                         }`}
                       >
                         {isPlayingThis ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3" />}
-                        <span>{isPlayingThis ? 'Dừng Lại' : 'Nghe Thử'}</span>
+                        <span>{isPlayingThis ? 'Dừng' : 'Thử'}</span>
                       </button>
 
                       {isSelected && (
@@ -438,18 +479,47 @@ export const VoiceView: React.FC = () => {
             </div>
 
             {/* Custom Test Text Input */}
-            <div className="space-y-1 text-xs">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                 <span>Câu Thử Nghiệm Giọng Đọc</span>
                 <span className="text-[10px] text-slate-400 font-mono">Tự động áp dụng từ điển</span>
-              </label>
+              </div>
               <textarea
                 value={customTestText}
                 onChange={(e) => setCustomTestText(e.target.value)}
                 rows={2}
                 className="w-full bg-slate-950 text-xs text-white p-2 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500 resize-none font-medium"
-                placeholder="Nhập câu tiếng Việt chứa tên nhân vật hoặc thuật ngữ để nghe thử..."
+                placeholder="Nhập câu thử nghiệm hoặc bấm chọn câu mẫu ngôn ngữ bên dưới..."
               />
+
+              {/* Quick Language Sample Pills */}
+              <div className="flex items-center space-x-1 overflow-x-auto pb-0.5 text-[9.5px]">
+                <span className="text-slate-500 shrink-0 text-[9px] mr-1">Mẫu nhanh:</span>
+                {[
+                  { lang: 'vi', label: '🇻🇳 VN' },
+                  { lang: 'en', label: '🇺🇸 EN' },
+                  { lang: 'ja', label: '🇯🇵 JA' },
+                  { lang: 'ko', label: '🇰🇷 KO' },
+                  { lang: 'zh', label: '🇨🇳 ZH' },
+                  { lang: 'es', label: '🇪🇸 ES' },
+                  { lang: 'fr', label: '🇫🇷 FR' },
+                  { lang: 'de', label: '🇩🇪 DE' },
+                ].map(({ lang, label }) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      if (SAMPLE_SENTENCES_BY_LANG[lang]) {
+                        setCustomTestText(SAMPLE_SENTENCES_BY_LANG[lang]);
+                      }
+                    }}
+                    className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 text-slate-300 hover:text-white transition-all shrink-0 cursor-pointer"
+                    title={`Nạp câu mẫu ${label}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Sliders */}
@@ -491,7 +561,7 @@ export const VoiceView: React.FC = () => {
             <div className="pt-1">
               <button
                 type="button"
-                onClick={() => handleTestVoice(assignedVoiceId, customTestText)}
+                onClick={() => handleTestVoice(assignedVoiceId, getTestTextForActor(assignedVoiceId))}
                 className={`w-full py-2 text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer ${
                   isPlayingSample === assignedVoiceId
                     ? 'bg-amber-600 hover:bg-amber-500 animate-pulse'

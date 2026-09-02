@@ -58,20 +58,36 @@ export class EdgeTtsService {
     genre = '',
     customDictionary = [],
   }) {
-    // 1. Normalize text (replace foreign names, gaming terms, strip markdown/director notes)
-    const cleanedText = normalizeRecapText(text, { genre, customDictionary });
-    if (!cleanedText) {
-      throw new Error('Văn bản trống sau khi chuẩn hóa.');
+    // 1. Map voice IDs to valid Edge Neural Voice IDs
+    let selectedVoice = voice;
+    const KNOWN_VOICE_ALIASES = {
+      'vbee_vi_manhdung_pro': 'vi-VN-NamMinhNeural',
+      'v-vbee-manhdung': 'vi-VN-NamMinhNeural',
+      'vbee_vi_thaotrinh_emotional': 'vi-VN-HoaiMyNeural',
+      'v-vbee-thaotrinh': 'vi-VN-HoaiMyNeural',
+      'vbee_vi_quynhanh_south': 'vi-VN-HoaiMyNeural',
+      'v-vbee-quynhanh': 'vi-VN-HoaiMyNeural',
+      'vbee_vi_bahung_action': 'vi-VN-NamMinhNeural',
+      'v-vbee-bahung': 'vi-VN-NamMinhNeural',
+      'v-eleven-adam': 'en-US-GuyNeural',
+    };
+
+    if (KNOWN_VOICE_ALIASES[voice]) {
+      selectedVoice = KNOWN_VOICE_ALIASES[voice];
+    } else if (voice.endsWith('Neural')) {
+      selectedVoice = voice;
+    } else if (voice.includes('hoaimy') || voice.includes('thaotrinh') || voice.includes('quynhanh')) {
+      selectedVoice = 'vi-VN-HoaiMyNeural';
+    } else if (voice.includes('namminh') || voice.includes('manhdung') || voice.includes('bahung')) {
+      selectedVoice = 'vi-VN-NamMinhNeural';
+    } else {
+      selectedVoice = 'vi-VN-NamMinhNeural';
     }
 
-    // 2. Map voice IDs to valid Edge Neural Voice IDs
-    let selectedVoice = voice;
-    if (voice.includes('hoaimy') || voice.includes('nu') || voice.includes('female') || voice.includes('thaotrinh') || voice.includes('quynhanh')) {
-      selectedVoice = 'vi-VN-HoaiMyNeural';
-    } else if (voice.includes('namminh') || voice.includes('manhdung') || voice.includes('bahung') || voice.includes('huukien') || voice.includes('male')) {
-      selectedVoice = 'vi-VN-NamMinhNeural';
-    } else if (!voice.includes('Neural')) {
-      selectedVoice = 'vi-VN-NamMinhNeural';
+    // 2. Normalize text (language-aware)
+    const cleanedText = normalizeRecapText(text, { genre, customDictionary, voice: selectedVoice });
+    if (!cleanedText) {
+      throw new Error('Văn bản trống sau khi chuẩn hóa.');
     }
 
     // Ensure format of rate and pitch

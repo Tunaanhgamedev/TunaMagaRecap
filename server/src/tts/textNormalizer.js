@@ -224,23 +224,26 @@ export function normalizeRecapText(text, options = {}) {
     }
   }
 
-  // 6. Apply Specific Genre Dictionary (if selected) or All Genre Packs
-  if (options.genre && GENRE_DICTIONARIES[options.genre]) {
-    for (const [pattern, replacement] of GENRE_DICTIONARIES[options.genre]) {
-      cleaned = cleaned.replace(pattern, replacement);
-    }
-  } else {
-    // Scan all genre dictionaries
-    for (const genreKey in GENRE_DICTIONARIES) {
-      for (const [pattern, replacement] of GENRE_DICTIONARIES[genreKey]) {
+  // 6. Apply Specific Genre Dictionary & Recap Terminology ONLY for Vietnamese voices
+  const isVietnameseVoice = !options.voice || options.voice.startsWith('vi-');
+  if (isVietnameseVoice) {
+    if (options.genre && GENRE_DICTIONARIES[options.genre]) {
+      for (const [pattern, replacement] of GENRE_DICTIONARIES[options.genre]) {
         cleaned = cleaned.replace(pattern, replacement);
       }
+    } else {
+      // Scan all genre dictionaries
+      for (const genreKey in GENRE_DICTIONARIES) {
+        for (const [pattern, replacement] of GENRE_DICTIONARIES[genreKey]) {
+          cleaned = cleaned.replace(pattern, replacement);
+        }
+      }
     }
-  }
 
-  // 7. Apply Common Recap Terminology Rules
-  for (const [pattern, replacement] of COMMON_RECAP_RULES) {
-    cleaned = cleaned.replace(pattern, replacement);
+    // 7. Apply Common Recap Terminology Rules
+    for (const [pattern, replacement] of COMMON_RECAP_RULES) {
+      cleaned = cleaned.replace(pattern, replacement);
+    }
   }
 
   // 8. Handle breathing pauses and punctuation
