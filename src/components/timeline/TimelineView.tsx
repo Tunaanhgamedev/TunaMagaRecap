@@ -29,6 +29,7 @@ import {
   Zap,
   Radio,
   PlaySquare,
+  Flame,
 } from 'lucide-react';
 import { YouTubePublisherModal } from '../youtube/YouTubePublisherModal';
 
@@ -731,6 +732,16 @@ export const TimelineView: React.FC = () => {
           >
             <Sparkles className={`w-3.5 h-3.5 ${blurredBackground ? 'text-amber-300' : 'text-slate-500'}`} />
             <span>{blurredBackground ? 'Nền Mờ 2 Bên (BẬT)' : 'Nền Đen Cũ'}</span>
+          </button>
+
+          {/* Viral Lab Jump Button */}
+          <button
+            onClick={() => setActiveTab('viral_lab')}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/40 transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Mở phòng thí nghiệm phân tích độ Viral và tối ưu nhịp độ giữ chân người xem"
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>🔥 Phân Tích Viral</span>
           </button>
 
           {/* Export CapCut */}

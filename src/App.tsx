@@ -13,6 +13,7 @@ const ScriptView = React.lazy(() => import('./components/script/ScriptView').the
 const VoiceView = React.lazy(() => import('./components/voice/VoiceView').then(m => ({ default: m.VoiceView })));
 const SubtitleView = React.lazy(() => import('./components/subtitle/SubtitleView').then(m => ({ default: m.SubtitleView })));
 const TimelineView = React.lazy(() => import('./components/timeline/TimelineView').then(m => ({ default: m.TimelineView })));
+const ViralLabView = React.lazy(() => import('./components/viral/ViralLabView').then(m => ({ default: m.ViralLabView })));
 const ThumbnailView = React.lazy(() => import('./components/thumbnail/ThumbnailView').then(m => ({ default: m.ThumbnailView })));
 const SEOView = React.lazy(() => import('./components/seo/SEOView').then(m => ({ default: m.SEOView })));
 const WorkflowView = React.lazy(() => import('./components/workflow/WorkflowView').then(m => ({ default: m.WorkflowView })));
@@ -52,6 +53,8 @@ export function App() {
         return <SubtitleView />;
       case 'timeline':
         return <TimelineView />;
+      case 'viral_lab':
+        return <ViralLabView />;
       case 'thumbnail':
         return <ThumbnailView />;
       case 'seo':

@@ -18,6 +18,7 @@ import {
   Settings,
   Sparkles,
   Database,
+  Flame,
 } from 'lucide-react';
 
 interface NavItem {
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'voice', label: 'Voice TTS Studio', icon: Mic },
   { id: 'subtitle', label: 'Whisper Subtitle', icon: Subtitles },
   { id: 'timeline', label: 'NLE & CapCut Export', icon: Film, badge: 'CapCut' },
+  { id: 'viral_lab', label: 'Viral Video Lab', icon: Flame, badge: 'Top View' },
   { id: 'thumbnail', label: 'AI Thumbnail', icon: Image },
   { id: 'seo', label: 'YouTube SEO Coach', icon: Globe },
   { id: 'workflow', label: 'Workflow Engine', icon: GitFork, badge: 'Auto' },

@@ -8,6 +8,7 @@ export type ActiveTab =
   | 'voice'
   | 'subtitle'
   | 'timeline'
+  | 'viral_lab' // Video Analysis & Viral Strategy Engine
   | 'thumbnail'
   | 'seo'
   | 'workflow'
@@ -457,6 +458,69 @@ export type VFXType =
   | 'speed_lines'
   | 'eye_flare'
   | 'rain_storm';
+
+export interface BenchmarkChannel {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  subscriberCount: string;
+  targetAudience: string;
+  avgPacingSec: number;
+  cutsPerMinute: number;
+  hookStyle: string;
+  description: string;
+  tips: string[];
+}
+
+export interface ViralHookOption {
+  id: string;
+  type: 'shock' | 'mystery' | 'revenge' | 'system' | 'action';
+  title: string;
+  text: string;
+  retentionRating: number; // 90-99%
+}
+
+export interface ViralAnalysisReport {
+  overallScore: number; // 0 - 100
+  tier: 'S+' | 'A' | 'B' | 'C';
+  totalDurationSec: number;
+  totalClips: number;
+  avgClipDurationSec: number;
+  cutsPerMinute: number;
+  hookAnalysis: {
+    score: number; // 0 - 100
+    hookText: string;
+    hasPowerKeyword: boolean;
+    hasCuriosityGap: boolean;
+    hasConflict: boolean;
+    recommendation: string;
+  };
+  pacingAnalysis: {
+    score: number;
+    avgPacingSec: number;
+    status: 'optimal' | 'too_slow' | 'too_fast';
+    slowClipsCount: number;
+    recommendation: string;
+  };
+  visualAnalysis: {
+    score: number;
+    motionVarietyScore: number;
+    recommendation: string;
+  };
+  subtitleAnalysis: {
+    score: number;
+    subtitlesCount: number;
+    recommendation: string;
+  };
+  viralChecklist: Array<{
+    id: string;
+    title: string;
+    passed: boolean;
+    detail: string;
+  }>;
+  suggestedHooks: ViralHookOption[];
+  analyzedAt: string;
+}
 
 
 

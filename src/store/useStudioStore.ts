@@ -41,6 +41,10 @@ import {
   SoundEffectType,
   MoodBgmType,
   VFXType,
+  AnimationEffectType,
+  ViralAnalysisReport,
+  ViralHookOption,
+  BenchmarkChannel,
 } from '../types/studio';
 
 interface StudioState {
@@ -272,6 +276,16 @@ interface StudioState {
   runFullPipeline: (url: string) => Promise<void>;
   playNarrationAudio: (text: string) => void;
   stopNarrationAudio: () => void;
+
+  // Viral Video Intelligence & Competitor Analysis
+  viralReport: ViralAnalysisReport | null;
+  selectedBenchmarkChannel: string;
+  isAnalyzingViral: boolean;
+  benchmarkChannels: BenchmarkChannel[];
+  runViralAnalysis: () => void;
+  applyViralPacingOptimization: (targetPacingSec?: number) => void;
+  applyViralHookToScript: (hookText: string) => void;
+  setSelectedBenchmarkChannel: (channelId: string) => void;
 }
 
 export const useStudioStore = create<StudioState>()(
@@ -525,6 +539,7 @@ export const useStudioStore = create<StudioState>()(
             glowColor: '#8b5cf6',
           },
         });
+        get().runViralAnalysis();
         return;
       }
     } catch (err) {
@@ -3127,6 +3142,341 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
 
     // Play welcome narration
     get().playNarrationAudio('Chào mừng các bạn đến với Manga Studio AI! Video tóm tắt chapter đã được tạo thành công.');
+
+    // Auto run viral analysis
+    get().runViralAnalysis();
+  },
+
+  // Viral Video Intelligence & Competitor Analysis Implementation
+  viralReport: null,
+  selectedBenchmarkChannel: 'manga_recap_us',
+  isAnalyzingViral: false,
+  benchmarkChannels: [
+    {
+      id: 'manga_recap_us',
+      name: 'Manga Recap / Manhwa Recapped (US Global)',
+      avatarUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150',
+      subscriberCount: '1.8M Subs',
+      targetAudience: 'US / UK / Global (High RPM $8 - $15)',
+      avgPacingSec: 3.2,
+      cutsPerMinute: 18.7,
+      hookStyle: 'Thăng cấp từ phế vật thành bá chủ thế giới trong 3s đầu',
+      description: 'Kênh recap hàng đầu phương Tây. Nhịp dựng dồn dập (3.2s/cảnh), hiệu ứng Ken Burns zoom sâu, nhạc trap/orchestral hùng tráng.',
+      tips: [
+        'Cắt cảnh liên tục mỗi 3.2 giây, không để khung hình đứng yên',
+        'Hook 3s đầu phải có cảnh biến hình hoặc bộc phát sức mạnh',
+        'Phụ đề highlight từ khóa màu vàng neon',
+        'Cliffhanger ngay mốc 50% thời lượng để giữ chân người xem qua quảng cáo giữa',
+      ],
+    },
+    {
+      id: 'vua_review_vn',
+      name: 'Review Truyện Tranh Triệu View (Phong cách VN)',
+      avatarUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150',
+      subscriberCount: '1.2M Subs',
+      targetAudience: 'Việt Nam (TikTok & YouTube Shorts / Long)',
+      avgPacingSec: 3.8,
+      cutsPerMinute: 15.8,
+      hookStyle: 'Dẫn dắt hài hước, cà khịa, giật gân, đẩy cao trào combat',
+      description: 'Phong cách review truyện cực cuốn của các kênh top Việt Nam. Giọng đọc hào sảng, chêm từ lóng ("main bá", "bán hành"), phụ đề to màu vàng CapCut.',
+      tips: [
+        'Phụ đề kiểu TikTok màu vàng viền đen, không che mặt nhân vật',
+        'Thêm âm thanh hiệu ứng (slash, whoosh, system ding) tại điểm cao trào',
+        'Câu hỏi mở ở cuối video để kích thích bình luận tranh luận',
+      ],
+    },
+    {
+      id: 'tutien_huyenhuyen',
+      name: 'Tu Tiên & Thần Thoại Đạo Quán',
+      avatarUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=150',
+      subscriberCount: '950K Subs',
+      targetAudience: 'Đông Nam Á & Trung Quốc',
+      avgPacingSec: 4.0,
+      cutsPerMinute: 15.0,
+      hookStyle: 'Trọng sinh / Cẩu đạo / Diệt môn trả thù',
+      description: 'Chuyên truyện Tiên Hiệp, Huyền Huyễn, Đô Thị Tu Chân. Tập trung bộc phát cảnh giới, đấu pháp hoành tráng.',
+      tips: [
+        'Nhấn mạnh vào các bậc cảnh giới (Luyện Khí, Trúc Cơ, Hóa Thần)',
+        'Nhịp chậm hơn một chút ở đoạn giải thích công pháp (4s)',
+        'Hình ảnh zoom từ dưới lên để tạo cảm giác uy nghiêm thần thánh',
+      ],
+    },
+    {
+      id: 'otome_romance',
+      name: 'Nữ Phụ Phản Diện & Isekai Romance',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      subscriberCount: '680K Subs',
+      targetAudience: 'Khán giả nữ & Fan Isekai Hoàng Gia',
+      avgPacingSec: 4.2,
+      cutsPerMinute: 14.2,
+      hookStyle: 'Trùng sinh vạch trần tra nam & hủy hôn ước',
+      description: 'Tập trung vào biểu cảm khuôn mặt, drama tình cảm gay cấn và sự trả thù sảng khoái.',
+      tips: [
+        'Zoom cận cảnh ánh mắt và nụ cười sắc sảo của nữ chính',
+        'Nhịp độ vừa phải để người xem kịp cảm nhận cảm xúc',
+        'Tạo sự đồng cảm và bức xúc ở 30s đầu',
+      ],
+    },
+  ],
+  setSelectedBenchmarkChannel: (channelId: string) => set({ selectedBenchmarkChannel: channelId }),
+
+  runViralAnalysis: () => {
+    set({ isAnalyzingViral: true });
+    const { clips, scriptData, selectedProject } = get();
+    const totalClips = clips.length;
+    const totalDurationSec = clips.reduce((acc, c) => acc + (c.duration || 4.0), 0) || 12;
+    const avgClipDurationSec = totalClips > 0 ? Number((totalDurationSec / totalClips).toFixed(1)) : 4.0;
+    const cutsPerMinute = Number(((totalClips / (totalDurationSec || 1)) * 60).toFixed(1));
+
+    // 1. Hook Analysis from Script
+    const scriptText = scriptData?.content || '';
+    const firstSentence = scriptText.split(/[.\n?!]/)[0] || '';
+    const powerKeywords = ['sức mạnh', 'chúa tể', 'ma vương', 'thần', 'thức tỉnh', 'bá đạo', 'cấp sss', 'monarch', 'shadow', 'level', 'power', 'arise', 'bất tử', 'đỉnh phong'];
+    const curiosityWords = ['tại sao', 'bí mật', 'bất ngờ', 'không thể tin', 'kinh hoàng', 'sự thật', 'liệu', 'chuyện gì', 'ai ngờ', 'chưa từng thấy'];
+    const conflictWords = ['tiêu diệt', 'đánh bại', 'phản bội', 'sát hại', 'chiến đấu', 'hủy diệt', 'chết', 'báo thù', 'kill', 'betray', 'đồ sát'];
+
+    const lowerScript = scriptText.toLowerCase();
+    const hasPowerKeyword = powerKeywords.some((w) => lowerScript.includes(w));
+    const hasCuriosityGap = curiosityWords.some((w) => lowerScript.includes(w));
+    const hasConflict = conflictWords.some((w) => lowerScript.includes(w));
+
+    let hookScore = 65;
+    if (hasPowerKeyword) hookScore += 12;
+    if (hasCuriosityGap) hookScore += 13;
+    if (hasConflict) hookScore += 10;
+    hookScore = Math.min(100, hookScore);
+
+    // 2. Pacing Score
+    let pacingScore = 70;
+    const slowClips = clips.filter((c) => (c.duration || 4.0) > 5.2);
+    if (avgClipDurationSec >= 3.0 && avgClipDurationSec <= 4.2) {
+      pacingScore = 95;
+    } else if (avgClipDurationSec < 3.0) {
+      pacingScore = 80;
+    } else if (avgClipDurationSec > 5.0) {
+      pacingScore = 60;
+    } else {
+      pacingScore = 85;
+    }
+    if (slowClips.length > 0) pacingScore -= Math.min(20, slowClips.length * 3);
+
+    // 3. Visual Motion Score
+    const motionTypes = new Set(clips.map((c) => c.animationEffect || 'dramatic_zoom'));
+    const motionVarietyScore = Math.min(100, motionTypes.size * 25 + 25);
+
+    // 4. Subtitle Score
+    const subsCount = get().subtitles.length;
+    const subtitleScore = subsCount > 0 ? (subsCount >= totalClips ? 95 : 80) : 40;
+
+    // Overall Weighted Score
+    const overallScore = Math.round(
+      hookScore * 0.35 + pacingScore * 0.35 + motionVarietyScore * 0.15 + subtitleScore * 0.15
+    );
+
+    let tier: 'S+' | 'A' | 'B' | 'C' = 'B';
+    if (overallScore >= 90) tier = 'S+';
+    else if (overallScore >= 80) tier = 'A';
+    else if (overallScore >= 70) tier = 'B';
+    else tier = 'C';
+
+    const seriesName = selectedProject?.seriesName || 'Truyện Tranh';
+    const chapterNum = selectedProject?.chapterNumber || 1;
+
+    const suggestedHooks: ViralHookOption[] = [
+      {
+        id: 'hook-1',
+        type: 'shock',
+        title: '💥 Gây Sốc Tức Thì (Shock Hook)',
+        text: `Bạn có tin nổi không? Một kẻ từng bị cả thế giới xem là phế vật vừa một tay đấm nát Ma Vương Cấp SSS trong chớp mắt!`,
+        retentionRating: 98,
+      },
+      {
+        id: 'hook-2',
+        type: 'mystery',
+        title: '❓ Bí Ẩn Gây Tò Mò (Curiosity Gap)',
+        text: `Bí mật kinh hoàng đằng sau kỹ năng thức tỉnh của ${seriesName} Chapter ${chapterNum} mà không một thợ săn nào dám nhắc tới...`,
+        retentionRating: 95,
+      },
+      {
+        id: 'hook-3',
+        type: 'revenge',
+        title: '🗡️ Trùng Sinh Báo Thù (Revenge / Comeback)',
+        text: `Bị phản bội và sát hại ở kiếp trước, giờ đây hắn tái sinh với ký ức 10 năm sau để bắt từng kẻ một phải quỳ gối xin tha!`,
+        retentionRating: 96,
+      },
+      {
+        id: 'hook-4',
+        type: 'system',
+        title: '⚡ Hệ Thống Thăng Cấp (Power System Level-Up)',
+        text: `[ĐINH! Kích hoạt nhiệm vụ ẩn: Tiêu diệt toàn bộ hầm ngục, phần thưởng: Thức tỉnh sức mạnh Thần Cấp!]`,
+        retentionRating: 94,
+      },
+      {
+        id: 'hook-5',
+        type: 'action',
+        title: '⚔️ Trận Chiến Sinh Tử (Combat In Medias Res)',
+        text: `Ngay giây phút lưỡi đao ma thần chỉ còn cách cổ họng một tấc, một luồng hắc khí ngập trời bỗng nhiên bao trùm cả chiến trường!`,
+        retentionRating: 97,
+      },
+    ];
+
+    const report: ViralAnalysisReport = {
+      overallScore,
+      tier,
+      totalDurationSec,
+      totalClips,
+      avgClipDurationSec,
+      cutsPerMinute,
+      hookAnalysis: {
+        score: hookScore,
+        hookText: firstSentence || 'Chưa có câu mở đầu rõ ràng trong kịch bản.',
+        hasPowerKeyword,
+        hasCuriosityGap,
+        hasConflict,
+        recommendation: hasCuriosityGap && hasPowerKeyword
+          ? 'Hook mở đầu đạt chuẩn hấp dẫn, tạo sự tò mò cao cho 3 giây đầu.'
+          : 'Nên thêm từ khóa thăng cấp bá đạo hoặc câu hỏi tò mò vào 3 giây đầu để ngăn người xem lướt qua.',
+      },
+      pacingAnalysis: {
+        score: pacingScore,
+        avgPacingSec: avgClipDurationSec,
+        status: avgClipDurationSec <= 4.2 ? 'optimal' : 'too_slow',
+        slowClipsCount: slowClips.length,
+        recommendation: avgClipDurationSec <= 4.2
+          ? 'Nhịp chuyển cảnh đạt chuẩn vàng của các kênh triệu view (3.0s - 4.2s/cảnh).'
+          : `Có ${slowClips.length} cảnh kéo dài hơn 5s. Bấm "Tự Động Tinh Chỉnh Nhịp Timeline" để đưa về chuẩn 3.5s/cảnh.`,
+      },
+      visualAnalysis: {
+        score: motionVarietyScore,
+        motionVarietyScore,
+        recommendation: motionTypes.size >= 3
+          ? 'Hiệu ứng chuyển động phong phú (Zoom, Pan, Tilt), giữ nhãn quan người xem liên tục.'
+          : 'Nên đa dạng hóa thêm hiệu ứng Ken Burns Pan & Zoom để khung tranh sống động như anime.',
+      },
+      subtitleAnalysis: {
+        score: subtitleScore,
+        subtitlesCount: subsCount,
+        recommendation: subsCount > 0
+          ? 'Phụ đề đầy đủ khớp với mạch truyện, kích thích xem hết video trên điện thoại.'
+          : 'Chưa tạo phụ đề. Hãy tạo phụ đề CapCut vàng để tăng 40% retention.',
+      },
+      viralChecklist: [
+        {
+          id: 'c1',
+          title: 'Hook 3 Giây Đầu Có Yếu Tố Tò Mò / Gây Sốc',
+          passed: hasCuriosityGap || hasPowerKeyword,
+          detail: 'Câu đầu tiên kích thích trí tò mò hoặc báo hiệu cảnh thăng cấp bá đạo.',
+        },
+        {
+          id: 'c2',
+          title: 'Nhịp Chuyển Cảnh Trung Bình Dưới 4.5 Giây',
+          passed: avgClipDurationSec <= 4.5,
+          detail: `Hiện tại: ${avgClipDurationSec}s/cảnh. Chuẩn triệu view: 3.2s - 4.2s.`,
+        },
+        {
+          id: 'c3',
+          title: 'Không Có Cảnh Tĩnh Quá 5.5 Giây',
+          passed: slowClips.length === 0,
+          detail: slowClips.length === 0 ? 'Tất cả cảnh đều chuyển động linh hoạt.' : `Còn ${slowClips.length} cảnh quá dài làm tụt tương tác.`,
+        },
+        {
+          id: 'c4',
+          title: 'Hiệu Ứng Ken Burns Zoom Đa Dạng',
+          passed: motionTypes.size >= 2,
+          detail: `Có ${motionTypes.size} loại chuyển động khung hình trên timeline.`,
+        },
+        {
+          id: 'c5',
+          title: 'Phụ Đề Phong Cách CapCut / TikTok',
+          passed: subsCount > 0,
+          detail: subsCount > 0 ? `Đã có ${subsCount} dòng phụ đề đồng bộ.` : 'Cần sinh phụ đề để giữ chân người xem tắt tiếng.',
+        },
+        {
+          id: 'c6',
+          title: 'Kịch Bản Chứa Từ Khóa Cảm Xúc Cao (Emotional Triggers)',
+          passed: hasConflict,
+          detail: hasConflict ? 'Kịch bản có xung đột kịch tính rõ ràng.' : 'Nên bổ sung cao trào giao tranh hoặc plot twist.',
+        },
+        {
+          id: 'c7',
+          title: 'Thời Lượng Video Đạt Chuẩn Đề Xuất',
+          passed: totalDurationSec >= 30,
+          detail: `${Math.round(totalDurationSec)} giây (phù hợp Shorts hoặc trích đoạn Chapter hấp dẫn).`,
+        },
+      ],
+      suggestedHooks,
+      analyzedAt: new Date().toLocaleTimeString('vi-VN'),
+    };
+
+    set({ viralReport: report, isAnalyzingViral: false });
+  },
+
+  applyViralPacingOptimization: (targetPacingSec = 3.5) => {
+    const { clips } = get();
+    if (clips.length === 0) return;
+
+    const MOTION_PRESETS: AnimationEffectType[] = [
+      'dramatic_zoom',
+      'pan_up',
+      'zoom_in',
+      'pan_down',
+      'shake',
+    ];
+
+    let currentStartTime = 0;
+    // CRITICAL: We preserve 100% of the scraped images, their URLs, titles, colors, tracks!
+    // We only optimize the duration and vary the camera motion effect to match viral channels!
+    const optimizedClips: TimelineClip[] = clips.map((clip, idx) => {
+      // Dynamic pacing: Opening 3 clips are slightly faster (2.8s) for ultra retention; rest are targetPacingSec
+      const duration = idx < 3 ? Math.max(2.5, targetPacingSec - 0.7) : targetPacingSec;
+      const startTime = currentStartTime;
+      currentStartTime += duration;
+
+      return {
+        ...clip,
+        startTime,
+        duration,
+        animationEffect: clip.animationEffect || MOTION_PRESETS[idx % MOTION_PRESETS.length],
+      };
+    });
+
+    const newDuration = Math.max(12, currentStartTime);
+
+    // Also re-align subtitles proportionally so they match the optimized pacing!
+    const { subtitles } = get();
+    const ratio = clips.length > 0 && currentStartTime > 0 ? currentStartTime / (get().duration || currentStartTime) : 1;
+    const adjustedSubtitles = subtitles.map((s) => ({
+      ...s,
+      startTime: Number((s.startTime * ratio).toFixed(2)),
+      endTime: Number((s.endTime * ratio).toFixed(2)),
+    }));
+
+    set({
+      clips: optimizedClips,
+      subtitles: adjustedSubtitles,
+      duration: newDuration,
+    });
+
+    // Re-run viral analysis to immediately show the updated 95+ score!
+    get().runViralAnalysis();
+  },
+
+  applyViralHookToScript: (hookText: string) => {
+    const { scriptData } = get();
+    if (!scriptData) return;
+
+    const cleanHook = hookText.trim();
+    const updatedContent = `🔥 [3-SECOND VIRAL HOOK]: "${cleanHook}"\n\n${scriptData.content}`;
+
+    set({
+      scriptData: {
+        ...scriptData,
+        content: updatedContent,
+        wordCount: updatedContent.split(/\s+/).length,
+      },
+    });
+
+    get().runViralAnalysis();
   },
 }),
     {
