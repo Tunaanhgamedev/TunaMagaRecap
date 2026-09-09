@@ -97,6 +97,7 @@ export const TimelineView: React.FC = () => {
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
   const [mergeBumpers, setMergeBumpers] = useState(true);
+  const [showSubtitleOverlay, setShowSubtitleOverlay] = useState(true);
 
   // Flatten all panels from all pages into a continuous sequence of video timeline blocks
   const panelTimeline = React.useMemo(() => {
@@ -439,8 +440,8 @@ export const TimelineView: React.FC = () => {
         // 4. Render 2.5D Motion Comic VFX Particle Overlay (Embers, Aura Smoke, Speed Lines, Eye Flare, Rain)
         motionComicVFXEngine.renderVFX(ctx, canvas.width, canvas.height, vfxOverlay, Date.now());
 
-        // 5. Render TikTok / Shorts High-Retention Viral Captions
-        if (activeItem.dialogueText) {
+        // 5. Render TikTok / Shorts High-Retention Viral Captions (toggleable)
+        if (showSubtitleOverlay && activeItem.dialogueText) {
           ctx.save();
           const isPortrait = aspectRatio === '9:16';
           const fontSize = isPortrait ? 36 : 28;
@@ -511,7 +512,7 @@ export const TimelineView: React.FC = () => {
       lastSpokenPanelIdRef.current = '';
       stopNarrationAudio();
     }
-  }, [currentTime, isPlaying, panelTimeline, aspectRatio, blurredBackground, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
+  }, [currentTime, isPlaying, panelTimeline, aspectRatio, blurredBackground, showSubtitleOverlay, totalVideoDuration, isMuted, isVoiceMuted, audioVolume]);
 
   // CapCut 1-Click Export Function
   const handleExportCapCutDraft = () => {
@@ -734,6 +735,19 @@ export const TimelineView: React.FC = () => {
             <span>{blurredBackground ? 'Nền Mờ 2 Bên (BẬT)' : 'Nền Đen Cũ'}</span>
           </button>
 
+          {/* Subtitle Overlay Toggle Button */}
+          <button
+            onClick={() => setShowSubtitleOverlay((prev) => !prev)}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer shadow-sm active:scale-95 ${
+              showSubtitleOverlay
+                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 border-yellow-400 text-white shadow-yellow-900/30'
+                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+            }`}
+            title="Bật/Tắt phụ đề chữ trên video (nếu chỉ cần giọng đọc thì tắt)"
+          >
+            <Subtitles className={`w-3.5 h-3.5 ${showSubtitleOverlay ? 'text-yellow-200' : 'text-slate-500'}`} />
+            <span>{showSubtitleOverlay ? 'Phụ Đề (BẬT)' : 'Phụ Đề (TẮT)'}</span>
+          </button>
           {/* Viral Lab Jump Button */}
           <button
             onClick={() => setActiveTab('viral_lab')}
