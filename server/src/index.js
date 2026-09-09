@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -16,6 +17,12 @@ import { GENRE_DICTIONARIES } from './tts/textNormalizer.js';
 const PORT = 3001;
 const prisma = new PrismaClient();
 const DB_FILE = path.join(process.cwd(), 'server', 'db.json');
+const IMAGE_CACHE_DIR = path.join(process.cwd(), 'server', '.cache', 'images');
+try {
+  fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
+} catch (e) {}
+
+const inFlightImageFetches = new Map();
 
 const loadDB = () => {
   try {
@@ -44,6 +51,169 @@ const setCORSHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };
 
+async function resolveAndFetchImage(imageUrl, initialReferer = null) {
+  if (!imageUrl) return null;
+
+  // 1. Direct Buffer extraction for base64 Data URLs (user uploaded images)
+  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+    const commaIndex = imageUrl.indexOf(',');
+    if (commaIndex !== -1) {
+      const match = imageUrl.match(/^data:([^;]+);/);
+      const contentType = match ? match[1] : 'image/jpeg';
+      return {
+        buffer: Buffer.from(imageUrl.slice(commaIndex + 1), 'base64'),
+        contentType,
+        fromCache: true,
+      };
+    }
+  }
+
+  let targetUrl = imageUrl;
+  let customReferer = initialReferer;
+
+  // 2. Unwrap nested /api/proxy-image URLs
+  while (typeof targetUrl === 'string' && (targetUrl.includes('/api/proxy-image') || targetUrl.includes('/proxy-image?'))) {
+    try {
+      const dummyBase = `http://localhost:${PORT}`;
+      const parsed = new URL(targetUrl, dummyBase);
+      const realUrl = parsed.searchParams.get('url');
+      const ref = parsed.searchParams.get('referer');
+      if (realUrl && realUrl !== targetUrl) {
+        targetUrl = realUrl;
+        if (ref && !customReferer) customReferer = ref;
+      } else {
+        break;
+      }
+    } catch (e) {
+      break;
+    }
+  }
+
+  // Handle relative paths
+  if (typeof targetUrl === 'string' && targetUrl.startsWith('/')) {
+    try {
+      const baseOrigin = customReferer ? new URL(customReferer).origin : 'https://asuracomic.net';
+      targetUrl = `${baseOrigin}${targetUrl}`;
+    } catch (e) {
+      targetUrl = `https://asuracomic.net${targetUrl}`;
+    }
+  }
+
+  // 3. Persistent Disk Cache Check
+  const cacheKey = crypto.createHash('md5').update(targetUrl).digest('hex');
+  const cacheBinPath = path.join(IMAGE_CACHE_DIR, `${cacheKey}.bin`);
+  const cacheMetaPath = path.join(IMAGE_CACHE_DIR, `${cacheKey}.json`);
+
+  if (fs.existsSync(cacheBinPath)) {
+    try {
+      let contentType = 'image/jpeg';
+      if (fs.existsSync(cacheMetaPath)) {
+        const meta = JSON.parse(fs.readFileSync(cacheMetaPath, 'utf8'));
+        if (meta && meta.contentType) contentType = meta.contentType;
+      }
+      const buffer = fs.readFileSync(cacheBinPath);
+      if (buffer && buffer.length > 0) {
+        return { buffer, contentType, fromCache: true };
+      }
+    } catch (err) {}
+  }
+
+  // 4. In-Flight Request Deduplication
+  if (inFlightImageFetches.has(cacheKey)) {
+    return await inFlightImageFetches.get(cacheKey);
+  }
+
+  // 5. Build and execute fetch with prioritized candidate referrers
+  const fetchPromise = (async () => {
+    try {
+      const candidateReferers = [];
+
+      // Smart domain-matched referrers FIRST for zero delay
+      if (targetUrl.includes('nettruyen') || targetUrl.includes('viestorage') || (customReferer && customReferer.includes('nettruyen'))) {
+        candidateReferers.push('https://nettruyen.africa/');
+        candidateReferers.push('https://nettruyenco.com/');
+        candidateReferers.push('https://nhattruyen.com/');
+      } else if (targetUrl.includes('thuviensach') || (customReferer && customReferer.includes('thuviensach'))) {
+        candidateReferers.push('https://thuviensach.vn/');
+      } else if (targetUrl.includes('asura') || (customReferer && customReferer.includes('asura'))) {
+        candidateReferers.push('https://asuracomic.net/');
+      } else if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
+        candidateReferers.push('https://truyenqqko.com/');
+        candidateReferers.push('https://truyenvua.com/');
+      } else if (targetUrl.includes('blogtruyen') || (customReferer && customReferer.includes('blogtruyen'))) {
+        candidateReferers.push('https://blogtruyen.vn/');
+        candidateReferers.push('https://blogtruyenmoi.com/');
+      }
+
+      if (customReferer) {
+        candidateReferers.push(customReferer);
+        try {
+          candidateReferers.push(new URL(customReferer).origin + '/');
+        } catch (e) {}
+      }
+
+      try {
+        const imgHost = new URL(targetUrl).hostname;
+        candidateReferers.push(`https://${imgHost}/`);
+      } catch (e) {}
+
+      candidateReferers.push('https://google.com/');
+      candidateReferers.push('');
+
+      const uniqueReferers = Array.from(new Set(candidateReferers.filter((r) => r !== undefined)));
+
+      let imgRes = null;
+      let lastStatus = 502;
+      for (const ref of uniqueReferers) {
+        try {
+          const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          };
+          if (ref) headers['Referer'] = ref;
+
+          const testRes = await fetch(targetUrl, {
+            headers,
+            signal: AbortSignal.timeout(6000),
+          });
+          if (testRes.ok) {
+            imgRes = testRes;
+            break;
+          } else {
+            lastStatus = testRes.status;
+          }
+        } catch (e) {}
+      }
+
+      if (!imgRes) {
+        throw new Error(`Upstream image server returned HTTP ${lastStatus} for ${targetUrl}`);
+      }
+
+      const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+      const arrayBuffer = await imgRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Save to disk cache
+      try {
+        fs.writeFileSync(cacheBinPath, buffer);
+        fs.writeFileSync(cacheMetaPath, JSON.stringify({ contentType, url: targetUrl, savedAt: Date.now() }));
+      } catch (err) {}
+
+      return { buffer, contentType, fromCache: false };
+    } finally {
+      inFlightImageFetches.delete(cacheKey);
+    }
+  })();
+
+  inFlightImageFetches.set(cacheKey, fetchPromise);
+  return await fetchPromise;
+}
+
+async function resolveAndFetchImageBuffer(imageUrl) {
+  const result = await resolveAndFetchImage(imageUrl);
+  return result?.buffer || null;
+}
+
 const server = http.createServer(async (req, res) => {
   setCORSHeaders(res);
 
@@ -70,7 +240,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 2. GET Dynamic Live Image Proxy (Streams bytes with correct Referer for any Manga CDN)
+  // 2. GET Dynamic Live Image Proxy (Streams bytes with correct Referer and Disk Caching)
   if (pathname === '/api/proxy-image' && req.method === 'GET') {
     const targetImageUrl = reqUrl.searchParams.get('url');
     const customReferer = reqUrl.searchParams.get('referer');
@@ -82,87 +252,20 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      let fullTargetUrl = targetImageUrl;
-
-      if (targetImageUrl.startsWith('/')) {
-        try {
-          const baseOrigin = customReferer ? new URL(customReferer).origin : 'https://asuracomic.net';
-          fullTargetUrl = `${baseOrigin}${targetImageUrl}`;
-        } catch (e) {
-          fullTargetUrl = `https://asuracomic.net${targetImageUrl}`;
-        }
+      const result = await resolveAndFetchImage(targetImageUrl, customReferer);
+      if (!result || !result.buffer) {
+        res.writeHead(502);
+        res.end('Failed to proxy image: upstream unavailable');
+        return;
       }
-
-      const candidateReferers = [];
-      if (customReferer) {
-        candidateReferers.push(customReferer);
-        try {
-          candidateReferers.push(new URL(customReferer).origin + '/');
-        } catch (e) {}
-      }
-
-      try {
-        const imgHost = new URL(fullTargetUrl).hostname;
-        candidateReferers.push(`https://${imgHost}/`);
-      } catch (e) {}
-
-      if (fullTargetUrl.includes('nettruyen') || fullTargetUrl.includes('viestorage') || (customReferer && customReferer.includes('nettruyen'))) {
-        candidateReferers.push('https://nettruyen.africa/');
-        candidateReferers.push('https://nettruyenco.com/');
-        candidateReferers.push('https://nhattruyen.com/');
-      }
-      if (fullTargetUrl.includes('truyenvua') || fullTargetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
-        candidateReferers.push('https://truyenqqko.com/');
-        candidateReferers.push('https://truyenvua.com/');
-      }
-      if (fullTargetUrl.includes('thuviensach')) {
-        candidateReferers.push('https://thuviensach.vn/');
-      }
-      if (fullTargetUrl.includes('asura')) {
-        candidateReferers.push('https://asuracomic.net/');
-      }
-      if (fullTargetUrl.includes('blogtruyen')) {
-        candidateReferers.push('https://blogtruyen.vn/');
-        candidateReferers.push('https://blogtruyenmoi.com/');
-      }
-      candidateReferers.push('https://google.com/');
-      candidateReferers.push('');
-
-      const uniqueReferers = Array.from(new Set(candidateReferers.filter((r) => r !== undefined)));
-
-      let imgRes = null;
-      let lastStatus = 502;
-      for (const ref of uniqueReferers) {
-        try {
-          const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          };
-          if (ref) headers['Referer'] = ref;
-
-          const testRes = await fetch(fullTargetUrl, { headers });
-          if (testRes.ok) {
-            imgRes = testRes;
-            break;
-          } else {
-            lastStatus = testRes.status;
-          }
-        } catch (e) {}
-      }
-
-      if (!imgRes) {
-        throw new Error(`Upstream image server returned HTTP ${lastStatus}`);
-      }
-
-      const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-      const arrayBuffer = await imgRes.arrayBuffer();
 
       res.writeHead(200, {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400',
+        'Content-Type': result.contentType || 'image/jpeg',
+        'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
+        'X-Cache-Status': result.fromCache ? 'HIT' : 'MISS',
       });
-      res.end(Buffer.from(arrayBuffer));
+      res.end(result.buffer);
     } catch (err) {
       res.writeHead(502);
       res.end('Failed to proxy image: ' + err.message);
@@ -501,88 +604,6 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-
-async function resolveAndFetchImageBuffer(imageUrl) {
-  if (!imageUrl) return null;
-
-  // 1. Direct Buffer extraction for base64 Data URLs (user uploaded images)
-  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
-    const commaIndex = imageUrl.indexOf(',');
-    if (commaIndex !== -1) {
-      return Buffer.from(imageUrl.slice(commaIndex + 1), 'base64');
-    }
-  }
-
-  let targetUrl = imageUrl;
-  let customReferer = null;
-
-  if (imageUrl.startsWith('/api/proxy-image') || imageUrl.includes('/api/proxy-image')) {
-    try {
-      const proxyUrl = new URL(imageUrl, `http://localhost:${PORT}`);
-      const realUrl = proxyUrl.searchParams.get('url');
-      if (realUrl) {
-        targetUrl = realUrl;
-        customReferer = proxyUrl.searchParams.get('referer');
-      }
-    } catch (e) {}
-  }
-
-  const candidateReferers = [];
-  if (customReferer) {
-    candidateReferers.push(customReferer);
-    try {
-      candidateReferers.push(new URL(customReferer).origin + '/');
-    } catch (e) {}
-  }
-
-  try {
-    const imgHost = new URL(targetUrl).hostname;
-    candidateReferers.push(`https://${imgHost}/`);
-  } catch (e) {}
-
-  if (targetUrl.includes('nettruyen') || targetUrl.includes('viestorage') || (customReferer && customReferer.includes('nettruyen'))) {
-    candidateReferers.push('https://nettruyen.africa/');
-    candidateReferers.push('https://nettruyenco.com/');
-    candidateReferers.push('https://nhattruyen.com/');
-  }
-  if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
-    candidateReferers.push('https://truyenqqko.com/');
-    candidateReferers.push('https://truyenvua.com/');
-  }
-  if (targetUrl.includes('thuviensach')) {
-    candidateReferers.push('https://thuviensach.vn/');
-  }
-  if (targetUrl.includes('asura')) {
-    candidateReferers.push('https://asuracomic.net/');
-  }
-  if (targetUrl.includes('blogtruyen')) {
-    candidateReferers.push('https://blogtruyen.vn/');
-    candidateReferers.push('https://blogtruyenmoi.com/');
-  }
-  candidateReferers.push('https://google.com/');
-  candidateReferers.push('');
-
-  const uniqueReferers = Array.from(new Set(candidateReferers.filter((r) => r !== undefined)));
-
-  for (const ref of uniqueReferers) {
-    try {
-      const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-      };
-      if (ref) headers['Referer'] = ref;
-
-      const imgRes = await fetch(targetUrl, { headers });
-      if (imgRes.ok) {
-        const arrayBuffer = await imgRes.arrayBuffer();
-        return Buffer.from(arrayBuffer);
-      }
-    } catch (e) {}
-  }
-
-  console.warn(`[Image Fetcher] All referers failed to download image from ${targetUrl}`);
-  return null;
-}
 
   // 5. POST Real OCR - Extract actual text from manga page images using Tesseract.js
   if (pathname === '/api/ocr/detect' && req.method === 'POST') {

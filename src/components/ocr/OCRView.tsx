@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useStudioStore } from "../../store/useStudioStore";
 import { API_BASE_URL, getProxyImageUrl } from "../../utils/constants";
 import {
@@ -40,6 +40,9 @@ import {
 export const OCRView: React.FC = () => {
   const {
     pages,
+    selectedProject,
+    isLoadingProject,
+    scrapeStatusMessage,
     activePageIndex,
     setActivePageIndex,
     updateDialogueText,
@@ -93,6 +96,7 @@ export const OCRView: React.FC = () => {
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isRunningOCR, setIsRunningOCR] = useState(false);
+  const [isMainImageLoading, setIsMainImageLoading] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,6 +117,30 @@ export const OCRView: React.FC = () => {
     initialW: 0,
     initialH: 0,
   });
+
+  const currentPage = pages[activePageIndex] || pages[0];
+
+  useEffect(() => {
+    if (currentPage) {
+      setIsMainImageLoading(true);
+    }
+  }, [activePageIndex, currentPage?.id]);
+
+  if (isLoadingProject) {
+    return (
+      <div className="p-8 max-w-xl mx-auto text-center space-y-4">
+        <div className="glass-panel p-8 rounded-2xl border border-slate-800 space-y-4">
+          <div className="w-10 h-10 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-base font-bold text-white">
+            Đang Tải Dữ Liệu Chapter...
+          </h2>
+          <p className="text-xs text-cyan-300 font-mono">
+            {scrapeStatusMessage || 'Đang chuẩn bị trang ảnh và các khung panel...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (pages.length === 0) {
     return (
@@ -137,8 +165,6 @@ export const OCRView: React.FC = () => {
       </div>
     );
   }
-
-  const currentPage = pages[activePageIndex] || pages[0];
 
   // Mouse Drag / Move Handler
   const handleMouseDownMove = (
@@ -848,8 +874,10 @@ export const OCRView: React.FC = () => {
                   }`}
                 >
                   <img
-                    src={getProxyImageUrl((p as any).rawImageUrl || p.imageUrl, "https://truyenqqko.com/")}
+                    src={getProxyImageUrl((p as any).rawImageUrl || p.imageUrl, selectedProject?.sourceUrl)}
                     alt={`Thumb ${idx + 1}`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = p.imageUrl;
@@ -945,12 +973,24 @@ export const OCRView: React.FC = () => {
               ref={containerRef}
               className="relative w-full max-h-[620px] overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 flex justify-center p-1.5 select-none"
             >
-              <div className="relative inline-block">
+              <div className="relative inline-block min-h-[300px]">
+                {isMainImageLoading && (
+                  <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center z-30 rounded">
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="w-8 h-8 border-3 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[11px] text-cyan-300 font-mono">Đang tải ảnh trang {currentPage.pageIndex}...</span>
+                    </div>
+                  </div>
+                )}
                 <img
-                  src={currentPage.cleanedImageUrl || getProxyImageUrl((currentPage as any).rawImageUrl || currentPage.imageUrl, "https://truyenqqko.com/")}
+                  src={currentPage.cleanedImageUrl || getProxyImageUrl((currentPage as any).rawImageUrl || currentPage.imageUrl, selectedProject?.sourceUrl)}
                   alt={`Page ${currentPage.pageIndex}`}
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => setIsMainImageLoading(false)}
                   className="block max-w-full max-h-[580px] w-auto h-auto object-contain rounded shadow-lg pointer-events-none"
                   onError={(e) => {
+                    setIsMainImageLoading(false);
                     (e.currentTarget as HTMLImageElement).src =
                       currentPage.imageUrl;
                   }}

@@ -305,11 +305,13 @@ export const LibraryView: React.FC = () => {
                         src={page.imageUrl.startsWith('http') ? page.imageUrl : `http://localhost:3001${page.imageUrl.startsWith('/') ? '' : '/'}${page.imageUrl}`}
                         referrerPolicy="no-referrer"
                         alt={`Page ${page.pageIndex}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           const raw = (page as any).rawImageUrl || page.imageUrl;
-                          const fallback = getProxyImageUrl(raw, mangaUrlInput.trim() || 'https://truyenqqko.com/');
+                          const fallback = getProxyImageUrl(raw, selectedProject?.sourceUrl || mangaUrlInput.trim() || 'https://truyenqqko.com/');
                           if (target.src !== fallback) {
                             target.src = fallback;
                           }
@@ -701,9 +703,18 @@ export const LibraryView: React.FC = () => {
                                 <Clock className="w-3 h-3 text-amber-400" />
                                 <span>~{Math.round(ch.durationEst || 240)}s</span>
                               </span>
-                              <span className="text-cyan-400 font-semibold hover:underline">
-                                Bấm để sửa →
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  loadProject(ch.id);
+                                  setActiveTab('ocr');
+                                }}
+                                className="text-cyan-400 hover:text-cyan-200 font-bold hover:underline flex items-center space-x-0.5 cursor-pointer"
+                                title="Mở trực tiếp chapter này trong không gian chỉnh sửa OCR"
+                              >
+                                <span>Mở OCR →</span>
+                              </button>
                             </div>
                           </div>
                         );

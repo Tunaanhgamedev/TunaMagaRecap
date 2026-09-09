@@ -21,6 +21,8 @@ dist
 dist-ssr
 *.local
 server/cache/
+server/.cache/
+.cache/
 public/cache/
 
 # Editor directories and files
