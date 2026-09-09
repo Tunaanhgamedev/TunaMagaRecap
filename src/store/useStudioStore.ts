@@ -275,6 +275,7 @@ interface StudioState {
   pipelineStep: number;
   runFullPipeline: (url: string) => Promise<void>;
   playNarrationAudio: (text: string) => void;
+  preloadNarrationAudio: (text: string) => void;
   stopNarrationAudio: () => void;
 
   // Viral Video Intelligence & Competitor Analysis
@@ -2476,8 +2477,62 @@ export const useStudioStore = create<StudioState>()(
 
   voiceActors: [
     {
+      id: 'capcut_vi_thanhnu',
+      name: 'CapCut - Thanh Nữ (Hoạt Ngôn, Review Manga Triệu View)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'capcut_vi_thanhnu',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      description: '⭐ [HOT TREND CAPCUT] Giọng nữ trẻ trung, lanh lợi, dứt khoát. Chuẩn giọng review tóm tắt truyện tranh & phim ảnh triệu view TikTok/Shorts.',
+    },
+    {
+      id: 'vbee_vi_thaotrinh',
+      name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_thaotrinh',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+      description: '⭐ [HOT VBEE] Giọng nữ Hà Nội ngọt ngào, ấm áp, sâu lắng. Chuyên truyện Ngôn Tình, Drama, Isekai, Nữ Phụ Phản Diện.',
+    },
+    {
+      id: 'vbee_vi_quynhanh',
+      name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'vbee_vi_quynhanh',
+      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+      description: '⭐ [HOT VBEE] Giọng nữ Sài Gòn nhẹ nhàng, trong trẻo, tự nhiên. Cực kỳ bắt tai khi kể chuyện tình cảm, hài hước, đời thường.',
+    },
+    {
+      id: 'capcut_vi_diudang',
+      name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'capcut_vi_diudang',
+      avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150',
+      description: 'Giọng nữ trầm ấm huyền bí, thì thầm truyền cảm. Tuyệt phẩm cho truyện Tu Tiên, Huyền Huyễn, Kinh Dị, Ma Thần.',
+    },
+    {
+      id: 'google_vi_chigoogle',
+      name: 'Chị Google (Huyền Thoại Meme / Tấu Hài TikTok)',
+      gender: 'female',
+      provider: 'capcut_edge',
+      voiceKey: 'google_vi_chigoogle',
+      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+      description: '⭐ [HUYỀN THOẠI] Giọng đọc nữ kinh điển của Google Translate tiếng Việt, phản hồi tức thì <200ms, siêu viral TikTok.',
+    },
+    {
+      id: 'vi-VN-HoaiMyNeural',
+      name: 'Hoài My (Microsoft Edge Neural Nguyên Bản)',
+      gender: 'female',
+      provider: 'azure',
+      voiceKey: 'vi-VN-HoaiMyNeural',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      description: 'Giọng nữ ngọt ngào, truyền cảm hứng, phát âm tự nhiên chuẩn Microsoft Neural.',
+    },
+    {
       id: 'vi-VN-NamMinhNeural',
-      name: 'Nam Minh (Microsoft Edge Neural)',
+      name: 'Nam Minh (Microsoft Edge Neural - Hào Hùng Cấp SSS)',
       gender: 'male',
       provider: 'azure',
       voiceKey: 'vi-VN-NamMinhNeural',
@@ -2485,47 +2540,20 @@ export const useStudioStore = create<StudioState>()(
       description: '⭐ [KHUYÊN DÙNG] Giọng nam MC hào hùng, uy lực, chuyên review Manga/Manhwa/Tu Tiên triệu view YouTube.',
     },
     {
-      id: 'vi-VN-HoaiMyNeural',
-      name: 'Hoài My (Microsoft Edge Neural)',
-      gender: 'female',
-      provider: 'azure',
-      voiceKey: 'vi-VN-HoaiMyNeural',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      description: '⭐ [KHUYÊN DÙNG] Giọng nữ truyền cảm, ngọt ngào, chuyên truyện Ngôn tình, Isekai, Nữ phụ phản diện.',
-    },
-    {
-      id: 'v-vbee-manhdung',
-      name: 'Vbee - Mạnh Dũng (Hà Nội)',
+      id: 'vbee_vi_manhdung',
+      name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
       gender: 'male',
       provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_manhdung_pro',
+      voiceKey: 'vbee_vi_manhdung',
       avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      description: 'Giọng nam Hà Nội trầm ấm, truyền cảm, chuyên review truyện tranh & phim ảnh.',
+      description: 'Giọng nam Hà Nội trầm ấm, truyền cảm, phong cách kể chuyện điện ảnh.',
     },
     {
-      id: 'v-vbee-thaotrinh',
-      name: 'Vbee - Thảo Trinh (Hà Nội)',
-      gender: 'female',
-      provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_thaotrinh_emotional',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      description: 'Giọng nữ Hà Nội ngọt ngào, biểu cảm sâu sắc, chuyên thuyết minh manga.',
-    },
-    {
-      id: 'v-vbee-quynhanh',
-      name: 'Vbee - Quỳnh Anh (TP.HCM)',
-      gender: 'female',
-      provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_quynhanh_south',
-      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-      description: 'Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn người nghe trên TikTok / YouTube.',
-    },
-    {
-      id: 'v-vbee-bahung',
-      name: 'Vbee - Bá Hùng (TP.HCM)',
+      id: 'vbee_vi_bahung',
+      name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
       gender: 'male',
       provider: 'capcut_edge',
-      voiceKey: 'vbee_vi_bahung_action',
+      voiceKey: 'vbee_vi_bahung',
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
       description: 'Giọng nam miền Nam hào sảng, kịch tính, phù hợp các phân cảnh combat gay cấn.',
     },
@@ -3101,6 +3129,11 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
     }
     const vol = Math.max(0, Math.min(1, audioVolume / 100));
     voiceAudioEngine.speak(text, assignedVoiceId, 1.05, 1.0, vol);
+  },
+
+  preloadNarrationAudio: (text: string) => {
+    const { assignedVoiceId } = get();
+    voiceAudioEngine.preload(text, assignedVoiceId, 1.05, 1.0);
   },
 
   stopNarrationAudio: () => {

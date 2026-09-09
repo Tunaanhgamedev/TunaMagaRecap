@@ -27,6 +27,9 @@ export function sanitizeTextForSpeech(rawText: string): string {
     // Strip speaker role tags like **[Dẫn Chuyện]**:, **[Nhân Vật]**:
     .replace(/\*\*\[.*?\]\*\*:?/g, '')
     .replace(/\[\/?(Dẫn Chuyện|Nhân vật|Phản Diện|Gợi Ý|BGM|SFX|Audio|Speaker|Trang \d+|Panel \d+).*?\]:?/gi, '')
+    // Replace dummy scraper placeholder phrases with natural narrative phrasing
+    .replace(/phân đoạn \d+ của trang truyện\.?/gi, 'diễn biến tiếp theo của câu chuyện.')
+    .replace(/phân cảnh trang \d+\.?/gi, 'diễn biến mới.')
     // Strip annotations in brackets
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*\)/g, ' ')
@@ -122,6 +125,52 @@ class VoiceAudioEngine {
     }
 
     return this.cachedVoices[0] || null;
+  }
+
+  /**
+   * Preload / prefetch speech audio into memory cache so timeline playback is 0ms instant
+   */
+  public async preload(
+    text: string,
+    voiceId: string = 'vi-VN-NamMinhNeural',
+    rate: number = 1.15,
+    pitch: number = 1.0,
+    options?: {
+      genre?: string;
+      customDictionary?: Array<{ term: string; reading: string }>;
+    }
+  ): Promise<string | null> {
+    const cleanText = sanitizeTextForSpeech(text);
+    if (!cleanText) return null;
+
+    const genreKey = options?.genre || 'all';
+    const dictHash = options?.customDictionary?.length ? `_dict${options.customDictionary.length}` : '';
+    const cacheKey = `${voiceId}_${rate}_${pitch}_${genreKey}${dictHash}_${cleanText}`;
+
+    if (this.memoryCache.has(cacheKey)) {
+      return this.memoryCache.get(cacheKey)!;
+    }
+
+    try {
+      const rateStr = rate >= 1.0 ? `+${Math.round((rate - 1.0) * 100)}%` : `${Math.round((rate - 1.0) * 100)}%`;
+      const ttsData = await synthesizeVoiceAudioApi({
+        text: cleanText,
+        voice: voiceId,
+        rate: rateStr,
+        pitch: '+0Hz',
+        genre: options?.genre,
+        customDictionary: options?.customDictionary,
+      });
+
+      if (ttsData && (ttsData.base64 || ttsData.audioUrl)) {
+        const audioSrc = ttsData.base64 || ttsData.audioUrl;
+        this.memoryCache.set(cacheKey, audioSrc);
+        return audioSrc;
+      }
+    } catch {
+      // Ignore background preload errors
+    }
+    return null;
   }
 
   /**

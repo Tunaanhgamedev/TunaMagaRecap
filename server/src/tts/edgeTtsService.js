@@ -4,7 +4,8 @@ import path from 'path';
 import crypto from 'crypto';
 import { normalizeRecapText, splitTextIntoChunks } from './textNormalizer.js';
 
-const CACHE_DIR = path.join(process.cwd(), 'server', 'cache', 'audio');
+const BASE_SERVER_DIR = process.cwd().endsWith('server') ? process.cwd() : path.join(process.cwd(), 'server');
+const CACHE_DIR = path.join(BASE_SERVER_DIR, 'cache', 'audio');
 
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -46,43 +47,277 @@ async function synthesizeChunkWithRetry(chunkText, voice, rate, pitch, retries =
   throw lastErr || new Error('Không thể kết nối đến máy chủ Edge Neural TTS.');
 }
 
+export const VOICE_PROFILES = {
+  // 1. CapCut Viral Female (Thanh Nữ / Hoạt Ngôn)
+  'capcut_vi_thanhnu': {
+    id: 'capcut_vi_thanhnu',
+    name: 'CapCut - Thanh Nữ (Hoạt Ngôn, Review Manga Triệu View)',
+    gender: 'female',
+    provider: 'CapCut AI',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+18%',
+    defaultPitch: '+3.5Hz',
+    engine: 'edge',
+  },
+  'v-capcut-thanhnu': {
+    id: 'v-capcut-thanhnu',
+    name: 'CapCut - Thanh Nữ (Hoạt Ngôn, Review Manga Triệu View)',
+    gender: 'female',
+    provider: 'CapCut AI',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+18%',
+    defaultPitch: '+3.5Hz',
+    engine: 'edge',
+  },
+
+  // 2. Vbee Thảo Trinh (Ngôn Tình, Kể Chuyện Đêm Khuya / Sâu Lắng)
+  'vbee_vi_thaotrinh': {
+    id: 'vbee_vi_thaotrinh',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+4%',
+    defaultPitch: '-1.5Hz',
+    engine: 'edge',
+  },
+  'vbee_vi_thaotrinh_emotional': {
+    id: 'vbee_vi_thaotrinh_emotional',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+4%',
+    defaultPitch: '-1.5Hz',
+    engine: 'edge',
+  },
+  'v-vbee-thaotrinh': {
+    id: 'v-vbee-thaotrinh',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+4%',
+    defaultPitch: '-1.5Hz',
+    engine: 'edge',
+  },
+
+  // 3. Vbee Quỳnh Anh (Miền Nam - Ngọt Ngào, Nữ Sinh Dịu Dàng)
+  'vbee_vi_quynhanh': {
+    id: 'vbee_vi_quynhanh',
+    name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+10%',
+    defaultPitch: '+2.0Hz',
+    engine: 'edge',
+  },
+  'vbee_vi_quynhanh_south': {
+    id: 'vbee_vi_quynhanh_south',
+    name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+10%',
+    defaultPitch: '+2.0Hz',
+    engine: 'edge',
+  },
+  'v-vbee-quynhanh': {
+    id: 'v-vbee-quynhanh',
+    name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+10%',
+    defaultPitch: '+2.0Hz',
+    engine: 'edge',
+  },
+
+  // 4. CapCut Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị / Tu Tiên)
+  'capcut_vi_diudang': {
+    id: 'capcut_vi_diudang',
+    name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
+    gender: 'female',
+    provider: 'CapCut AI',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '-2%',
+    defaultPitch: '-3.0Hz',
+    engine: 'edge',
+  },
+  'v-capcut-diudang': {
+    id: 'v-capcut-diudang',
+    name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
+    gender: 'female',
+    provider: 'CapCut AI',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '-2%',
+    defaultPitch: '-3.0Hz',
+    engine: 'edge',
+  },
+
+  // 5. Chị Google (Huyền thoại Meme / TikTok)
+  'google_vi_chigoogle': {
+    id: 'google_vi_chigoogle',
+    name: 'Chị Google (Huyền Thoại Meme / Tấu Hài TikTok)',
+    gender: 'female',
+    provider: 'Google Translate',
+    engine: 'google',
+  },
+  'v-google-chigoogle': {
+    id: 'v-google-chigoogle',
+    name: 'Chị Google (Huyền Thoại Meme / Tấu Hài TikTok)',
+    gender: 'female',
+    provider: 'Google Translate',
+    engine: 'google',
+  },
+
+  // 6. Hoài My (Edge Neural Original)
+  'vi-VN-HoaiMyNeural': {
+    id: 'vi-VN-HoaiMyNeural',
+    name: 'Hoài My (Microsoft Edge Neural Nguyên Bản)',
+    gender: 'female',
+    provider: 'Microsoft Edge Neural',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+10%',
+    defaultPitch: '+0Hz',
+    engine: 'edge',
+  },
+
+  // 7. Vbee Mạnh Dũng (Nam MC Hà Nội Hào Hùng)
+  'vbee_vi_manhdung': {
+    id: 'vbee_vi_manhdung',
+    name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+12%',
+    defaultPitch: '-0.5Hz',
+    engine: 'edge',
+  },
+  'vbee_vi_manhdung_pro': {
+    id: 'vbee_vi_manhdung_pro',
+    name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+12%',
+    defaultPitch: '-0.5Hz',
+    engine: 'edge',
+  },
+  'v-vbee-manhdung': {
+    id: 'v-vbee-manhdung',
+    name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+12%',
+    defaultPitch: '-0.5Hz',
+    engine: 'edge',
+  },
+
+  // 8. Nam Minh (Edge Neural Original)
+  'vi-VN-NamMinhNeural': {
+    id: 'vi-VN-NamMinhNeural',
+    name: 'Nam Minh (Microsoft Edge Neural - Hào Hùng Cấp SSS)',
+    gender: 'male',
+    provider: 'Microsoft Edge Neural',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+15%',
+    defaultPitch: '+0Hz',
+    engine: 'edge',
+  },
+
+  // 9. Vbee Bá Hùng (Nam Miền Nam Kịch Tính)
+  'vbee_vi_bahung': {
+    id: 'vbee_vi_bahung',
+    name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+14%',
+    defaultPitch: '+0Hz',
+    engine: 'edge',
+  },
+  'vbee_vi_bahung_action': {
+    id: 'vbee_vi_bahung_action',
+    name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+14%',
+    defaultPitch: '+0Hz',
+    engine: 'edge',
+  },
+  'v-vbee-bahung': {
+    id: 'v-vbee-bahung',
+    name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
+    gender: 'male',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-NamMinhNeural',
+    defaultRate: '+14%',
+    defaultPitch: '+0Hz',
+    engine: 'edge',
+  },
+};
+
 export class EdgeTtsService {
+  /**
+   * Synthesize text via Google Translate TTS for ultra-fast, zero-rate-limit narration
+   */
+  static async synthesizeGoogleTTS(text) {
+    const chunks = splitTextIntoChunks(text, 180);
+    const audioBuffers = [];
+
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=vi&client=tw-ob`;
+      const resp = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://translate.google.com/',
+        },
+      });
+      if (!resp.ok) {
+        throw new Error(`Google TTS error: ${resp.status}`);
+      }
+      const arrayBuf = await resp.arrayBuffer();
+      audioBuffers.push(Buffer.from(arrayBuf));
+    }
+
+    return Buffer.concat(audioBuffers);
+  }
+
   /**
    * Synthesize text to MP3 with disk caching and phonetic text normalization
    */
   static async synthesize({
     text,
     voice = 'vi-VN-NamMinhNeural',
-    rate = '+15%',
-    pitch = '+0Hz',
+    rate,
+    pitch,
     genre = '',
     customDictionary = [],
   }) {
-    // 1. Map voice IDs to valid Edge Neural Voice IDs
-    let selectedVoice = voice;
-    const KNOWN_VOICE_ALIASES = {
-      'vbee_vi_manhdung_pro': 'vi-VN-NamMinhNeural',
-      'v-vbee-manhdung': 'vi-VN-NamMinhNeural',
-      'vbee_vi_thaotrinh_emotional': 'vi-VN-HoaiMyNeural',
-      'v-vbee-thaotrinh': 'vi-VN-HoaiMyNeural',
-      'vbee_vi_quynhanh_south': 'vi-VN-HoaiMyNeural',
-      'v-vbee-quynhanh': 'vi-VN-HoaiMyNeural',
-      'vbee_vi_bahung_action': 'vi-VN-NamMinhNeural',
-      'v-vbee-bahung': 'vi-VN-NamMinhNeural',
-      'v-eleven-adam': 'en-US-GuyNeural',
-    };
+    // 1. Resolve Voice Profile
+    const profile = VOICE_PROFILES[voice];
+    const isGoogleEngine = profile?.engine === 'google' || voice.includes('google');
 
-    if (KNOWN_VOICE_ALIASES[voice]) {
-      selectedVoice = KNOWN_VOICE_ALIASES[voice];
+    let selectedVoice = 'vi-VN-NamMinhNeural';
+    if (profile?.baseVoice) {
+      selectedVoice = profile.baseVoice;
     } else if (voice.endsWith('Neural')) {
       selectedVoice = voice;
-    } else if (voice.includes('hoaimy') || voice.includes('thaotrinh') || voice.includes('quynhanh')) {
+    } else if (voice.includes('hoaimy') || voice.includes('thanhnu') || voice.includes('thaotrinh') || voice.includes('quynhanh') || voice.includes('diudang')) {
       selectedVoice = 'vi-VN-HoaiMyNeural';
     } else if (voice.includes('namminh') || voice.includes('manhdung') || voice.includes('bahung')) {
       selectedVoice = 'vi-VN-NamMinhNeural';
-    } else {
-      selectedVoice = 'vi-VN-NamMinhNeural';
+    } else if (voice.startsWith('en-') || voice.startsWith('ja-') || voice.startsWith('ko-') || voice.startsWith('zh-') || voice.startsWith('es-') || voice.startsWith('fr-') || voice.startsWith('de-')) {
+      selectedVoice = voice;
     }
+
+    // Determine rate & pitch with profile defaults
+    let resolvedRate = rate || profile?.defaultRate || '+15%';
+    let resolvedPitch = pitch || profile?.defaultPitch || '+0Hz';
 
     // 2. Normalize text (language-aware)
     const cleanedText = normalizeRecapText(text, { genre, customDictionary, voice: selectedVoice });
@@ -91,28 +326,28 @@ export class EdgeTtsService {
     }
 
     // Ensure format of rate and pitch
-    let formattedRate = rate;
-    if (typeof rate === 'number') {
-      const pct = Math.round((rate - 1.0) * 100);
+    let formattedRate = resolvedRate;
+    if (typeof formattedRate === 'number') {
+      const pct = Math.round((formattedRate - 1.0) * 100);
       formattedRate = pct >= 0 ? `+${pct}%` : `${pct}%`;
     }
-    if (!formattedRate.includes('%')) {
+    if (typeof formattedRate !== 'string' || !formattedRate.includes('%')) {
       formattedRate = '+15%';
     }
 
-    let formattedPitch = pitch;
-    if (typeof pitch === 'number') {
-      const hz = Math.round((pitch - 1.0) * 50);
+    let formattedPitch = resolvedPitch;
+    if (typeof formattedPitch === 'number') {
+      const hz = Math.round((formattedPitch - 1.0) * 50);
       formattedPitch = hz >= 0 ? `+${hz}Hz` : `${hz}Hz`;
     }
-    if (!formattedPitch.includes('Hz')) {
+    if (typeof formattedPitch !== 'string' || !formattedPitch.includes('Hz')) {
       formattedPitch = '+0Hz';
     }
 
     // 3. Generate MD5 Cache Key
     const hash = crypto
       .createHash('md5')
-      .update(`${selectedVoice}_${formattedRate}_${formattedPitch}_${cleanedText}`)
+      .update(`${isGoogleEngine ? 'google_vi' : selectedVoice}_${formattedRate}_${formattedPitch}_${cleanedText}`)
       .digest('hex');
 
     const fileName = `${hash}.mp3`;
@@ -132,27 +367,32 @@ export class EdgeTtsService {
           cached: true,
           cleanedText,
           duration: Math.max(1, Math.round(audioBuffer.length / 12000)),
-          voice: selectedVoice,
+          voice: isGoogleEngine ? 'google_vi_chigoogle' : selectedVoice,
         };
       }
     }
 
-    // 5. Chunk text if long and synthesize
-    const chunks = splitTextIntoChunks(cleanedText, 700);
-    const audioBuffers = [];
+    // 5. Synthesize via Google TTS or Edge TTS
+    let finalBuffer;
+    if (isGoogleEngine) {
+      finalBuffer = await EdgeTtsService.synthesizeGoogleTTS(cleanedText);
+    } else {
+      const chunks = splitTextIntoChunks(cleanedText, 700);
+      const audioBuffers = [];
 
-    for (const chunk of chunks) {
-      const chunkBuffer = await synthesizeChunkWithRetry(chunk, selectedVoice, formattedRate, formattedPitch, 2);
-      if (chunkBuffer && chunkBuffer.length > 0) {
-        audioBuffers.push(chunkBuffer);
+      for (const chunk of chunks) {
+        const chunkBuffer = await synthesizeChunkWithRetry(chunk, selectedVoice, formattedRate, formattedPitch, 2);
+        if (chunkBuffer && chunkBuffer.length > 0) {
+          audioBuffers.push(chunkBuffer);
+        }
       }
+
+      if (audioBuffers.length === 0) {
+        throw new Error('Không nhận được luồng âm thanh từ Edge TTS.');
+      }
+      finalBuffer = Buffer.concat(audioBuffers);
     }
 
-    if (audioBuffers.length === 0) {
-      throw new Error('Không nhận được luồng âm thanh từ Edge TTS.');
-    }
-
-    const finalBuffer = Buffer.concat(audioBuffers);
     await fs.promises.writeFile(filePath, finalBuffer);
 
     return {

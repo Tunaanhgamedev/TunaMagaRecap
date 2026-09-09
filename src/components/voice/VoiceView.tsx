@@ -61,7 +61,16 @@ export const VoiceView: React.FC = () => {
   );
 
   const getTestTextForActor = (actorId: string) => {
-    const lang = actorId.slice(0, 2);
+    let lang = actorId.slice(0, 2);
+    if (
+      actorId.includes('_vi_') ||
+      actorId.startsWith('vi-') ||
+      actorId.includes('vbee') ||
+      actorId.includes('capcut') ||
+      actorId.includes('google')
+    ) {
+      lang = 'vi';
+    }
     const isDefault = Object.values(SAMPLE_SENTENCES_BY_LANG).includes(customTestText);
     if (isDefault && SAMPLE_SENTENCES_BY_LANG[lang]) {
       return SAMPLE_SENTENCES_BY_LANG[lang];
@@ -127,7 +136,16 @@ export const VoiceView: React.FC = () => {
 
   const handleSelectActor = (actorId: string) => {
     setAssignedVoiceId(actorId);
-    const lang = actorId.slice(0, 2);
+    let lang = actorId.slice(0, 2);
+    if (
+      actorId.includes('_vi_') ||
+      actorId.startsWith('vi-') ||
+      actorId.includes('vbee') ||
+      actorId.includes('capcut') ||
+      actorId.includes('google')
+    ) {
+      lang = 'vi';
+    }
     const isDefault = Object.values(SAMPLE_SENTENCES_BY_LANG).includes(customTestText);
     if (isDefault && SAMPLE_SENTENCES_BY_LANG[lang]) {
       setCustomTestText(SAMPLE_SENTENCES_BY_LANG[lang]);
@@ -376,7 +394,14 @@ export const VoiceView: React.FC = () => {
               {voiceActors
                 .filter((actor) => {
                   if (voiceLangFilter === 'all') return true;
-                  if (voiceLangFilter === 'vi') return actor.id.startsWith('vi-') || actor.id.startsWith('v-vbee');
+                  if (voiceLangFilter === 'vi')
+                    return (
+                      actor.id.startsWith('vi-') ||
+                      actor.id.includes('_vi_') ||
+                      actor.id.includes('vbee') ||
+                      actor.id.includes('capcut') ||
+                      actor.id.includes('google')
+                    );
                   if (voiceLangFilter === 'en') return actor.id.startsWith('en-') || actor.id.startsWith('v-eleven');
                   if (voiceLangFilter === 'ja') return actor.id.startsWith('ja-');
                   if (voiceLangFilter === 'ko') return actor.id.startsWith('ko-');

@@ -49,6 +49,7 @@ export const TimelineView: React.FC = () => {
     setAssignedVoiceId,
     setActiveTab,
     playNarrationAudio,
+    preloadNarrationAudio,
     stopNarrationAudio,
     audioVolume,
     setAudioVolume,
@@ -143,14 +144,18 @@ export const TimelineView: React.FC = () => {
             ];
 
       pagePanels.forEach((panel, panIdx) => {
-        const d =
-          panel.dialogues && panel.dialogues[0]
-            ? panel.dialogues[0]
-            : {
-                speaker: 'Dẫn Chuyện',
-                text: `Diễn biến gay cấn tại Trang ${page.pageIndex} Panel ${panIdx + 1}.`,
-                emotion: 'neutral',
-              };
+        let dialogueStr = `Diễn biến gay cấn tại Trang ${page.pageIndex} Panel ${panIdx + 1}.`;
+        let speakerStr = 'Dẫn Chuyện';
+        let emotionStr = 'neutral';
+
+        if (panel.dialogues && panel.dialogues[0]) {
+          const raw = ((panel.dialogues[0] as any).translatedText || panel.dialogues[0].text || '').trim();
+          if (raw && !raw.includes('của trang truyện') && !raw.includes('Phân đoạn')) {
+            dialogueStr = raw;
+          }
+          speakerStr = panel.dialogues[0].speaker || speakerStr;
+          emotionStr = panel.dialogues[0].emotion || emotionStr;
+        }
 
         timelineItems.push({
           id: `t-${page.pageIndex}-${panIdx + 1}`,
@@ -162,9 +167,9 @@ export const TimelineView: React.FC = () => {
           cameraEffect: (panel.suggestedCameraEffect as string) || 'dramatic_zoom',
           startTime: cursor,
           duration: defaultDurationPerPanel,
-          speaker: d.speaker,
-          dialogueText: d.text,
-          emotion: d.emotion,
+          speaker: speakerStr,
+          dialogueText: dialogueStr,
+          emotion: emotionStr,
         });
         cursor += defaultDurationPerPanel;
       });
@@ -485,8 +490,17 @@ export const TimelineView: React.FC = () => {
 
         if (canSpeak && activeItem.dialogueText) {
           playNarrationAudio(activeItem.dialogueText);
-        } else {
-          stopNarrationAudio();
+
+          // Proactively pre-cache upcoming 3 panels so speech is 0ms instant with zero lag!
+          const curIdx = panelTimeline.findIndex((item) => item.id === activeItem.id);
+          if (curIdx >= 0) {
+            for (let i = 1; i <= 3; i++) {
+              const nextItem = panelTimeline[curIdx + i];
+              if (nextItem && nextItem.dialogueText) {
+                preloadNarrationAudio(nextItem.dialogueText);
+              }
+            }
+          }
         }
       } else if (!canSpeak) {
         stopNarrationAudio();
@@ -665,7 +679,18 @@ export const TimelineView: React.FC = () => {
                 const newV = e.target.value;
                 setAssignedVoiceId(newV);
                 if (!isVoiceMuted && !isMuted) {
-                  playNarrationAudio(activePanelInfo?.text || 'Đã chuyển sang giọng đọc Vbee mới!');
+                  const sampleIntro = newV.includes('thanhnu')
+                    ? 'Xin chào! Đây là giọng nữ CapCut hoạt ngôn, review manga siêu cuốn hút.'
+                    : newV.includes('thaotrinh')
+                    ? 'Xin chào các bạn. Đây là giọng nữ Thảo Trinh ngọt ngào, truyền cảm xúc sâu lắng.'
+                    : newV.includes('quynhanh')
+                    ? 'Dạ xin chào mọi người nha! Đây là giọng nữ Quỳnh Anh miền Nam dịu dàng, tự nhiên.'
+                    : newV.includes('diudang')
+                    ? 'Chào mừng bạn đến với thế giới truyện tranh huyền bí và ma mị.'
+                    : newV.includes('google')
+                    ? 'Chào các bạn, đây là chị Google huyền thoại review truyện tranh tấu hài.'
+                    : 'Đã chuyển sang giọng lồng tiếng AI mới!';
+                  playNarrationAudio(sampleIntro);
                 }
               }}
               className="bg-slate-950 border border-slate-700 text-cyan-300 text-[11px] font-bold rounded px-2 py-1 focus:outline-none focus:border-cyan-400"
@@ -684,13 +709,35 @@ export const TimelineView: React.FC = () => {
                   setIsVoiceMuted(false);
                   setIsMuted(false);
                 }
-                playNarrationAudio(
-                  activePanelInfo?.text || 'Xin chào! Đây là giọng lồng tiếng AI Vbee chất lượng cao.'
-                );
+                const sampleIntro = assignedVoiceId.includes('thanhnu')
+                  ? 'Xin chào! Đây là giọng nữ CapCut hoạt ngôn, review manga siêu cuốn hút.'
+                  : assignedVoiceId.includes('thaotrinh')
+                  ? 'Xin chào các bạn. Đây là giọng nữ Thảo Trinh ngọt ngào, truyền cảm xúc sâu lắng.'
+                  : assignedVoiceId.includes('quynhanh')
+                  ? 'Dạ xin chào mọi người nha! Đây là giọng nữ Quỳnh Anh miền Nam dịu dàng, tự nhiên.'
+                  : assignedVoiceId.includes('diudang')
+                  ? 'Chào mừng bạn đến với thế giới truyện tranh huyền bí và ma mị.'
+                  : assignedVoiceId.includes('google')
+                  ? 'Chào các bạn, đây là chị Google huyền thoại review truyện tranh tấu hài.'
+                  : 'Xin chào! Đây là giọng lồng tiếng AI chất lượng cao cho video recap truyện tranh.';
+                playNarrationAudio(sampleIntro);
               }}
               className="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow cursor-pointer flex items-center space-x-1 transition-all active:scale-95"
             >
               <span>🔊 Nghe Thử Voice</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const uniqueTexts = Array.from(new Set(panelTimeline.map((p) => p.dialogueText).filter(Boolean)));
+                uniqueTexts.slice(0, 30).forEach((t) => preloadNarrationAudio(t));
+              }}
+              className="bg-amber-600/80 hover:bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow cursor-pointer flex items-center space-x-1 transition-all active:scale-95"
+              title="Tải sẵn toàn bộ giọng đọc chapter vào bộ nhớ để xem mượt mà 0ms độ trễ"
+            >
+              <Zap className="w-3 h-3 text-yellow-300" />
+              <span>⚡ Nạp Voice 0ms</span>
             </button>
           </div>
 
