@@ -11,7 +11,7 @@
 
 **Hệ sinh thái tự động hóa sản xuất Video Tóm Tắt Truyện Tranh (Manga/Manhwa/Manhua Recap) chuẩn YouTube & TikTok triệu view chỉ với 1-Click.**
 
-[Tính Năng Pro](#-tính-năng-nổi-bật) • [Cài Đặt](#-hướng-dẫn-cài-đặt--khởi-chạy) • [Quy Trình Sản Xuất](#-quy-trình-sản-xuất-video-tự-động) • [Xuất Dữ Liệu](#-các-định-dạng-xuất-dữ-liệu) • [Tech Stack](#-công-nghệ-sử-dụng)
+[Tính Năng Pro](#-tính-năng-nổi-bật) • [Viral Lab](#10--viral-video-lab--phân-tích-kênh-đối-thủ-top-view-retention-optimization) • [Cài Đặt](#-hướng-dẫn-cài-đặt--khởi-chạy) • [Quy Trình Sản Xuất](#-quy-trình-sản-xuất-video-tự-động) • [Xuất Dữ Liệu](#-các-định-dạng-xuất-dữ-liệu) • [Tech Stack](#-công-nghệ-sử-dụng)
 
 </div>
 
@@ -53,13 +53,26 @@
   - `👁️ Mắt Lóe Sáng (Eye Flare)`: Mắt lóe sáng đỏ neon khi tung chiêu.
   - `🌧️ Mưa Sấm (Rain Storm)`: Mưa rơi kèm tia chớp flash kịch tính.
 
-### 6. 🌍 Multi-Language Global Dubbing (Kiếm Tiền RPM Mỹ)
-- Tích hợp sẵn bộ giọng đọc quốc tế chuẩn Manhwa Recap:
-  - 🇻🇳 **Tiếng Việt**: Nam Minh, Hoài My, Vbee Mạnh Dũng, Thảo Trinh, Quỳnh Anh, Bá Hùng.
+### 6. 🌍 Multi-Language Global Dubbing (Kiếm Tiền RPM Mỹ & Giọng Đọc Cuốn Hút)
+- **Hệ thống diễn viên lồng tiếng AI chất lượng cao (Microsoft Edge Neural + Google TTS)**:
+  - 🇻🇳 **Bộ Sưu Tập Giọng Nữ Truyện Tranh Cực Hay (CapCut & Vbee Pro)**:
+    - 🌸 **CapCut - Thanh Nữ**: Trẻ trung, hoạt ngôn, dứt khoát (`+18% rate, +3.5Hz pitch`) — chuẩn giọng review tóm tắt manga triệu view TikTok/Shorts.
+    - 🎭 **Vbee - Thảo Trinh (Hà Nội)**: Ấm áp, sâu lắng, ngọt ngào (`+4% rate, -1.5Hz pitch`) — chuyên Ngôn Tình, Drama, Isekai, Nữ Phụ Phản Diện.
+    - 🍯 **Vbee - Quỳnh Anh (TP.HCM)**: Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn (`+10% rate, +2.0Hz pitch`).
+    - ✨ **CapCut - Nữ Dịu Dàng**: Trầm ấm huyền bí, thì thầm truyền cảm (`-2% rate, -3.0Hz pitch`) — chuyên Tu Tiên, Huyền Huyễn, Ma Mị.
+    - 🤖 **Chị Google Huyền Thoại**: Giọng đọc kinh điển Google Translate tiếng Việt, phản hồi siêu tốc `< 200ms`, phong cách tấu hài viral TikTok.
+    - 👑 **Hoài My**: Giọng nữ phát thanh viên Microsoft Edge Neural nguyên bản.
+  - 🇻🇳 **Giọng Nam Hào Hùng**:
+    - 🔥 **Nam Minh**: Giọng nam hào hùng, uy lực, chuyên review Manhwa Tu Tiên cấp SSS.
+    - ⚡ **Vbee - Mạnh Dũng (Hà Nội)**: Nam MC trầm ấm, truyền cảm, phong thái điện ảnh.
+    - ⚔️ **Vbee - Bá Hùng (TP.HCM)**: Nam miền Nam hào sảng, kịch tính, chuyên phân cảnh combat.
   - 🇺🇸 **Tiếng Anh (US RPM Cao)**: Guy (US Manhwa Narrator Pro), Christopher (Epic Movie Narrator), Jenny (US Female Anime Host).
-  - 🇯🇵 **Tiếng Nhật**: Keita (Anime Narrator).
-  - 🇰🇷 **Tiếng Hàn**: InJoon (Korean Manhwa Narrator).
-  - 🇪🇸 **Tiếng Tây Ban Nha**: Alvaro (Spanish Global Recap).
+  - 🇯🇵 **Tiếng Nhật**: Keita (Anime Narrator), Nanami (Anime Heroine).
+  - 🇰🇷 **Tiếng Hàn**: InJoon (Korean Manhwa Narrator), SunHi (Webtoon Heroine).
+  - 🇨🇳 **Tiếng Trung**: Yunxi (Tu Tiên Pro), Xiaoxiao (Manhua Host).
+  - 🇪🇸 **Tiếng Tây Ban Nha**: Alvaro (Global Recap), Elvira (Female Host).
+  - 🇫🇷 **Tiếng Pháp**: Henri (French Cinema Narrator).
+  - 🇩🇪 **Tiếng Đức**: Conrad (German Epic Voice).
 
 ### 7. 🚀 Direct YouTube Uploader & Channel Publisher
 - Nút **"🚀 Đăng YouTube"** trực tiếp trên Timeline.
@@ -74,6 +87,33 @@
 ### 9. 🎞️ 5-Track NLE Timeline & CapCut Export
 - Dựng phim đa kênh: Track Ảnh/Chuyển Động, Track Voice Thuyết Minh, Track Phụ Đề, Track Nhạc Nền (BGM), Track Hiệu Ứng (VFX).
 - Xuất dự án **CapCut Draft JSON 1-Click** hoặc **Render Video MP4/WebM trực tiếp**.
+
+### 10. 🔥 Viral Video Lab & Phân Tích Kênh Đối Thủ (Top View Retention Optimization)
+- **Benchmark 4 Kênh Recap Triệu View Hàng Đầu**:
+  - `Manga Hype (1.2M Subs)`: Nhịp cắt cực nhanh 1.8s, giữ chân khán giả liên tục.
+  - `Anime Recap Pro (850K Subs)`: Nhịp cân bằng 3.2s, nhấn mạnh cảm xúc nhân vật.
+  - `Manhwa Realm (620K Subs)`: Nhịp cinematic 4.0s, tập trung vào chiều sâu đồ họa.
+  - `Shorts Manga 60s (2.1M Subs)`: Tốc độ giật gân 1.4s, tối ưu thuật toán TikTok/Shorts.
+- **Chẩn Đoán Điểm Viral Score (Thang 0-100)**: Đánh giá chi tiết 4 chỉ số:
+  - `Hook Giữ Chân 5s Đầu`: Đánh giá sức hút mở màn.
+  - `Nhịp Cắt Chuyển Cảnh (Pacing)`: Tối ưu thời gian chiếu từng Panel.
+  - `Cường Độ Cảm Xúc (Emotional Arc)`: Phân bổ cao trào theo từng hồi kịch bản.
+  - `Giọng Thuyết Minh & Audio (Retention)`: Kết hợp voice AI và sound effects.
+- **5 Mẫu Câu Hook Triệu View Đóng Sẵn**: Cliffhanger giật gân, Shonen Hype chiến đấu, Tu Tiên bá đạo, Drama ngôn tình, Hài hước cà khịa.
+- **Nút 1-Click Tự Động Tối Ưu**: Áp dụng nhịp chuyển cảnh chuẩn kênh đối thủ và chèn Hook thẳng vào kịch bản dẫn chuyện.
+- Nút bấm truy cập nhanh **"🔥 Phân Tích Viral"** ngay trên thanh công cụ Timeline.
+
+### 11. 💬 Bật / Tắt Phụ Đề Chữ Trên Video Canvas (Subtitle Overlay Toggle)
+- Nút toggle thông minh **`Phụ Đề (BẬT)` / `Phụ Đề (TẮT)`** trên thanh điều khiển Timeline.
+- Cho phép người sáng tạo tự do lựa chọn:
+  - **Bật Phụ Đề**: Hiển thị chữ vàng neon TikTok Punch Style viền đen dày nổi bật.
+  - **Tắt Phụ Đề**: Ẩn phụ đề chữ trên khung hình canvas, chỉ phát hình ảnh + giọng đọc AI lồng tiếng để người xem tập trung trọn vẹn vào nét vẽ truyện tranh.
+
+### 12. ⚡ Đệm Âm Thanh Proactive Pre-Caching 0ms & Nạp Sẵn Audio
+- **Proactive Pre-Caching**: Khi video đang chiếu ở panel hiện tại, hệ thống tự động **nạp trước âm thanh của 3 panel tiếp theo** vào bộ nhớ đệm RAM.
+- **0ms Độ Trễ**: Khi timeline chạy đến khung hình mới, giọng đọc phát ra ngay lập tức, triệt tiêu hoàn toàn hiện tượng trễ mạng hay ngắt quãng audio.
+- Nút **`⚡ Nạp Voice 0ms`**: Tải sẵn toàn bộ voice của toàn bộ chapter chỉ với 1 click chuột.
+- Tự động chuẩn hóa và loại bỏ các chuỗi rác placeholder của scraper (`[Trang X] Phân đoạn Y...`), thay bằng lời dẫn chuyện tự nhiên.
 
 ---
 
@@ -100,6 +140,7 @@ TunaRecap/
 │   │   ├── script/         # AI Script Director workspace
 │   │   ├── thumbnail/      # 3D AI Thumbnail Studio (Canvas 2D)
 │   │   ├── timeline/       # 5-Track NLE Video Editor, VFX & Audio Mixer
+│   │   ├── viral/          # Viral Video Lab & Benchmark Retention Optimizer
 │   │   ├── voice/          # Voice TTS studio & Global Dubbing
 │   │   └── youtube/        # YouTube Direct Publisher & Scheduler Modal
 │   ├── store/
@@ -167,18 +208,20 @@ flowchart LR
     A[Dán Link Truyện / Chapter] --> B[Cào Hàng Loạt & Lưu Folder]
     B --> C[Tẩy Bóng Thoại & AI Inpainting]
     C --> D[Biên Soạn Kịch Bản AI]
-    D --> E[Lồng Tiếng Global & BGM Auto-Ducking]
+    D --> E[Lồng Tiếng Global, CapCut & Vbee]
     E --> F[Thiết Kế Thumbnail 3D]
-    F --> G[Dựng NLE Timeline & Phủ VFX 60 FPS]
-    G --> H[Xuất CapCut / Đăng YouTube Trực Tiếp]
+    F --> G[Viral Lab Tối Ưu Giữ Chân Khán Giả]
+    G --> H[Dựng NLE Timeline, VFX 60FPS & Bật/Tắt Sub]
+    H --> I[Xuất CapCut / Đăng YouTube Trực Tiếp]
 ```
 
 1. **Bước 1 (Thư Viện)**: Dán link bộ truyện để quét toàn bộ 200+ chapter, chọn khoảng cần cào và lưu vào từng thư mục chapter.
 2. **Bước 2 (OCR & Inpainting)**: Bấm `🪄 Tẩy Sạch Bóng Thoại` để xóa sạch chữ cũ trong bong bóng thoại, trả lại nền tranh nguyên bản.
 3. **Bước 3 (Kịch Bản)**: Chọn phong cách recap (Review Chi Tiết, Tóm Tắt Nhanh, Hài Hước, Hồi Hộp, Tu Tiên, Thợ Săn...).
-4. **Bước 4 (Lồng Tiếng)**: Chọn giọng đọc (Tiếng Việt hoặc Tiếng Anh/Mỹ để ăn RPM ngoại).
+4. **Bước 4 (Lồng Tiếng)**: Chọn giọng đọc (Giọng nữ CapCut/Vbee, Chị Google, Nam Minh, hoặc Tiếng Anh/Mỹ để ăn RPM ngoại).
 5. **Bước 5 (Thumbnail Studio)**: Tùy biến bìa 3D giật gân, chọn nhãn badge và xuất ảnh 16:9 / 9:16 Full HD.
-6. **Bước 6 (Timeline & Xuất Bản)**: Chọn Mood BGM, bật hiệu ứng VFX hạt 60 FPS, chọn tỉ lệ 16:9 (YouTube) hoặc 9:16 (TikTok) và bấm **"🚀 Đăng YouTube"** hoặc **"Xuất Video MP4"**.
+6. **Bước 6 (Viral Lab)**: So sánh với 4 kênh recap top đầu, kiểm tra điểm Viral Score, gắn Hook mở màn và tối ưu nhịp cắt chuyển cảnh.
+7. **Bước 7 (Timeline & Xuất Bản)**: Chọn Mood BGM, bật hiệu ứng VFX hạt 60 FPS, bấm `⚡ Nạp Voice 0ms`, tùy biến Bật/Tắt Phụ Đề, chọn tỉ lệ 16:9 hoặc 9:16 và bấm **"🚀 Đăng YouTube"** hoặc **"Xuất Video MP4"**.
 
 ---
 
@@ -197,11 +240,12 @@ flowchart LR
 
 ## 🛠️ Công Nghệ Sử Dụng
 
-- **Frontend Core**: React 19, TypeScript, Vite, Zustand với `persist` middleware.
-- **Giao Diện & Hiệu Ứng**: Tailwind CSS, Lucide Icons, HTML5 Canvas 2D & Web Audio API.
-- **Xử Lý Âm Thanh & Giọng Đọc**: Microsoft Edge Neural TTS Backend (48kHz), Web Audio Synthesizer, Real-Time Audio Ducking Engine.
-- **Xử Lý Hình Ảnh & Video**: AI Speech Bubble Inpainter, 2.5D Motion Comic VFX Particles Engine, MediaRecorder Canvas Stream Exporter.
-- **Backend & Crawler**: Node.js, Express REST API, Multi-Referer Image Streaming Proxy, Prisma ORM với SQLite.
+- **Frontend Core**: React 19, TypeScript, Vite, Zustand với `persist` middleware, Code-Splitting với React.lazy & Suspense.
+- **Giao Diện & Hiệu Ứng**: Tailwind CSS, Lucide Icons, HTML5 Canvas 2D & Web Audio API, TikTok Punch Viral Subtitles Engine.
+- **Xử Lý Âm Thanh & Giọng Đọc**: Microsoft Edge Neural TTS Backend (48kHz), Google Translate Official TTS Engine, CapCut & Vbee Acoustic Profile Tuner, Web Audio Synthesizer, Real-Time Audio Ducking Engine, Proactive Audio Pre-Caching.
+- **Xử Lý Hình Ảnh & Video**: AI Speech Bubble Inpainter, 2.5D Motion Comic VFX Particles Engine, MediaRecorder Canvas Stream Exporter, NLE Realtime Video Render Loop.
+- **Phân Tích Dữ Liệu & Viral AI**: Viral Video Lab Engine, Benchmark 4 Kênh Triệu View, Algorithmic Pacing & Hook Generator.
+- **Backend & Crawler**: Node.js, Express REST API, Multi-Referer Image Streaming Proxy, Prisma ORM với SQLite, Multi-Language Edge TTS Router.
 - **Quy Chuẩn Xuất File**: CapCut Project Draft Spec (v3/v4), SubRip Text (SRT), YouTube Data API v3 Publisher.
 
 ---
