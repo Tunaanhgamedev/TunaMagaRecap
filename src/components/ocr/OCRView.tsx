@@ -971,9 +971,9 @@ export const OCRView: React.FC = () => {
             {/* Interactive Image Container with Bounding Boxes */}
             <div
               ref={containerRef}
-              className="relative w-full max-h-[620px] overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 flex justify-center p-1.5 select-none"
+              className="relative w-full max-h-[85vh] overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 flex justify-center p-1.5 select-none"
             >
-              <div className="relative inline-block min-h-[300px]">
+              <div className="relative inline-block w-full max-w-[520px] min-h-[300px]">
                 {isMainImageLoading && (
                   <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center z-30 rounded">
                     <div className="flex flex-col items-center space-y-2">
@@ -988,7 +988,7 @@ export const OCRView: React.FC = () => {
                   loading="eager"
                   decoding="async"
                   onLoad={() => setIsMainImageLoading(false)}
-                  className="block max-w-full max-h-[580px] w-auto h-auto object-contain rounded shadow-lg pointer-events-none"
+                  className="block w-full h-auto object-contain rounded shadow-lg pointer-events-none"
                   onError={(e) => {
                     setIsMainImageLoading(false);
                     (e.currentTarget as HTMLImageElement).src =
