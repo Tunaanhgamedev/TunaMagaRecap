@@ -426,7 +426,7 @@ export const TimelineView: React.FC = () => {
         let cardH = maxCardH;
         let scaledW = maxCardW;
         let scaledH = maxCardH;
-        let scrollY = 0;
+        let drawOffsetY = 0;
 
         if (aspectCrop >= maxCardW / maxCardH) {
           // Wide panel (e.g. landscape 16:9 / 4:3)
@@ -446,19 +446,13 @@ export const TimelineView: React.FC = () => {
           scaledH = cardH;
         } else {
           // Tall / narrow manhwa strip (e.g. 1:2 to 1:5)
-          // Maintain generous card width (never a skinny toothpick), clip & smooth vertical Ken Burns pan!
-          cardW = Math.min(maxCardW, Math.max(minCardW, maxCardH * 0.85));
+          // Frame at balanced comic proportion (no 130px skinny stick, no lướt ảnh)
+          cardW = Math.min(maxCardW, Math.max(minCardW, maxCardH * 0.80));
           cardH = maxCardH;
           scaledW = cardW;
           scaledH = cardW / aspectCrop;
-
-          const maxScroll = Math.max(0, scaledH - cardH);
-          if (activeItem.cameraEffect === 'pan_up') {
-            scrollY = (1 - progress) * maxScroll;
-          } else {
-            // Default / pan_down / dramatic_zoom: smoothly scroll down through the scenes as narrator speaks
-            scrollY = progress * maxScroll;
-          }
+          // Focus slightly on upper-center where faces and dialogue bubbles are (static, no scrolling)
+          drawOffsetY = -Math.max(0, (scaledH - cardH) * 0.20);
         }
 
         ctx.save();
@@ -484,7 +478,7 @@ export const TimelineView: React.FC = () => {
         ctx.fill();
         ctx.restore();
 
-        // B. Clipped Manga Image (With smooth vertical scroll for tall strips)
+        // B. Clipped Manga Image (Static framing with camera zoom effect "thu qua thu lại")
         ctx.save();
         ctx.beginPath();
         if (typeof (ctx as any).roundRect === 'function') {
@@ -501,7 +495,7 @@ export const TimelineView: React.FC = () => {
           cropW,
           cropH,
           -cardW / 2,
-          -cardH / 2 - scrollY,
+          -cardH / 2 + drawOffsetY,
           scaledW,
           scaledH
         );
