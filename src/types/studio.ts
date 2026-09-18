@@ -77,6 +77,7 @@ export interface Dialogue {
 export type AnimationEffectType =
   | 'zoom_in'
   | 'zoom_out'
+  | 'slow_zoom_out'
   | 'pan_left'
   | 'pan_right'
   | 'pan_up'

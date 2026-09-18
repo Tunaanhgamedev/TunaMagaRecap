@@ -123,6 +123,19 @@
   - 5 mốc nhảy nhanh: `Đỉnh (2%)`, `Trên (24%)`, `Giữa (48%)`, `Dưới (70%)`, `Đáy (82%)`.
   - Tự động cuộn mượt mà (smooth scroll) khung nhìn tới panel khi bấm nút `👁️ Xem`, nút dời `↑ Lên`, `↓ Xuống` hoặc click vào card panel.
 
+### 14. 🎛️ Tự Do Di Chuyển Panel 4 Hướng & Căn Chỉnh Trái/Phải (Full 4-Way Bounding Box Navigation)
+- **Tự Do Di Chuyển 4 Hướng (Trái, Phải, Lên, Xuống)**: Khắc phục triệt để lỗi ép lề trái cũ (sửa lỗi logic `0 || 5` khiến tọa độ 0% bị giật ngược về 5%), cho phép panel di chuyển mượt mà về sát mép viền trái ảnh (`0%`), tuyệt đối tuân thủ giới hạn khung hình tranh (`0% <= x <= 100%`, không tràn khỏi mép ảnh).
+- **Thao Tác Kéo Thả Canvas Đa Điểm (Direct Canvas Drag & Handles)**:
+  - Bấm và giữ bất kỳ vị trí nào trên thân panel để kéo tự do 4 hướng linh hoạt.
+  - Bổ sung tay nắm kéo ngang chuyên dụng ở cạnh trái (`Left Edge Drag Handle`) màu cyan nổi bật, giúp kéo panel sang trái dễ dàng kể cả trên màn hình nhỏ.
+  - Tay nắm co giãn góc dưới phải (`Bottom-Right Corner Resize`) tự động co giãn kích thước panel theo thời gian thực.
+- **Bộ Điều Khiển Ngang & Dọc Toàn Diện Trong Panel Inspector**:
+  - 4 ô nhập thông số tọa độ & kích thước trực tiếp: `X (Trái) %`, `W (Rộng) %`, `Y (Trên) %`, `H (Dài) %`.
+  - Phím dời ngang: `← Trái` (dời sang trái 2.5%, chạm lề 0%), `→ Phải` (dời sang phải 2.5%).
+  - Phím độ rộng: `- Hẹp` (thu hẹp 5%), `+ Rộng` (nới rộng 5%).
+  - 3 chế độ căn ngang 1-Click: `Sát Trái (0%)`, `Giữa (Căn trung tâm)`, `Tràn Viền (100% chiều ngang)`.
+  - Giữ nguyên vẹn toàn bộ hệ thống phím dời dọc: `↑ Lên`, `↓ Xuống`, `- Ngắn`, `+ Dài`, cùng 5 preset vùng `Đỉnh`, `Trên`, `Giữa`, `Dưới`, `Đáy`.
+
 ---
 
 ## 📁 Cấu Trúc Thư Mục Dự Án
