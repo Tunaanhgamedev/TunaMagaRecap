@@ -115,6 +115,14 @@
 - Nút **`⚡ Nạp Voice 0ms`**: Tải sẵn toàn bộ voice của toàn bộ chapter chỉ với 1 click chuột.
 - Tự động chuẩn hóa và loại bỏ các chuỗi rác placeholder của scraper (`[Trang X] Phân đoạn Y...`), thay bằng lời dẫn chuyện tự nhiên.
 
+### 13. 📐 Không Gian Phân Cảnh OCR Manhwa Webtoon Siêu Dài (Auto-Expanding Canvas & Infinite Scroll)
+- **Hỗ trợ dải truyện Webtoon/Manhwa siêu dài (8,000px+)**: Khắc phục triệt để lỗi giới hạn khung nhìn cố định, container ảnh tự động giãn nở `h-fit self-start` theo đúng 100% chiều cao thực tế của ảnh (kể cả ảnh dài hơn 6,000px - 10,000px).
+- **Phân Bố Bounding Box Chuẩn Xác 1:1**: Tọa độ phần trăm (0% - 100%) ánh xạ chuẩn xác từng milimet dọc theo toàn bộ dải truyện, cho phép kéo thả, co giãn panel xuống tận cùng các khung thoại và nhân vật ở đáy trang.
+- **Bộ Preset Cắt Panel Chuyên Dụng**: `1 Panel Toàn Trang`, `Chia 2`, `Chia 3`, `Chia 4`, `Chia 5`, `Chia 6` chia đều dải truyện siêu dài chỉ trong 1 click.
+- **Định Vị Vùng Nhanh & Cuộn Thông Minh (Scroll-To-Panel)**:
+  - 5 mốc nhảy nhanh: `Đỉnh (2%)`, `Trên (24%)`, `Giữa (48%)`, `Dưới (70%)`, `Đáy (82%)`.
+  - Tự động cuộn mượt mà (smooth scroll) khung nhìn tới panel khi bấm nút `👁️ Xem`, nút dời `↑ Lên`, `↓ Xuống` hoặc click vào card panel.
+
 ---
 
 ## 📁 Cấu Trúc Thư Mục Dự Án

@@ -125,6 +125,8 @@ interface StudioState {
   splitTwoPanelsMode: (pageIdx: number) => void;
   splitThreePanelsMode: (pageIdx: number) => void;
   splitFourPanelsMode: (pageIdx: number) => void;
+  splitFivePanelsMode: (pageIdx: number) => void;
+  splitSixPanelsMode: (pageIdx: number) => void;
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
   addNarrationPanel: (pageIdx: number) => void;
@@ -1579,6 +1581,64 @@ export const useStudioStore = create<StudioState>()(
         ];
       }
       return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 4 Panel cân xứng!` };
+    });
+  },
+
+  splitFivePanelsMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const effects: AnimationEffectType[] = ['dramatic_zoom', 'pan_right', 'pan_down', 'pan_left', 'slow_zoom_out'];
+        page.panels = [0, 1, 2, 3, 4].map((i) => ({
+          id: `pan-split5-${Date.now()}-${i + 1}`,
+          pageIndex: page.pageIndex,
+          panelIndex: i + 1,
+          bbox: { x: 5, y: Math.round((2 + i * 19.4) * 10) / 10, w: 90, h: 18 },
+          suggestedCameraEffect: effects[i] || 'dramatic_zoom',
+          aiDescription: `Trang ${page.pageIndex}: Panel ${i + 1}/5 (phân đoạn webtoon).`,
+          dialogues: [
+            {
+              id: `d-split5-${Date.now()}-${i + 1}`,
+              panelId: `pan-split5-${Date.now()}-${i + 1}`,
+              speaker: i === 0 ? 'Nhân Vật Chính' : 'Dẫn Chuyện',
+              text: `Phân cảnh ${i + 1} của trang ${page.pageIndex}.`,
+              emotion: 'neutral',
+              useForScript: true,
+            },
+          ],
+        }));
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 5 Panel (chuẩn manhwa dài)!` };
+    });
+  },
+
+  splitSixPanelsMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        const effects: AnimationEffectType[] = ['dramatic_zoom', 'pan_right', 'zoom_in', 'pan_down', 'pan_left', 'slow_zoom_out'];
+        page.panels = [0, 1, 2, 3, 4, 5].map((i) => ({
+          id: `pan-split6-${Date.now()}-${i + 1}`,
+          pageIndex: page.pageIndex,
+          panelIndex: i + 1,
+          bbox: { x: 5, y: Math.round((1.5 + i * 16.3) * 10) / 10, w: 90, h: 15 },
+          suggestedCameraEffect: effects[i] || 'dramatic_zoom',
+          aiDescription: `Trang ${page.pageIndex}: Panel ${i + 1}/6 (dải webtoon cuộn dài).`,
+          dialogues: [
+            {
+              id: `d-split6-${Date.now()}-${i + 1}`,
+              panelId: `pan-split6-${Date.now()}-${i + 1}`,
+              speaker: i === 0 ? 'Nhân Vật Chính' : 'Dẫn Chuyện',
+              text: `Phân cảnh ${i + 1} của trang ${page.pageIndex}.`,
+              emotion: 'neutral',
+              useForScript: true,
+            },
+          ],
+        }));
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 6 Panel (bao trọn dải manhwa siêu dài)!` };
     });
   },
 

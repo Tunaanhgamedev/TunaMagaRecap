@@ -57,6 +57,8 @@ export const OCRView: React.FC = () => {
     splitTwoPanelsMode,
     splitThreePanelsMode,
     splitFourPanelsMode,
+    splitFivePanelsMode,
+    splitSixPanelsMode,
     addDialogueToPanel,
     deleteDialogue,
     setActiveTab,
@@ -128,6 +130,17 @@ export const OCRView: React.FC = () => {
       setIsMainImageLoading(true);
     }
   }, [activePageIndex, currentPage?.id]);
+
+  const scrollToPanel = (yPercent: number) => {
+    if (!containerRef.current || !imageWrapperRef.current) return;
+    const wrapH = imageWrapperRef.current.clientHeight;
+    const targetPx = (yPercent / 100) * wrapH;
+    const contH = containerRef.current.clientHeight;
+    containerRef.current.scrollTo({
+      top: Math.max(0, targetPx - contH / 4),
+      behavior: "smooth",
+    });
+  };
 
   if (isLoadingProject) {
     return (
@@ -991,6 +1004,26 @@ export const OCRView: React.FC = () => {
                   <span>Chia 4</span>
                 </button>
 
+                {/* 5-Panels Split Preset */}
+                <button
+                  onClick={() => splitFivePanelsMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-rose-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Chia trang thành 5 panel (chuẩn manhwa dài)"
+                >
+                  <SplitSquareVertical className="w-3 h-3 text-rose-400" />
+                  <span>Chia 5</span>
+                </button>
+
+                {/* 6-Panels Split Preset */}
+                <button
+                  onClick={() => splitSixPanelsMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-fuchsia-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Chia trang thành 6 panel (dải webtoon cuộn dài)"
+                >
+                  <SplitSquareVertical className="w-3 h-3 text-fuchsia-400" />
+                  <span>Chia 6</span>
+                </button>
+
                 {/* Delete Page Button */}
                 <button
                   onClick={() => deletePage(activePageIndex)}
@@ -1010,7 +1043,8 @@ export const OCRView: React.FC = () => {
             >
               <div
                 ref={imageWrapperRef}
-                className="relative inline-block w-full max-w-[520px] min-h-[300px]"
+                className="relative block w-full max-w-[520px] h-fit self-start mx-auto"
+                style={{ minHeight: "300px" }}
               >
                 {isMainImageLoading && (
                   <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center z-30 rounded">
@@ -1137,7 +1171,10 @@ export const OCRView: React.FC = () => {
                 return (
                   <div
                     key={panel.id}
-                    onClick={() => setSelectedPanelId(panel.id)}
+                    onClick={() => {
+                      setSelectedPanelId(panel.id);
+                      scrollToPanel(panel.bbox?.y ?? 0);
+                    }}
                     className={`p-3.5 rounded-xl border transition-all ${
                       isSelected
                         ? "bg-slate-900/90 border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-lg"
@@ -1153,6 +1190,19 @@ export const OCRView: React.FC = () => {
                         <span className="text-[9.5px] font-mono text-slate-400">
                           ({panel.bbox?.w || 90}% × {panel.bbox?.h || 40}%)
                         </span>
+                        {/* Scroll-to-Panel button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPanelId(panel.id);
+                            scrollToPanel(panel.bbox?.y ?? 0);
+                          }}
+                          className="bg-slate-800 hover:bg-slate-700 text-cyan-300 px-1.5 py-0.2 rounded text-[9px] font-bold flex items-center space-x-0.5 cursor-pointer transition-colors"
+                          title="Cuộn khung nhìn tới panel này trên ảnh"
+                        >
+                          <span>👁️ Xem</span>
+                        </button>
                       </div>
 
                       <div className="flex items-center space-x-2">
@@ -1205,6 +1255,7 @@ export const OCRView: React.FC = () => {
                               const curH = panel.bbox?.h || 30;
                               const newH = Math.max(5, Math.min(curH, 100 - targetY));
                               updatePanelBBox(activePageIndex, panel.id, { y: targetY, h: newH });
+                              scrollToPanel(targetY);
                             }}
                             className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-cyan-300 text-center text-[10px] focus:outline-none focus:border-cyan-400"
                             title="Vị trí từ trên xuống dưới (0% - 95%)"
@@ -1226,6 +1277,7 @@ export const OCRView: React.FC = () => {
                               // If targetH doesn't fit below curY, shift Y upwards so H can expand!
                               const newY = Math.max(0, Math.min(curY, 100 - targetH));
                               updatePanelBBox(activePageIndex, panel.id, { y: newY, h: targetH });
+                              scrollToPanel(newY);
                             }}
                             className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-emerald-300 text-center text-[10px] focus:outline-none focus:border-emerald-400"
                             title="Độ dài / chiều cao của panel (5% - 98%)"
@@ -1242,11 +1294,12 @@ export const OCRView: React.FC = () => {
                             type="button"
                             onClick={() => {
                               const curY = panel.bbox?.y ?? 0;
-                              const newY = Math.max(0, curY - 10);
+                              const newY = Math.max(0, curY - 8);
                               updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10 });
+                              scrollToPanel(newY);
                             }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
-                            title="Dời panel lên trên 10%"
+                            title="Dời panel lên trên 8%"
                           >
                             ↑ Lên
                           </button>
@@ -1255,12 +1308,13 @@ export const OCRView: React.FC = () => {
                             onClick={() => {
                               const curY = panel.bbox?.y ?? 0;
                               const curH = panel.bbox?.h ?? 30;
-                              const newY = Math.min(95, curY + 10);
+                              const newY = Math.min(95, curY + 8);
                               const newH = Math.max(5, Math.min(curH, 100 - newY));
                               updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10, h: Math.round(newH * 10) / 10 });
+                              scrollToPanel(newY);
                             }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
-                            title="Dời panel xuống dưới 10%"
+                            title="Dời panel xuống dưới 8%"
                           >
                             ↓ Xuống
                           </button>
@@ -1272,11 +1326,11 @@ export const OCRView: React.FC = () => {
                             type="button"
                             onClick={() => {
                               const curH = panel.bbox?.h ?? 30;
-                              const newH = Math.max(5, curH - 10);
+                              const newH = Math.max(5, curH - 8);
                               updatePanelBBox(activePageIndex, panel.id, { h: Math.round(newH * 10) / 10 });
                             }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-amber-300 transition-colors cursor-pointer"
-                            title="Thu ngắn độ dài 10%"
+                            title="Thu ngắn độ dài 8%"
                           >
                             - Ngắn
                           </button>
@@ -1285,12 +1339,13 @@ export const OCRView: React.FC = () => {
                             onClick={() => {
                               const curY = panel.bbox?.y ?? 0;
                               const curH = panel.bbox?.h ?? 30;
-                              const targetH = Math.min(98, curH + 10);
+                              const targetH = Math.min(98, curH + 8);
                               const newY = Math.max(0, Math.min(curY, 100 - targetH));
                               updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10, h: Math.round(targetH * 10) / 10 });
+                              scrollToPanel(newY);
                             }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-emerald-300 transition-colors cursor-pointer"
-                            title="Kéo dài panel thêm 10%"
+                            title="Kéo dài panel thêm 8%"
                           >
                             + Dài
                           </button>
@@ -1300,25 +1355,56 @@ export const OCRView: React.FC = () => {
                           <span className="text-[9px] text-slate-500 mr-0.5">Vùng:</span>
                           <button
                             type="button"
-                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 2, h: 30 })}
+                            onClick={() => {
+                              updatePanelBBox(activePageIndex, panel.id, { y: 2, h: 22 });
+                              scrollToPanel(2);
+                            }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[9px] transition-colors cursor-pointer"
-                            title="Đặt panel ở 1/3 trên cùng của trang"
+                            title="Đặt panel ở đỉnh trang (2%)"
                           >
                             Đỉnh
                           </button>
                           <button
                             type="button"
-                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 35, h: 30 })}
+                            onClick={() => {
+                              updatePanelBBox(activePageIndex, panel.id, { y: 24, h: 22 });
+                              scrollToPanel(24);
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded text-[9px] transition-colors cursor-pointer"
+                            title="Đặt panel ở 1/4 trên (24%)"
+                          >
+                            Trên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updatePanelBBox(activePageIndex, panel.id, { y: 48, h: 22 });
+                              scrollToPanel(48);
+                            }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded text-[9px] transition-colors cursor-pointer"
-                            title="Đặt panel ở 1/3 giữa của trang"
+                            title="Đặt panel ở giữa trang (48%)"
                           >
                             Giữa
                           </button>
                           <button
                             type="button"
-                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 68, h: 30 })}
+                            onClick={() => {
+                              updatePanelBBox(activePageIndex, panel.id, { y: 70, h: 22 });
+                              scrollToPanel(70);
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-[9px] transition-colors cursor-pointer"
+                            title="Đặt panel ở 3/4 dưới (70%)"
+                          >
+                            Dưới
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updatePanelBBox(activePageIndex, panel.id, { y: 82, h: 16 });
+                              scrollToPanel(82);
+                            }}
                             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded text-[9px] transition-colors cursor-pointer"
-                            title="Đặt panel ở 1/3 đáy của trang (nhân vật bên dưới)"
+                            title="Đặt panel ở sát đáy trang (82%)"
                           >
                             Đáy
                           </button>
