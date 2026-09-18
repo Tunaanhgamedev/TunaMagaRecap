@@ -242,19 +242,17 @@ export const OCRView: React.FC = () => {
           dragStartRef.current.initialX + deltaX,
         ),
       );
-      const newY = Math.max(
-        0,
-        Math.min(
-          100 - dragStartRef.current.initialH,
-          dragStartRef.current.initialY + deltaY,
-        ),
-      );
+      const rawY = dragStartRef.current.initialY + deltaY;
+      const newY = Math.max(0, Math.min(95, rawY));
+      const initialH = dragStartRef.current.initialH;
+      // Dynamically shrink H if moving past bottom so it's never stuck at 58!
+      const newH = Math.max(5, Math.min(initialH, 100 - newY));
 
       updatePanelBBox(activePageIndex, draggingPanelId, {
         x: Math.round(newX * 10) / 10,
         y: Math.round(newY * 10) / 10,
         w: dragStartRef.current.initialW,
-        h: dragStartRef.current.initialH,
+        h: Math.round(newH * 10) / 10,
       });
     } else if (resizingPanelId) {
       const newW = Math.max(
@@ -264,11 +262,12 @@ export const OCRView: React.FC = () => {
           dragStartRef.current.initialW + deltaX,
         ),
       );
+      const rawH = dragStartRef.current.initialH + deltaY;
       const newH = Math.max(
-        2,
+        5,
         Math.min(
           100 - dragStartRef.current.initialY,
-          dragStartRef.current.initialH + deltaY,
+          rawH,
         ),
       );
 
@@ -1191,64 +1190,139 @@ export const OCRView: React.FC = () => {
                     </div>
 
                     {/* Panel Bounding Box Controls (Y position & Height controls) */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-2 bg-slate-900/60 rounded border border-slate-800/80 text-[10px] font-mono text-slate-300">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="text-slate-400">Vị trí Y:</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={98}
-                          value={Math.round(panel.bbox?.y ?? 0)}
-                          onChange={(e) => {
-                            const val = Math.max(0, Math.min(100 - (panel.bbox?.h || 5), Number(e.target.value)));
-                            updatePanelBBox(activePageIndex, panel.id, { y: val });
-                          }}
-                          className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-cyan-300 text-center text-[10px] focus:outline-none focus:border-cyan-400"
-                          title="Vị trí từ trên xuống dưới (0% - 100%)"
-                        />
-                        <span className="text-slate-500">%</span>
+                    <div className="space-y-1.5 py-2 px-2.5 bg-slate-900/80 rounded-lg border border-slate-800 text-[10px] font-mono text-slate-300">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {/* Y position input */}
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-cyan-400 font-bold">Vị trí Y:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={95}
+                            value={Math.round(panel.bbox?.y ?? 0)}
+                            onChange={(e) => {
+                              const targetY = Math.max(0, Math.min(95, Number(e.target.value)));
+                              const curH = panel.bbox?.h || 30;
+                              const newH = Math.max(5, Math.min(curH, 100 - targetY));
+                              updatePanelBBox(activePageIndex, panel.id, { y: targetY, h: newH });
+                            }}
+                            className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-cyan-300 text-center text-[10px] focus:outline-none focus:border-cyan-400"
+                            title="Vị trí từ trên xuống dưới (0% - 95%)"
+                          />
+                          <span className="text-slate-500">%</span>
+                        </div>
+
+                        {/* Height input */}
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-emerald-400 font-bold">Độ Dài (H):</span>
+                          <input
+                            type="number"
+                            min={5}
+                            max={98}
+                            value={Math.round(panel.bbox?.h ?? 40)}
+                            onChange={(e) => {
+                              const targetH = Math.max(5, Math.min(98, Number(e.target.value)));
+                              const curY = panel.bbox?.y ?? 0;
+                              // If targetH doesn't fit below curY, shift Y upwards so H can expand!
+                              const newY = Math.max(0, Math.min(curY, 100 - targetH));
+                              updatePanelBBox(activePageIndex, panel.id, { y: newY, h: targetH });
+                            }}
+                            className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-emerald-300 text-center text-[10px] focus:outline-none focus:border-emerald-400"
+                            title="Độ dài / chiều cao của panel (5% - 98%)"
+                          />
+                          <span className="text-slate-500">%</span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center space-x-1.5">
-                        <span className="text-slate-400">Độ Dài (H):</span>
-                        <input
-                          type="number"
-                          min={2}
-                          max={100}
-                          value={Math.round(panel.bbox?.h ?? 40)}
-                          onChange={(e) => {
-                            const val = Math.max(2, Math.min(100 - (panel.bbox?.y || 0), Number(e.target.value)));
-                            updatePanelBBox(activePageIndex, panel.id, { h: val });
-                          }}
-                          className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-emerald-300 text-center text-[10px] focus:outline-none focus:border-emerald-400"
-                          title="Độ dài / chiều cao của panel"
-                        />
-                        <span className="text-slate-500">%</span>
-                      </div>
+                      {/* Quick Nudge & Position Buttons */}
+                      <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-slate-800/80">
+                        <div className="flex items-center space-x-1">
+                          <span className="text-[9px] text-slate-500 mr-0.5">Dời:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curY = panel.bbox?.y ?? 0;
+                              const newY = Math.max(0, curY - 10);
+                              updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10 });
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
+                            title="Dời panel lên trên 10%"
+                          >
+                            ↑ Lên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curY = panel.bbox?.y ?? 0;
+                              const curH = panel.bbox?.h ?? 30;
+                              const newY = Math.min(95, curY + 10);
+                              const newH = Math.max(5, Math.min(curH, 100 - newY));
+                              updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10, h: Math.round(newH * 10) / 10 });
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
+                            title="Dời panel xuống dưới 10%"
+                          >
+                            ↓ Xuống
+                          </button>
+                        </div>
 
-                      <div className="flex items-center space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newY = Math.min(100 - (panel.bbox?.h || 20), (panel.bbox?.y || 0) + 10);
-                            updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10 });
-                          }}
-                          className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
-                          title="Đưa panel xuống dưới (+10%)"
-                        >
-                          ↓ Xuống
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newH = Math.min(100 - (panel.bbox?.y || 0), (panel.bbox?.h || 20) + 10);
-                            updatePanelBBox(activePageIndex, panel.id, { h: Math.round(newH * 10) / 10 });
-                          }}
-                          className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-emerald-300 transition-colors cursor-pointer"
-                          title="Tăng độ dài panel (+10%)"
-                        >
-                          + Dài
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <span className="text-[9px] text-slate-500 mr-0.5">Dài:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curH = panel.bbox?.h ?? 30;
+                              const newH = Math.max(5, curH - 10);
+                              updatePanelBBox(activePageIndex, panel.id, { h: Math.round(newH * 10) / 10 });
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-amber-300 transition-colors cursor-pointer"
+                            title="Thu ngắn độ dài 10%"
+                          >
+                            - Ngắn
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curY = panel.bbox?.y ?? 0;
+                              const curH = panel.bbox?.h ?? 30;
+                              const targetH = Math.min(98, curH + 10);
+                              const newY = Math.max(0, Math.min(curY, 100 - targetH));
+                              updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10, h: Math.round(targetH * 10) / 10 });
+                            }}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-emerald-300 transition-colors cursor-pointer"
+                            title="Kéo dài panel thêm 10%"
+                          >
+                            + Dài
+                          </button>
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                          <span className="text-[9px] text-slate-500 mr-0.5">Vùng:</span>
+                          <button
+                            type="button"
+                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 2, h: 30 })}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[9px] transition-colors cursor-pointer"
+                            title="Đặt panel ở 1/3 trên cùng của trang"
+                          >
+                            Đỉnh
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 35, h: 30 })}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded text-[9px] transition-colors cursor-pointer"
+                            title="Đặt panel ở 1/3 giữa của trang"
+                          >
+                            Giữa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updatePanelBBox(activePageIndex, panel.id, { y: 68, h: 30 })}
+                            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded text-[9px] transition-colors cursor-pointer"
+                            title="Đặt panel ở 1/3 đáy của trang (nhân vật bên dưới)"
+                          >
+                            Đáy
+                          </button>
+                        </div>
                       </div>
                     </div>
 
