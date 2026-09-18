@@ -123,6 +123,8 @@ interface StudioState {
   deletePage: (pageIdx: number) => void;
   setSinglePanelMode: (pageIdx: number) => void;
   splitTwoPanelsMode: (pageIdx: number) => void;
+  splitThreePanelsMode: (pageIdx: number) => void;
+  splitFourPanelsMode: (pageIdx: number) => void;
   addDialogueToPanel: (pageIdx: number, panelId: string) => void;
   deleteDialogue: (pageIdx: number, panelId: string, dialogueId: string) => void;
   addNarrationPanel: (pageIdx: number) => void;
@@ -1427,6 +1429,156 @@ export const useStudioStore = create<StudioState>()(
         ];
       }
       return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 2 Panel cân xứng!` };
+    });
+  },
+
+  splitThreePanelsMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        page.panels = [
+          {
+            id: `pan-split-${Date.now()}-1`,
+            pageIndex: page.pageIndex,
+            panelIndex: 1,
+            bbox: { x: 5, y: 2, w: 90, h: 30 },
+            suggestedCameraEffect: 'dramatic_zoom',
+            aiDescription: `Trang ${page.pageIndex}: Khung hình trên (1/3).`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-1`,
+                panelId: `pan-split-${Date.now()}-1`,
+                speaker: 'Nhân Vật Chính',
+                text: `Phân đoạn 1 của trang ${page.pageIndex}.`,
+                emotion: 'excited',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-2`,
+            pageIndex: page.pageIndex,
+            panelIndex: 2,
+            bbox: { x: 5, y: 35, w: 90, h: 30 },
+            suggestedCameraEffect: 'pan_down',
+            aiDescription: `Trang ${page.pageIndex}: Khung hình giữa (2/3).`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-2`,
+                panelId: `pan-split-${Date.now()}-2`,
+                speaker: 'Dẫn Chuyện',
+                text: `Phân đoạn 2 của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-3`,
+            pageIndex: page.pageIndex,
+            panelIndex: 3,
+            bbox: { x: 5, y: 68, w: 90, h: 30 },
+            suggestedCameraEffect: 'slow_zoom_out',
+            aiDescription: `Trang ${page.pageIndex}: Khung hình dưới (3/3).`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-3`,
+                panelId: `pan-split-${Date.now()}-3`,
+                speaker: 'Nhân Vật 2',
+                text: `Phân đoạn 3 của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+        ];
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 3 Panel cân xứng!` };
+    });
+  },
+
+  splitFourPanelsMode: (pageIdx) => {
+    set((state) => {
+      const updatedPages = [...state.pages];
+      const page = updatedPages[pageIdx];
+      if (page) {
+        page.panels = [
+          {
+            id: `pan-split-${Date.now()}-1`,
+            pageIndex: page.pageIndex,
+            panelIndex: 1,
+            bbox: { x: 5, y: 2, w: 90, h: 22 },
+            suggestedCameraEffect: 'dramatic_zoom',
+            aiDescription: `Trang ${page.pageIndex}: Panel 1/4.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-1`,
+                panelId: `pan-split-${Date.now()}-1`,
+                speaker: 'Nhân Vật Chính',
+                text: `Phân cảnh 1 của trang ${page.pageIndex}.`,
+                emotion: 'excited',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-2`,
+            pageIndex: page.pageIndex,
+            panelIndex: 2,
+            bbox: { x: 5, y: 26, w: 90, h: 22 },
+            suggestedCameraEffect: 'pan_right',
+            aiDescription: `Trang ${page.pageIndex}: Panel 2/4.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-2`,
+                panelId: `pan-split-${Date.now()}-2`,
+                speaker: 'Dẫn Chuyện',
+                text: `Phân cảnh 2 của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-3`,
+            pageIndex: page.pageIndex,
+            panelIndex: 3,
+            bbox: { x: 5, y: 50, w: 90, h: 22 },
+            suggestedCameraEffect: 'pan_down',
+            aiDescription: `Trang ${page.pageIndex}: Panel 3/4.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-3`,
+                panelId: `pan-split-${Date.now()}-3`,
+                speaker: 'Nhân Vật 2',
+                text: `Phân cảnh 3 của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+          {
+            id: `pan-split-${Date.now()}-4`,
+            pageIndex: page.pageIndex,
+            panelIndex: 4,
+            bbox: { x: 5, y: 74, w: 90, h: 22 },
+            suggestedCameraEffect: 'slow_zoom_out',
+            aiDescription: `Trang ${page.pageIndex}: Panel 4/4.`,
+            dialogues: [
+              {
+                id: `d-split-${Date.now()}-4`,
+                panelId: `pan-split-${Date.now()}-4`,
+                speaker: 'Dẫn Chuyện',
+                text: `Phân cảnh 4 của trang ${page.pageIndex}.`,
+                emotion: 'neutral',
+                useForScript: true,
+              },
+            ],
+          },
+        ];
+      }
+      return { pages: updatedPages, scrapeStatusMessage: `✓ Đã chia trang ${pageIdx + 1} thành 4 Panel cân xứng!` };
     });
   },
 

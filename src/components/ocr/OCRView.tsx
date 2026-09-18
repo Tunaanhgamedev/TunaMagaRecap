@@ -55,6 +55,8 @@ export const OCRView: React.FC = () => {
     deletePage,
     setSinglePanelMode,
     splitTwoPanelsMode,
+    splitThreePanelsMode,
+    splitFourPanelsMode,
     addDialogueToPanel,
     deleteDialogue,
     setActiveTab,
@@ -953,7 +955,27 @@ export const OCRView: React.FC = () => {
                   title="Chia trang thành 2 panel trên dưới"
                 >
                   <SplitSquareVertical className="w-3 h-3 text-violet-400" />
-                  <span>Chia Đôi Panel</span>
+                  <span>Chia 2</span>
+                </button>
+
+                {/* 3-Panels Split Preset */}
+                <button
+                  onClick={() => splitThreePanelsMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Chia trang thành 3 panel đều nhau (chuẩn webtoon dài)"
+                >
+                  <SplitSquareVertical className="w-3 h-3 text-emerald-400" />
+                  <span>Chia 3</span>
+                </button>
+
+                {/* 4-Panels Split Preset */}
+                <button
+                  onClick={() => splitFourPanelsMode(activePageIndex)}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                  title="Chia trang thành 4 panel (cho trang truyện rất dài)"
+                >
+                  <SplitSquareVertical className="w-3 h-3 text-amber-400" />
+                  <span>Chia 4</span>
                 </button>
 
                 {/* Delete Page Button */}

@@ -413,35 +413,113 @@ export const TimelineView: React.FC = () => {
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // 3. Draw Main Animated Panel in Center with Camera Motion Effects
+        // 3. Draw Main Animated Panel in Center with Camera Motion Effects & Manga Review Card Framing
+        const isPortrait = aspectRatio === '9:16';
+
+        // Manga Recap Frame proportions:
+        // In 16:9, card occupies ~52-58% of canvas width so 21-24% blurred background shines on each side!
+        const maxCardW = isPortrait ? canvas.width * 0.92 : canvas.width * 0.58;
+        const maxCardH = isPortrait ? canvas.height * 0.82 : canvas.height * 0.94;
+        const minCardW = isPortrait ? canvas.width * 0.70 : canvas.width * 0.48;
+
+        let cardW = maxCardW;
+        let cardH = maxCardH;
+        let scaledW = maxCardW;
+        let scaledH = maxCardH;
+        let scrollY = 0;
+
+        if (aspectCrop >= maxCardW / maxCardH) {
+          // Wide panel (e.g. landscape 16:9 / 4:3)
+          cardW = maxCardW;
+          cardH = maxCardW / aspectCrop;
+          if (cardH > maxCardH) {
+            cardH = maxCardH;
+            cardW = maxCardH * aspectCrop;
+          }
+          scaledW = cardW;
+          scaledH = cardH;
+        } else if (aspectCrop >= 0.55) {
+          // Standard portrait comic panel (e.g. 3:4 or 4:5)
+          cardH = maxCardH;
+          cardW = Math.max(minCardW * 0.75, maxCardH * aspectCrop);
+          scaledW = cardW;
+          scaledH = cardH;
+        } else {
+          // Tall / narrow manhwa strip (e.g. 1:2 to 1:5)
+          // Maintain generous card width (never a skinny toothpick), clip & smooth vertical Ken Burns pan!
+          cardW = Math.min(maxCardW, Math.max(minCardW, maxCardH * 0.85));
+          cardH = maxCardH;
+          scaledW = cardW;
+          scaledH = cardW / aspectCrop;
+
+          const maxScroll = Math.max(0, scaledH - cardH);
+          if (activeItem.cameraEffect === 'pan_up') {
+            scrollY = (1 - progress) * maxScroll;
+          } else {
+            // Default / pan_down / dramatic_zoom: smoothly scroll down through the scenes as narrator speaks
+            scrollY = progress * maxScroll;
+          }
+        }
+
         ctx.save();
         ctx.filter = 'none';
         ctx.translate(canvas.width / 2 + shiftX, canvas.height / 2 + shiftY);
         ctx.scale(scale, scale);
 
-        // Aspect COVER within canvas viewport (fill entire canvas, crop excess)
-        let drawW = canvas.width;
-        let drawH = canvas.height;
-
-        if (aspectCrop > aspectCanvas) {
-          // Crop is wider than canvas: fit height, overflow width
-          drawH = canvas.height;
-          drawW = canvas.height * aspectCrop;
-        } else {
-          // Crop is taller than canvas (manga): fit width, overflow height
-          drawW = canvas.width;
-          drawH = canvas.width / aspectCrop;
-        }
-
-        // Deep drop shadow on the central panel for maximum pop and depth
+        // A. Floating Card Shadow & Dark Backing
+        ctx.save();
         if (blurredBackground) {
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.88)';
           ctx.shadowBlur = 24;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 6;
         }
+        ctx.fillStyle = '#0a0d14';
+        ctx.beginPath();
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+        } else {
+          ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
+        }
+        ctx.fill();
+        ctx.restore();
 
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, -drawW / 2, -drawH / 2, drawW, drawH);
+        // B. Clipped Manga Image (With smooth vertical scroll for tall strips)
+        ctx.save();
+        ctx.beginPath();
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+        } else {
+          ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
+        }
+        ctx.clip();
+
+        ctx.drawImage(
+          img,
+          cropX,
+          cropY,
+          cropW,
+          cropH,
+          -cardW / 2,
+          -cardH / 2 - scrollY,
+          scaledW,
+          scaledH
+        );
+        ctx.restore();
+
+        // C. Elegant Modern Border
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+        } else {
+          ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
+        }
+        ctx.stroke();
+        ctx.restore();
+
         ctx.restore();
 
         // 4. Render 2.5D Motion Comic VFX Particle Overlay (Embers, Aura Smoke, Speed Lines, Eye Flare, Rain)
