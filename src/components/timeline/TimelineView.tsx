@@ -419,16 +419,18 @@ export const TimelineView: React.FC = () => {
         ctx.translate(canvas.width / 2 + shiftX, canvas.height / 2 + shiftY);
         ctx.scale(scale, scale);
 
-        // Aspect fit / cover within canvas viewport
+        // Aspect COVER within canvas viewport (fill entire canvas, crop excess)
         let drawW = canvas.width;
         let drawH = canvas.height;
 
         if (aspectCrop > aspectCanvas) {
-          drawW = canvas.width;
-          drawH = canvas.width / aspectCrop;
-        } else {
+          // Crop is wider than canvas: fit height, overflow width
           drawH = canvas.height;
           drawW = canvas.height * aspectCrop;
+        } else {
+          // Crop is taller than canvas (manga): fit width, overflow height
+          drawW = canvas.width;
+          drawH = canvas.width / aspectCrop;
         }
 
         // Deep drop shadow on the central panel for maximum pop and depth
