@@ -101,19 +101,20 @@ export const OCRView: React.FC = () => {
   const [isMainImageLoading, setIsMainImageLoading] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageWrapperRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
 
   const dragStartRef = useRef<{
-    mouseX: number;
-    mouseY: number;
+    startMousePercentX: number;
+    startMousePercentY: number;
     initialX: number;
     initialY: number;
     initialW: number;
     initialH: number;
   }>({
-    mouseX: 0,
-    mouseY: 0,
+    startMousePercentX: 0,
+    startMousePercentY: 0,
     initialX: 0,
     initialY: 0,
     initialW: 0,
@@ -177,9 +178,12 @@ export const OCRView: React.FC = () => {
     e.stopPropagation();
     setDraggingPanelId(panelId);
     setSelectedPanelId(panelId);
+    const rect = imageWrapperRef.current?.getBoundingClientRect();
+    const startX = rect && rect.width > 0 ? ((e.clientX - rect.left) / rect.width) * 100 : 0;
+    const startY = rect && rect.height > 0 ? ((e.clientY - rect.top) / rect.height) * 100 : 0;
     dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
+      startMousePercentX: startX,
+      startMousePercentY: startY,
       initialX: bbox.x,
       initialY: bbox.y,
       initialW: bbox.w,
@@ -196,9 +200,12 @@ export const OCRView: React.FC = () => {
     e.stopPropagation();
     setResizingPanelId(panelId);
     setSelectedPanelId(panelId);
+    const rect = imageWrapperRef.current?.getBoundingClientRect();
+    const startX = rect && rect.width > 0 ? ((e.clientX - rect.left) / rect.width) * 100 : 0;
+    const startY = rect && rect.height > 0 ? ((e.clientY - rect.top) / rect.height) * 100 : 0;
     dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
+      startMousePercentX: startX,
+      startMousePercentY: startY,
       initialX: bbox.x,
       initialY: bbox.y,
       initialW: bbox.w,
@@ -207,15 +214,27 @@ export const OCRView: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
+    if (!imageWrapperRef.current || (!draggingPanelId && !resizingPanelId)) return;
+    const rect = imageWrapperRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    // Auto-scroll the container if dragging near container top/bottom edge
+    if (containerRef.current) {
+      const cRect = containerRef.current.getBoundingClientRect();
+      if (e.clientY > cRect.bottom - 50) {
+        containerRef.current.scrollTop += 14;
+      } else if (e.clientY < cRect.top + 50) {
+        containerRef.current.scrollTop -= 14;
+      }
+    }
+
+    const currentX = ((e.clientX - rect.left) / rect.width) * 100;
+    const currentY = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const deltaX = currentX - dragStartRef.current.startMousePercentX;
+    const deltaY = currentY - dragStartRef.current.startMousePercentY;
 
     if (draggingPanelId) {
-      const deltaX =
-        ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
-      const deltaY =
-        ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
-
       const newX = Math.max(
         0,
         Math.min(
@@ -238,23 +257,18 @@ export const OCRView: React.FC = () => {
         h: dragStartRef.current.initialH,
       });
     } else if (resizingPanelId) {
-      const deltaW =
-        ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
-      const deltaH =
-        ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
-
       const newW = Math.max(
-        15,
+        5,
         Math.min(
           100 - dragStartRef.current.initialX,
-          dragStartRef.current.initialW + deltaW,
+          dragStartRef.current.initialW + deltaX,
         ),
       );
       const newH = Math.max(
-        10,
+        2,
         Math.min(
           100 - dragStartRef.current.initialY,
-          dragStartRef.current.initialH + deltaH,
+          dragStartRef.current.initialH + deltaY,
         ),
       );
 
@@ -995,7 +1009,10 @@ export const OCRView: React.FC = () => {
               ref={containerRef}
               className="relative w-full max-h-[85vh] overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 flex justify-center p-1.5 select-none"
             >
-              <div className="relative inline-block w-full max-w-[520px] min-h-[300px]">
+              <div
+                ref={imageWrapperRef}
+                className="relative inline-block w-full max-w-[520px] min-h-[300px]"
+              >
                 {isMainImageLoading && (
                   <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] flex items-center justify-center z-30 rounded">
                     <div className="flex flex-col items-center space-y-2">
@@ -1169,6 +1186,68 @@ export const OCRView: React.FC = () => {
                           title="Xóa Panel"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Panel Bounding Box Controls (Y position & Height controls) */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-2 bg-slate-900/60 rounded border border-slate-800/80 text-[10px] font-mono text-slate-300">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-slate-400">Vị trí Y:</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={98}
+                          value={Math.round(panel.bbox?.y ?? 0)}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100 - (panel.bbox?.h || 5), Number(e.target.value)));
+                            updatePanelBBox(activePageIndex, panel.id, { y: val });
+                          }}
+                          className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-cyan-300 text-center text-[10px] focus:outline-none focus:border-cyan-400"
+                          title="Vị trí từ trên xuống dưới (0% - 100%)"
+                        />
+                        <span className="text-slate-500">%</span>
+                      </div>
+
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-slate-400">Độ Dài (H):</span>
+                        <input
+                          type="number"
+                          min={2}
+                          max={100}
+                          value={Math.round(panel.bbox?.h ?? 40)}
+                          onChange={(e) => {
+                            const val = Math.max(2, Math.min(100 - (panel.bbox?.y || 0), Number(e.target.value)));
+                            updatePanelBBox(activePageIndex, panel.id, { h: val });
+                          }}
+                          className="w-12 bg-slate-800 border border-slate-700 rounded px-1 text-emerald-300 text-center text-[10px] focus:outline-none focus:border-emerald-400"
+                          title="Độ dài / chiều cao của panel"
+                        />
+                        <span className="text-slate-500">%</span>
+                      </div>
+
+                      <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newY = Math.min(100 - (panel.bbox?.h || 20), (panel.bbox?.y || 0) + 10);
+                            updatePanelBBox(activePageIndex, panel.id, { y: Math.round(newY * 10) / 10 });
+                          }}
+                          className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-cyan-300 transition-colors cursor-pointer"
+                          title="Đưa panel xuống dưới (+10%)"
+                        >
+                          ↓ Xuống
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newH = Math.min(100 - (panel.bbox?.y || 0), (panel.bbox?.h || 20) + 10);
+                            updatePanelBBox(activePageIndex, panel.id, { h: Math.round(newH * 10) / 10 });
+                          }}
+                          className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] hover:text-emerald-300 transition-colors cursor-pointer"
+                          title="Tăng độ dài panel (+10%)"
+                        >
+                          + Dài
                         </button>
                       </div>
                     </div>
