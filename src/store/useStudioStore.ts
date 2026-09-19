@@ -293,6 +293,29 @@ interface StudioState {
   setSelectedBenchmarkChannel: (channelId: string) => void;
 }
 
+// Safe LocalStorage wrapper to prevent QuotaExceededError and avoid main thread crashes
+const safeLocalStorage = {
+  getItem: (name: string): string | null => {
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (e) {
+      console.warn('⚠️ [useStudioStore] LocalStorage quota exceeded or storage unavailable. Skipping persist to protect application state.', e);
+    }
+  },
+  removeItem: (name: string): void => {
+    try {
+      localStorage.removeItem(name);
+    } catch {}
+  },
+};
+
 export const useStudioStore = create<StudioState>()(
   persist(
     (set, get) => ({
@@ -3726,11 +3749,31 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
 }),
     {
       name: 'manga-studio-storage-v4',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({
         pages: state.pages,
-        projects: state.projects,
-        selectedProject: state.selectedProject,
+        projects: (state.projects || []).map((p) => ({
+          id: p.id,
+          seriesName: p.seriesName,
+          chapterNumber: p.chapterNumber,
+          episodeTitle: p.episodeTitle,
+          coverUrl: p.coverUrl,
+          status: p.status,
+          updatedAt: p.updatedAt,
+          durationEst: p.durationEst,
+          sourceUrl: p.sourceUrl,
+        })),
+        selectedProject: state.selectedProject ? {
+          id: state.selectedProject.id,
+          seriesName: state.selectedProject.seriesName,
+          chapterNumber: state.selectedProject.chapterNumber,
+          episodeTitle: state.selectedProject.episodeTitle,
+          coverUrl: state.selectedProject.coverUrl,
+          status: state.selectedProject.status,
+          updatedAt: state.selectedProject.updatedAt,
+          durationEst: state.selectedProject.durationEst,
+          sourceUrl: state.selectedProject.sourceUrl,
+        } : null,
         clips: state.clips,
         subtitles: state.subtitles,
         scriptData: state.scriptData,
@@ -3739,7 +3782,6 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
         mangaUrlInput: state.mangaUrlInput,
       }),
       merge: (persistedState: any, currentState) => {
-        // Never restore activeTab or isPlaying from localStorage
         if (persistedState) {
           delete persistedState.activeTab;
           delete persistedState.isPlaying;

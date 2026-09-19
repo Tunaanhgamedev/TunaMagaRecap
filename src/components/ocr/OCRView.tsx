@@ -123,6 +123,13 @@ export const OCRView: React.FC = () => {
     initialH: 0,
   });
 
+  const rafThrottleRef = useRef<number | null>(null);
+  const pendingBBoxRef = useRef<{
+    pageIdx: number;
+    panelId: string;
+    bbox: { x?: number; y?: number; w?: number; h?: number };
+  } | null>(null);
+
   const currentPage = pages[activePageIndex] || pages[0];
 
   useEffect(() => {
@@ -261,12 +268,16 @@ export const OCRView: React.FC = () => {
       // Dynamically shrink H if moving past bottom so it's never stuck
       const newH = Math.max(5, Math.min(initialH, 100 - newY));
 
-      updatePanelBBox(activePageIndex, draggingPanelId, {
-        x: Math.round(newX * 10) / 10,
-        y: Math.round(newY * 10) / 10,
-        w: Math.round(newW * 10) / 10,
-        h: Math.round(newH * 10) / 10,
-      });
+      pendingBBoxRef.current = {
+        pageIdx: activePageIndex,
+        panelId: draggingPanelId,
+        bbox: {
+          x: Math.round(newX * 10) / 10,
+          y: Math.round(newY * 10) / 10,
+          w: Math.round(newW * 10) / 10,
+          h: Math.round(newH * 10) / 10,
+        },
+      };
     } else if (resizingPanelId) {
       const newW = Math.max(
         5,
@@ -284,16 +295,46 @@ export const OCRView: React.FC = () => {
         ),
       );
 
-      updatePanelBBox(activePageIndex, resizingPanelId, {
-        x: dragStartRef.current.initialX,
-        y: dragStartRef.current.initialY,
-        w: Math.round(newW * 10) / 10,
-        h: Math.round(newH * 10) / 10,
+      pendingBBoxRef.current = {
+        pageIdx: activePageIndex,
+        panelId: resizingPanelId,
+        bbox: {
+          x: dragStartRef.current.initialX,
+          y: dragStartRef.current.initialY,
+          w: Math.round(newW * 10) / 10,
+          h: Math.round(newH * 10) / 10,
+        },
+      };
+    }
+
+    if (!rafThrottleRef.current) {
+      rafThrottleRef.current = requestAnimationFrame(() => {
+        if (pendingBBoxRef.current) {
+          updatePanelBBox(
+            pendingBBoxRef.current.pageIdx,
+            pendingBBoxRef.current.panelId,
+            pendingBBoxRef.current.bbox,
+          );
+          pendingBBoxRef.current = null;
+        }
+        rafThrottleRef.current = null;
       });
     }
   };
 
   const handleMouseUp = () => {
+    if (rafThrottleRef.current) {
+      cancelAnimationFrame(rafThrottleRef.current);
+      rafThrottleRef.current = null;
+    }
+    if (pendingBBoxRef.current) {
+      updatePanelBBox(
+        pendingBBoxRef.current.pageIdx,
+        pendingBBoxRef.current.panelId,
+        pendingBBoxRef.current.bbox,
+      );
+      pendingBBoxRef.current = null;
+    }
     setDraggingPanelId(null);
     setResizingPanelId(null);
   };
@@ -895,6 +936,7 @@ export const OCRView: React.FC = () => {
                 <div
                   key={p.id}
                   onClick={() => setActivePageIndex(idx)}
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '96px 128px' }}
                   className={`group relative shrink-0 w-24 h-32 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
                     isActive
                       ? "border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10"

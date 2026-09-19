@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import zlib from 'zlib';
 dotenv.config();
 
 import { PrismaClient } from '@prisma/client';
@@ -49,6 +50,41 @@ const setCORSHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+};
+
+/**
+ * High-performance JSON sender with native gzip compression for payloads > 1KB
+ */
+const sendJSON = (res, data, statusCode = 200, req = null) => {
+  setCORSHeaders(res);
+  const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
+  const acceptEncoding = req?.headers?.['accept-encoding'] || '';
+
+  if (jsonStr.length > 1024 && acceptEncoding.includes('gzip')) {
+    zlib.gzip(jsonStr, (err, compressed) => {
+      if (!err && compressed) {
+        res.writeHead(statusCode, {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'gzip',
+          'Content-Length': compressed.length,
+          'Vary': 'Accept-Encoding',
+        });
+        res.end(compressed);
+        return;
+      }
+      res.writeHead(statusCode, {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(jsonStr),
+      });
+      res.end(jsonStr);
+    });
+  } else {
+    res.writeHead(statusCode, {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(jsonStr),
+    });
+    res.end(jsonStr);
+  }
 };
 
 async function resolveAndFetchImage(imageUrl, initialReferer = null) {
@@ -280,11 +316,9 @@ const server = http.createServer(async (req, res) => {
         const prismaProjects = await prisma.project.findMany({
           orderBy: { updatedAt: 'desc' },
         });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, projects: prismaProjects.length > 0 ? prismaProjects : db.projects }));
+        sendJSON(res, { success: true, projects: prismaProjects.length > 0 ? prismaProjects : db.projects }, 200, req);
       } catch (err) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, projects: db.projects }));
+        sendJSON(res, { success: true, projects: db.projects }, 200, req);
       }
       return;
     }
@@ -1509,6 +1543,12 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
         }));
       }
 
+      // FAST PATH: If SQLite has no pages yet, but localProject (db.json) already has pages, use them immediately (0ms)!
+      if (pages.length === 0 && localProject && Array.isArray(localProject.pages) && localProject.pages.length > 0) {
+        pages = localProject.pages;
+        console.log(`[Project Detail] ⚡ Instant load: Retrieved ${pages.length} pages from local cache for "${effectiveProject.seriesName}"`);
+      }
+
       // If pages are empty but project has a sourceUrl, auto-scrape pages on the fly and cache them
       const sourceUrl = effectiveProject.sourceUrl || (prismaProject?.chapters?.[0]?.sourceUrl) || localProject?.sourceUrl;
       if (pages.length === 0 && sourceUrl) {
@@ -1595,17 +1635,15 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
         ];
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
+      sendJSON(res, {
         success: true,
         project: effectiveProject,
         pages: pages,
         scriptData: null,
         chapters: prismaProject?.chapters || [],
-      }));
+      }, 200, req);
     } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: err.message }));
+      sendJSON(res, { success: false, error: err.message }, 500, req);
     }
     return;
   }
