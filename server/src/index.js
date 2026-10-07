@@ -25,10 +25,91 @@ try {
 
 const inFlightImageFetches = new Map();
 
+export function normalizeSeriesName(name) {
+  if (!name) return '';
+  return String(name)
+    .toLowerCase()
+    .replace(/truyện tranh\s*/gi, '')
+    .replace(/,\s*thư viện sách.*/gi, '')
+    .replace(/\s*[-–—:]\s*(solo leveling|tiếng việt|tieng viet|full|raw|manhua|manhwa|manga).*/gi, '')
+    .replace(/\(.*\)/g, '')
+    .replace(/[^a-z0-9àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ\s]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeChapterNumber(num) {
+  if (typeof num === 'number') return isNaN(num) ? 0 : num;
+  if (!num) return 0;
+  const str = String(num).trim();
+  const match = str.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+const deduplicateProjectsList = (projectsList) => {
+  if (!Array.isArray(projectsList)) return [];
+  const seenKeys = new Set();
+  const result = [];
+  for (const p of projectsList) {
+    const normSeries = normalizeSeriesName(p.seriesName);
+    const normChap = normalizeChapterNumber(p.chapterNumber);
+    const key = `${normSeries}::${normChap}`;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      result.push({
+        ...p,
+        chapterNumber: normChap,
+      });
+    }
+  }
+  return result;
+};
+
+const cleanUpDuplicateProjects = async () => {
+  try {
+    if (Array.isArray(db.projects)) {
+      const origCount = db.projects.length;
+      db.projects = deduplicateProjectsList(db.projects);
+      if (db.projects.length !== origCount) {
+        console.log(`[DB Deduplication] 🧹 Đã dọn dẹp ${origCount - db.projects.length} chapter trùng lặp trong db.json`);
+        saveDB(db);
+      }
+    }
+
+    const allPrismaProjects = await prisma.project.findMany({
+      orderBy: { updatedAt: 'desc' },
+    });
+    const prismaSeen = new Set();
+    const duplicateIdsToDelete = [];
+
+    for (const p of allPrismaProjects) {
+      const key = `${normalizeSeriesName(p.seriesName)}::${normalizeChapterNumber(p.chapterNumber)}`;
+      if (prismaSeen.has(key)) {
+        duplicateIdsToDelete.push(p.id);
+      } else {
+        prismaSeen.add(key);
+      }
+    }
+
+    if (duplicateIdsToDelete.length > 0) {
+      console.log(`[Prisma Deduplication] 🧹 Đã dọn dẹp ${duplicateIdsToDelete.length} project trùng lặp trong Prisma SQLite`);
+      await prisma.project.deleteMany({
+        where: { id: { in: duplicateIdsToDelete } },
+      });
+    }
+  } catch (err) {
+    console.error('[Deduplication Error]', err.message);
+  }
+};
+
 const loadDB = () => {
   try {
     if (fs.existsSync(DB_FILE)) {
-      return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      if (data && Array.isArray(data.projects)) {
+        data.projects = deduplicateProjectsList(data.projects);
+      }
+      return data;
     }
   } catch (err) {}
   return {
@@ -39,12 +120,17 @@ const loadDB = () => {
 
 const saveDB = (data) => {
   try {
+    if (data && Array.isArray(data.projects)) {
+      data.projects = deduplicateProjectsList(data.projects);
+    }
     fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
   } catch (err) {}
 };
 
 let db = loadDB();
+// Run initial cleanup on startup
+cleanUpDuplicateProjects().catch(() => {});
 
 const setCORSHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -382,16 +468,13 @@ const server = http.createServer(async (req, res) => {
         // Sync to Prisma SQLite DB with upsert logic to prevent duplicate records
         try {
           const resolvedSeriesName = scrapedData.project.seriesName;
-          const resolvedChapterNum = typeof scrapedData.project.chapterNumber === 'string'
-            ? parseInt(scrapedData.project.chapterNumber) || 1
-            : scrapedData.project.chapterNumber;
+          const resolvedNormSeries = normalizeSeriesName(resolvedSeriesName);
+          const resolvedChapterNum = normalizeChapterNumber(scrapedData.project.chapterNumber);
 
-          const existingProject = await prisma.project.findFirst({
-            where: {
-              seriesName: resolvedSeriesName,
-              chapterNumber: resolvedChapterNum,
-            },
-          });
+          const allPrismaProjects = await prisma.project.findMany();
+          const existingProject = allPrismaProjects.find(
+            (p) => normalizeSeriesName(p.seriesName) === resolvedNormSeries && normalizeChapterNumber(p.chapterNumber) === resolvedChapterNum
+          );
 
           let project;
           if (existingProject) {
@@ -417,14 +500,15 @@ const server = http.createServer(async (req, res) => {
             });
           }
           scrapedData.project.id = project.id;
+          scrapedData.project.chapterNumber = resolvedChapterNum;
 
           if (scrapedData.pages && scrapedData.pages.length > 0) {
             if (!existingProject) {
               await prisma.chapter.create({
                 data: {
                   projectId: project.id,
-                  number: parseInt(scrapedData.project.chapterNumber) || 1,
-                  title: scrapedData.project.episodeTitle || `Chapter ${scrapedData.project.chapterNumber}`,
+                  number: resolvedChapterNum,
+                  title: scrapedData.project.episodeTitle || `Chapter ${resolvedChapterNum}`,
                   pages: {
                     create: scrapedData.pages.map((p, idx) => ({
                       pageIndex: p.pageIndex || idx + 1,
@@ -439,7 +523,15 @@ const server = http.createServer(async (req, res) => {
           console.log('[Prisma Sync] Stored in cached memory store:', dbErr.message);
         }
 
-        db.projects = [scrapedData.project, ...db.projects.filter((p) => p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber)];
+        const normScrapedSeries = normalizeSeriesName(scrapedData.project.seriesName);
+        const normScrapedChap = normalizeChapterNumber(scrapedData.project.chapterNumber);
+
+        db.projects = [
+          scrapedData.project,
+          ...db.projects.filter(
+            (p) => p.id !== scrapedData.project.id && (normalizeSeriesName(p.seriesName) !== normScrapedSeries || normalizeChapterNumber(p.chapterNumber) !== normScrapedChap)
+          ),
+        ];
         saveDB(db);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -471,23 +563,39 @@ const server = http.createServer(async (req, res) => {
         console.log(`[Discover API] 🔍 Bắt đầu dò tìm toàn bộ chapter từ: ${mangaUrl}`);
         const discovered = await scraperManager.discoverSeries(mangaUrl);
 
-        // Check which chapters are already scraped in database
-        let existingProjects = [];
+        // Build deduplication map of all existing chapters for this series across Prisma & local db
+        const normTargetSeries = normalizeSeriesName(discovered.series.name);
+        const existingProjectsMap = new Map();
+
         try {
-          existingProjects = await prisma.project.findMany({
-            where: { seriesName: discovered.series.name },
-            select: { id: true, chapterNumber: true, episodeTitle: true, durationEst: true }
-          });
-        } catch (e) {
-          existingProjects = db.projects.filter((p) => p.seriesName === discovered.series.name);
+          const prismaProjects = await prisma.project.findMany();
+          for (const p of prismaProjects) {
+            const pNormSeries = normalizeSeriesName(p.seriesName);
+            if (pNormSeries === normTargetSeries || pNormSeries.includes(normTargetSeries) || normTargetSeries.includes(pNormSeries)) {
+              const chapNum = normalizeChapterNumber(p.chapterNumber);
+              existingProjectsMap.set(chapNum, p.id);
+            }
+          }
+        } catch (e) {}
+
+        for (const lp of db.projects) {
+          const lpNormSeries = normalizeSeriesName(lp.seriesName);
+          if (lpNormSeries === normTargetSeries || lpNormSeries.includes(normTargetSeries) || normTargetSeries.includes(lpNormSeries)) {
+            const chapNum = normalizeChapterNumber(lp.chapterNumber);
+            if (!existingProjectsMap.has(chapNum)) {
+              existingProjectsMap.set(chapNum, lp.id);
+            }
+          }
         }
 
         const enrichedChapters = discovered.chapters.map((ch) => {
-          const existing = existingProjects.find((p) => p.chapterNumber === ch.chapterNumber);
+          const cNum = normalizeChapterNumber(ch.chapterNumber);
+          const isScraped = existingProjectsMap.has(cNum);
           return {
             ...ch,
-            isScraped: !!existing,
-            projectId: existing ? existing.id : null,
+            chapterNumber: cNum,
+            isScraped,
+            projectId: isScraped ? existingProjectsMap.get(cNum) : null,
           };
         });
 
@@ -550,29 +658,44 @@ const server = http.createServer(async (req, res) => {
 
         // Execute batch in background
         (async () => {
-          // Pre-fetch all existing chapters for this series to enable O(1) dedup lookups
+          const normTargetSeries = normalizeSeriesName(seriesName);
           let existingChapterKeys = new Set();
+          let inFlightKeys = new Set();
+
+          // Pre-fetch all existing chapters for this series to enable O(1) dedup lookups
           try {
-            const existingProjects = await prisma.project.findMany({
-              where: { seriesName: seriesName },
-              select: { seriesName: true, chapterNumber: true },
-            });
+            const existingProjects = await prisma.project.findMany();
             for (const ep of existingProjects) {
-              const chapNum = typeof ep.chapterNumber === 'number' ? ep.chapterNumber : (parseInt(String(ep.chapterNumber)) || 0);
-              existingChapterKeys.add(`${ep.seriesName}::${chapNum}`);
+              const epNormSeries = normalizeSeriesName(ep.seriesName);
+              const chapNum = normalizeChapterNumber(ep.chapterNumber);
+              if (epNormSeries === normTargetSeries || epNormSeries.includes(normTargetSeries) || normTargetSeries.includes(epNormSeries)) {
+                existingChapterKeys.add(`${normTargetSeries}::${chapNum}`);
+              }
             }
           } catch (e) {}
-          // Also check db.json local store
+
           for (const lp of db.projects) {
-            if (lp.seriesName === seriesName) {
-              const chapNum = typeof lp.chapterNumber === 'number' ? lp.chapterNumber : (parseInt(String(lp.chapterNumber)) || 0);
-              existingChapterKeys.add(`${lp.seriesName}::${chapNum}`);
+            const lpNormSeries = normalizeSeriesName(lp.seriesName);
+            const chapNum = normalizeChapterNumber(lp.chapterNumber);
+            if (lpNormSeries === normTargetSeries || lpNormSeries.includes(normTargetSeries) || normTargetSeries.includes(lpNormSeries)) {
+              existingChapterKeys.add(`${normTargetSeries}::${chapNum}`);
+            }
+          }
+
+          // Deduplicate incoming input chapters array upfront
+          const uniqueInputChapters = [];
+          const seenInputChaps = new Set();
+          for (const ch of chapters) {
+            const cChapNum = normalizeChapterNumber(ch.chapterNumber);
+            if (!seenInputChaps.has(cChapNum)) {
+              seenInputChaps.add(cChapNum);
+              uniqueInputChapters.push({ ...ch, chapterNumber: cChapNum });
             }
           }
 
           let processedCount = 0;
           let skippedCount = 0;
-          const totalChapters = chapters.length;
+          const totalChapters = uniqueInputChapters.length;
 
           let dirtyDb = false;
           let saveTimer = null;
@@ -582,6 +705,7 @@ const server = http.createServer(async (req, res) => {
             if (!saveTimer) {
               saveTimer = setTimeout(() => {
                 if (dirtyDb) {
+                  db.projects = deduplicateProjectsList(db.projects);
                   saveDB(db);
                   dirtyDb = false;
                 }
@@ -602,13 +726,13 @@ const server = http.createServer(async (req, res) => {
           // Filter out chapters to scrape vs skip upfront
           const chaptersToScrape = [];
           for (let i = 0; i < totalChapters; i++) {
-            const ch = chapters[i];
-            const cChapNum = typeof ch.chapterNumber === 'number' ? ch.chapterNumber : (parseInt(String(ch.chapterNumber)) || 0);
-            const chapKey = `${seriesName}::${cChapNum}`;
+            const ch = uniqueInputChapters[i];
+            const cChapNum = normalizeChapterNumber(ch.chapterNumber);
+            const chapKey = `${normTargetSeries}::${cChapNum}`;
             if (existingChapterKeys.has(chapKey)) {
-              console.log(`[Batch Scraper] ⏩ [${i + 1}/${totalChapters}] Bỏ qua ${ch.title} (đã tồn tại trong DB)`);
+              console.log(`[Batch Scraper] ⏩ [${i + 1}/${totalChapters}] Bỏ qua ${ch.title || 'Chapter ' + cChapNum} (đã tồn tại trong DB)`);
               skippedCount++;
-              updateProgress(`⏩ Bỏ qua: ${ch.title} (đã có)`);
+              updateProgress(`⏩ Bỏ qua: ${ch.title || 'Chapter ' + cChapNum} (đã có)`);
             } else {
               chaptersToScrape.push({ ch, originalIndex: i });
             }
@@ -627,8 +751,16 @@ const server = http.createServer(async (req, res) => {
               const currentIndex = queueIndex++;
               const { ch, originalIndex } = chaptersToScrape[currentIndex];
 
-              const cChapNum = typeof ch.chapterNumber === 'number' ? ch.chapterNumber : (parseInt(String(ch.chapterNumber)) || 0);
-              const chapKey = `${seriesName}::${cChapNum}`;
+              const cChapNum = normalizeChapterNumber(ch.chapterNumber);
+              const chapKey = `${normTargetSeries}::${cChapNum}`;
+
+              if (existingChapterKeys.has(chapKey) || inFlightKeys.has(chapKey)) {
+                console.log(`[Batch Scraper] ⏩ W${workerId} Bỏ qua ${ch.title || 'Chapter ' + cChapNum} (đang xử lý hoặc đã hoàn thành)`);
+                updateProgress(`⏩ Bỏ qua: ${ch.title || 'Chapter ' + cChapNum}`);
+                continue;
+              }
+
+              inFlightKeys.add(chapKey);
 
               try {
                 console.log(`[Batch Scraper] ⏳ W${workerId} [${originalIndex + 1}/${totalChapters}] Đang cào ${ch.title} (${ch.url})...`);
@@ -636,14 +768,13 @@ const server = http.createServer(async (req, res) => {
 
                 try {
                   const resolvedSeriesName = scrapedData.project.seriesName || seriesName;
-                  const resolvedChapterNum = ch.chapterNumber || scrapedData.project.chapterNumber;
+                  const resolvedNormSeries = normalizeSeriesName(resolvedSeriesName);
+                  const resolvedChapterNum = normalizeChapterNumber(ch.chapterNumber || scrapedData.project.chapterNumber);
 
-                  const existingProject = await prisma.project.findFirst({
-                    where: {
-                      seriesName: resolvedSeriesName,
-                      chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
-                    },
-                  });
+                  const allPrisma = await prisma.project.findMany();
+                  const existingProject = allPrisma.find(
+                    (p) => normalizeSeriesName(p.seriesName) === resolvedNormSeries && normalizeChapterNumber(p.chapterNumber) === resolvedChapterNum
+                  );
 
                   let project;
                   if (existingProject) {
@@ -661,7 +792,7 @@ const server = http.createServer(async (req, res) => {
                     project = await prisma.project.create({
                       data: {
                         seriesName: resolvedSeriesName,
-                        chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
+                        chapterNumber: resolvedChapterNum,
                         episodeTitle: scrapedData.project.episodeTitle,
                         status: 'ready',
                         durationEst: scrapedData.project.durationEst,
@@ -670,14 +801,15 @@ const server = http.createServer(async (req, res) => {
                     });
                   }
                   scrapedData.project.id = project.id;
+                  scrapedData.project.chapterNumber = resolvedChapterNum;
 
                   if (scrapedData.pages && scrapedData.pages.length > 0) {
                     if (!existingProject) {
                       await prisma.chapter.create({
                         data: {
                           projectId: project.id,
-                          number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
-                          title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
+                          number: resolvedChapterNum,
+                          title: scrapedData.project.episodeTitle || `Chapter ${resolvedChapterNum}`,
                           pages: {
                             create: scrapedData.pages.map((p, idx) => ({
                               pageIndex: p.pageIndex || idx + 1,
@@ -692,7 +824,15 @@ const server = http.createServer(async (req, res) => {
                   console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
                 }
 
-                db.projects = [scrapedData.project, ...db.projects.filter((p) => p.id !== scrapedData.project.id && (p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber))];
+                const normScrapedSeries = normalizeSeriesName(scrapedData.project.seriesName);
+                const normScrapedChap = normalizeChapterNumber(scrapedData.project.chapterNumber);
+
+                db.projects = [
+                  scrapedData.project,
+                  ...db.projects.filter(
+                    (p) => p.id !== scrapedData.project.id && (normalizeSeriesName(p.seriesName) !== normScrapedSeries || normalizeChapterNumber(p.chapterNumber) !== normScrapedChap)
+                  ),
+                ];
                 scheduleSave();
 
                 existingChapterKeys.add(chapKey);
@@ -702,6 +842,8 @@ const server = http.createServer(async (req, res) => {
                 console.error(`[Batch Scraper] ❌ W${workerId} Lỗi cào ${ch.title}:`, chErr.message);
                 global.batchScrapeProgress.errors.push({ chapter: ch.title, error: chErr.message });
                 updateProgress(`❌ Lỗi: ${ch.title}`);
+              } finally {
+                inFlightKeys.delete(chapKey);
               }
 
               // Small delay between chapters per worker
@@ -721,7 +863,7 @@ const server = http.createServer(async (req, res) => {
             clearTimeout(saveTimer);
             saveTimer = null;
           }
-          saveDB(db);
+          await cleanUpDuplicateProjects();
 
           global.batchScrapeProgress.isRunning = false;
           console.log(`[Batch Scraper] ✅ Hoàn tất cào ${global.batchScrapeProgress.completedProjects.length}/${totalChapters} chapter cho ${seriesName}! (Đã bỏ qua ${skippedCount} chapter đã có)`);
