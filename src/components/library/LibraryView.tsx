@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useStudioStore } from '../../store/useStudioStore';
 import { getProxyImageUrl } from '../../utils/constants';
+import { Project } from '../../types/studio';
 import {
   FolderOpen,
   Upload,
@@ -23,7 +24,88 @@ import {
   Film,
   Download,
   Trash2,
+  ChevronDown,
+  ChevronUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from 'lucide-react';
+
+interface ChapterCardProps {
+  chapter: Project;
+  isActive: boolean;
+  responsiveClass?: string;
+  onOpen: (id: string) => void;
+  onDelete: (id: string, num: number, title?: string) => void;
+  onOpenOCR: (id: string) => void;
+}
+
+const ChapterCard = React.memo<ChapterCardProps>(({
+  chapter,
+  isActive,
+  responsiveClass = '',
+  onOpen,
+  onDelete,
+  onOpenOCR,
+}) => {
+  return (
+    <div
+      onClick={() => onOpen(chapter.id)}
+      className={`glass-card p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] space-y-2 ${
+        isActive
+          ? 'bg-violet-950/60 border-violet-500 shadow-lg shadow-violet-900/30'
+          : 'bg-slate-950/80 border-slate-800 hover:border-indigo-500/50'
+      } ${responsiveClass}`}
+    >
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-bold text-white flex items-center space-x-1">
+          <Folder className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Chap {chapter.chapterNumber}</span>
+        </span>
+        <div className="flex items-center space-x-1.5">
+          {isActive && (
+            <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded border border-emerald-500/30">
+              Đang Mở
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(chapter.id, chapter.chapterNumber, chapter.episodeTitle);
+            }}
+            className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 transition-colors cursor-pointer"
+            title={`Xóa Chap ${chapter.chapterNumber}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="text-[10px] text-slate-400 truncate">
+        {chapter.episodeTitle || `Chapter ${chapter.chapterNumber}`}
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-900 text-slate-400">
+        <span className="flex items-center space-x-1">
+          <Clock className="w-3 h-3 text-amber-400" />
+          <span>~{Math.round(chapter.durationEst || 240)}s</span>
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenOCR(chapter.id);
+          }}
+          className="text-cyan-400 hover:text-cyan-200 font-bold hover:underline flex items-center space-x-0.5 cursor-pointer"
+          title="Mở trực tiếp chapter này trong không gian chỉnh sửa OCR"
+        >
+          <span>Mở OCR →</span>
+        </button>
+      </div>
+    </div>
+  );
+});
+ChapterCard.displayName = 'ChapterCard';
 
 export const LibraryView: React.FC = () => {
   const {
@@ -74,6 +156,59 @@ export const LibraryView: React.FC = () => {
   const [rangeStart, setRangeStart] = useState<number>(1);
   const [rangeEnd, setRangeEnd] = useState<number>(20);
   const [seriesSearchQuery, setSeriesSearchQuery] = useState<string>('');
+  const [expandedSeriesMap, setExpandedSeriesMap] = useState<Record<string, boolean>>({});
+
+  const toggleSeriesExpand = useCallback((seriesName: string, totalChapters: number) => {
+    setExpandedSeriesMap((prev) => {
+      const isCurrentExpanded = prev[seriesName] ?? (totalChapters <= 6);
+      return {
+        ...prev,
+        [seriesName]: !isCurrentExpanded,
+      };
+    });
+  }, []);
+
+  const collapseAllSeries = useCallback(() => {
+    const newMap: Record<string, boolean> = {};
+    seriesFolders.forEach((s) => {
+      newMap[s.seriesName] = false;
+    });
+    setExpandedSeriesMap(newMap);
+  }, [seriesFolders]);
+
+  const expandAllSeries = useCallback(() => {
+    const newMap: Record<string, boolean> = {};
+    seriesFolders.forEach((s) => {
+      newMap[s.seriesName] = true;
+    });
+    setExpandedSeriesMap(newMap);
+  }, [seriesFolders]);
+
+  const handleOpenChapter = useCallback((id: string) => {
+    loadProject(id);
+    setLibrarySubTab('single');
+  }, [loadProject, setLibrarySubTab]);
+
+  const handleDeleteChapter = useCallback((id: string, num: number, title?: string) => {
+    if (window.confirm(`Xác nhận xóa Chap ${num} (${title || ''})?`)) {
+      deleteProject(id);
+    }
+  }, [deleteProject]);
+
+  const handleOpenOCR = useCallback((id: string) => {
+    loadProject(id);
+    setActiveTab('ocr');
+  }, [loadProject, setActiveTab]);
+
+  const filteredSeriesFolders = useMemo(() => {
+    if (!seriesSearchQuery.trim()) return seriesFolders;
+    const q = seriesSearchQuery.toLowerCase();
+    return seriesFolders.filter((s) => s.seriesName.toLowerCase().includes(q));
+  }, [seriesFolders, seriesSearchQuery]);
+
+  const totalChaptersCount = useMemo(() => {
+    return seriesFolders.reduce((acc, s) => acc + s.totalChapters, 0);
+  }, [seriesFolders]);
 
   useEffect(() => {
     fetchSeriesFolders();
@@ -158,7 +293,7 @@ export const LibraryView: React.FC = () => {
             }`}
           >
             <FolderCheck className="w-3.5 h-3.5 text-emerald-300" />
-            <span>📁 Thư Mục Chapters ({seriesFolders.reduce((acc, s) => acc + s.totalChapters, 0)})</span>
+            <span>📁 Thư Mục Chapters ({totalChaptersCount})</span>
           </button>
         </div>
       </div>
@@ -632,13 +767,19 @@ export const LibraryView: React.FC = () => {
       {/* ========================================================= */}
       {librarySubTab === 'folders' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white flex items-center space-x-2">
-              <FolderCheck className="w-4 h-4 text-emerald-400" />
-              <span>Quản Lý Thư Mục Chapters Theo Từng Bộ Truyện</span>
-            </h2>
-
+          {/* Folders Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
             <div className="flex items-center space-x-2">
+              <FolderCheck className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-bold text-white">
+                Quản Lý Thư Mục Chapters Theo Từng Bộ Truyện
+              </h2>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
+                {filteredSeriesFolders.length} bộ • {totalChaptersCount} chapter
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 value={seriesSearchQuery}
@@ -646,46 +787,104 @@ export const LibraryView: React.FC = () => {
                 placeholder="Tìm bộ truyện..."
                 className="bg-slate-950 text-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-800 focus:outline-none focus:border-indigo-500 w-44"
               />
+
               <button
-                onClick={fetchSeriesFolders}
-                className="px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center space-x-1"
+                type="button"
+                onClick={collapseAllSeries}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                title="Thu gọn tất cả bộ truyện về 1 hàng đầu tiên"
               >
-                <RefreshCw className="w-3 h-3" />
+                <ChevronsDownUp className="w-3.5 h-3.5 text-violet-400" />
+                <span>Thu Gọn Hết</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={expandAllSeries}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                title="Mở rộng tất cả chapter của mọi bộ truyện"
+              >
+                <ChevronsUpDown className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Mở Rộng Hết</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchSeriesFolders}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                title="Làm mới danh sách từ hệ thống"
+              >
+                <RefreshCw className="w-3 h-3 text-cyan-400" />
                 <span>Làm Mới</span>
               </button>
             </div>
           </div>
 
-          {seriesFolders.length > 0 ? (
+          {filteredSeriesFolders.length > 0 ? (
             <div className="space-y-6">
-              {seriesFolders
-                .filter((s) => !seriesSearchQuery || s.seriesName.toLowerCase().includes(seriesSearchQuery.toLowerCase()))
-                .map((series) => (
+              {filteredSeriesFolders.map((series) => {
+                const isExpanded = expandedSeriesMap[series.seriesName] ?? (series.totalChapters <= 6);
+                const displayedChapters = isExpanded ? series.chapters : series.chapters.slice(0, 6);
+                const hasHiddenChapters = !isExpanded && series.totalChapters > 6;
+
+                return (
                   <div
                     key={series.seriesName}
-                    className="glass-panel p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3"
+                    className="glass-panel p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3 transition-all"
                   >
                     {/* Series Header */}
-                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-md shrink-0">
                           <Folder className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white">{series.seriesName}</h3>
+                          <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                            <span>{series.seriesName}</span>
+                            {!isExpanded && series.totalChapters > 6 && (
+                              <span className="text-[10px] font-normal text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                Đang thu gọn 1 hàng
+                              </span>
+                            )}
+                          </h3>
                           <p className="text-[11px] text-slate-400">
                             Đã lưu <span className="text-cyan-300 font-bold">{series.totalChapters} Chapter</span> trong hệ thống
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Toggle Collapse/Expand Button */}
                         <button
+                          type="button"
+                          onClick={() => toggleSeriesExpand(series.seriesName, series.totalChapters)}
+                          className={`text-xs font-semibold flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                            isExpanded
+                              ? 'bg-slate-950/80 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'
+                              : 'bg-violet-950/60 border-violet-700/60 text-violet-300 hover:bg-violet-900/60 hover:text-white hover:border-violet-500'
+                          }`}
+                          title={isExpanded ? 'Thu gọn lại chỉ hiển thị 1 hàng đầu tiên' : `Mở rộng toàn bộ ${series.totalChapters} chapter`}
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="w-3.5 h-3.5 text-violet-400" />
+                              <span>Thu Gọn (1 Hàng)</span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Mở Rộng ({series.totalChapters} Chap)</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => {
                             setLibrarySubTab('batch_series');
                             discoverSeriesFromUrl(series.chapters[0]?.sourceUrl || series.seriesName);
                           }}
-                          className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-cyan-500/50 transition-colors"
+                          className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-cyan-500/50 transition-colors cursor-pointer"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
                           <span>Cào Thêm Chapter Mới</span>
@@ -710,94 +909,86 @@ export const LibraryView: React.FC = () => {
 
                     {/* Chapter Folders Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {series.chapters.map((ch) => {
-                        const isCurrentActive = selectedProject?.id === ch.id;
+                      {displayedChapters.map((ch, idx) => {
+                        let responsiveClass = '';
+                        if (!isExpanded) {
+                          if (idx === 2) responsiveClass = 'hidden sm:block';
+                          else if (idx === 3) responsiveClass = 'hidden md:block';
+                          else if (idx >= 4) responsiveClass = 'hidden lg:block';
+                        }
+
                         return (
-                          <div
+                          <ChapterCard
                             key={ch.id}
-                            onClick={() => {
-                              loadProject(ch.id);
-                              setLibrarySubTab('single');
-                            }}
-                            className={`glass-card p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] space-y-2 ${
-                              isCurrentActive
-                                ? 'bg-violet-950/60 border-violet-500 shadow-lg shadow-violet-900/30'
-                                : 'bg-slate-950/80 border-slate-800 hover:border-indigo-500/50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-white flex items-center space-x-1">
-                                <Folder className="w-3.5 h-3.5 text-cyan-400" />
-                                <span>Chap {ch.chapterNumber}</span>
-                              </span>
-                              <div className="flex items-center space-x-1.5">
-                                {isCurrentActive && (
-                                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                                    Đang Mở
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (window.confirm(`Xác nhận xóa Chap ${ch.chapterNumber} (${ch.episodeTitle || ''})?`)) {
-                                      deleteProject(ch.id);
-                                    }
-                                  }}
-                                  className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 transition-colors cursor-pointer"
-                                  title={`Xóa Chap ${ch.chapterNumber}`}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="text-[10px] text-slate-400 truncate">
-                              {ch.episodeTitle || `Chapter ${ch.chapterNumber}`}
-                            </div>
-
-                            <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-900 text-slate-400">
-                              <span className="flex items-center space-x-1">
-                                <Clock className="w-3 h-3 text-amber-400" />
-                                <span>~{Math.round(ch.durationEst || 240)}s</span>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  loadProject(ch.id);
-                                  setActiveTab('ocr');
-                                }}
-                                className="text-cyan-400 hover:text-cyan-200 font-bold hover:underline flex items-center space-x-0.5 cursor-pointer"
-                                title="Mở trực tiếp chapter này trong không gian chỉnh sửa OCR"
-                              >
-                                <span>Mở OCR →</span>
-                              </button>
-                            </div>
-                          </div>
+                            chapter={ch}
+                            isActive={selectedProject?.id === ch.id}
+                            responsiveClass={responsiveClass}
+                            onOpen={handleOpenChapter}
+                            onDelete={handleDeleteChapter}
+                            onOpenOCR={handleOpenOCR}
+                          />
                         );
                       })}
                     </div>
+
+                    {/* Collapse / Expand Helper Footer */}
+                    {hasHiddenChapters && (
+                      <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/60 px-1">
+                        <span className="text-[11px] text-slate-400 flex items-center space-x-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                          <span>
+                            Đang hiển thị 1 hàng đầu tiên • Còn <strong className="text-cyan-300 font-bold">{series.totalChapters - 6}</strong> chapter nữa
+                          </span>
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleSeriesExpand(series.seriesName, series.totalChapters)}
+                          className="text-xs font-semibold text-cyan-400 hover:text-cyan-200 flex items-center space-x-1 hover:underline cursor-pointer"
+                        >
+                          <span>Xem toàn bộ {series.totalChapters} chapter</span>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {isExpanded && series.totalChapters > 6 && (
+                      <div className="pt-2 flex justify-center border-t border-slate-800/60">
+                        <button
+                          type="button"
+                          onClick={() => toggleSeriesExpand(series.seriesName, series.totalChapters)}
+                          className="text-xs text-slate-400 hover:text-white bg-slate-950/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-600 flex items-center space-x-1.5 transition-colors cursor-pointer"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5 text-violet-400" />
+                          <span>Thu gọn lại 1 hàng đầu tiên</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ))}
+                );
+              })}
             </div>
           ) : (
             <div className="glass-panel py-12 px-4 rounded-xl border border-slate-800 text-center space-y-4">
               <FolderOpen className="w-10 h-10 text-slate-500 mx-auto" />
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Chưa Có Thư Mục Chapter Nào</h3>
+                <h3 className="text-sm font-bold text-slate-200">
+                  {seriesSearchQuery ? `Không tìm thấy bộ truyện nào khớp với "${seriesSearchQuery}"` : 'Chưa Có Thư Mục Chapter Nào'}
+                </h3>
                 <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Hãy chuyển sang tab "Dò & Cào Cả Bộ Truyện" để quét và cào toàn bộ các chapter tự động.
+                  {seriesSearchQuery ? 'Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc bấm Làm mới.' : 'Hãy chuyển sang tab "Dò & Cào Cả Bộ Truyện" để quét và cào toàn bộ các chapter tự động.'}
                 </p>
               </div>
 
-              <button
-                onClick={() => setLibrarySubTab('batch_series')}
-                className="inline-flex items-center space-x-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-                <span>Chuyển Sang Dò & Cào Cả Bộ Truyện</span>
-              </button>
+              {!seriesSearchQuery && (
+                <button
+                  onClick={() => setLibrarySubTab('batch_series')}
+                  className="inline-flex items-center space-x-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                  <span>Chuyển Sang Dò & Cào Cả Bộ Truyện</span>
+                </button>
+              )}
             </div>
           )}
         </div>
