@@ -570,107 +570,161 @@ const server = http.createServer(async (req, res) => {
             }
           }
 
+          let processedCount = 0;
           let skippedCount = 0;
+          const totalChapters = chapters.length;
 
-          for (let i = 0; i < chapters.length; i++) {
+          let dirtyDb = false;
+          let saveTimer = null;
+
+          const scheduleSave = () => {
+            dirtyDb = true;
+            if (!saveTimer) {
+              saveTimer = setTimeout(() => {
+                if (dirtyDb) {
+                  saveDB(db);
+                  dirtyDb = false;
+                }
+                saveTimer = null;
+              }, 1000);
+            }
+          };
+
+          const updateProgress = (chapterTitle) => {
+            processedCount++;
+            global.batchScrapeProgress.current = processedCount;
+            global.batchScrapeProgress.percent = Math.round((processedCount / totalChapters) * 100);
+            if (chapterTitle) {
+              global.batchScrapeProgress.currentChapter = chapterTitle;
+            }
+          };
+
+          // Filter out chapters to scrape vs skip upfront
+          const chaptersToScrape = [];
+          for (let i = 0; i < totalChapters; i++) {
             const ch = chapters[i];
-            global.batchScrapeProgress.current = i + 1;
-            global.batchScrapeProgress.currentChapter = ch.title || `Chapter ${ch.chapterNumber}`;
-            global.batchScrapeProgress.percent = Math.round(((i + 1) / chapters.length) * 100);
-
-            // === DEDUPLICATION CHECK: skip chapters that already exist ===
             const cChapNum = typeof ch.chapterNumber === 'number' ? ch.chapterNumber : (parseInt(String(ch.chapterNumber)) || 0);
             const chapKey = `${seriesName}::${cChapNum}`;
             if (existingChapterKeys.has(chapKey)) {
-              console.log(`[Batch Scraper] ⏩ [${i + 1}/${chapters.length}] Bỏ qua ${ch.title} (đã tồn tại trong DB)`);
+              console.log(`[Batch Scraper] ⏩ [${i + 1}/${totalChapters}] Bỏ qua ${ch.title} (đã tồn tại trong DB)`);
               skippedCount++;
-              global.batchScrapeProgress.currentChapter = `⏩ Bỏ qua: ${ch.title} (đã có)`;
-              continue;
+              updateProgress(`⏩ Bỏ qua: ${ch.title} (đã có)`);
+            } else {
+              chaptersToScrape.push({ ch, originalIndex: i });
             }
-
-            try {
-              console.log(`[Batch Scraper] ⏳ [${i + 1}/${chapters.length}] Đang cào ${ch.title} (${ch.url})...`);
-              const scrapedData = await scraperManager.scrape(ch.url);
-
-              try {
-                // Use upsert-like logic: find existing first, only create if not found
-                const resolvedSeriesName = scrapedData.project.seriesName || seriesName;
-                const resolvedChapterNum = ch.chapterNumber || scrapedData.project.chapterNumber;
-
-                const existingProject = await prisma.project.findFirst({
-                  where: {
-                    seriesName: resolvedSeriesName,
-                    chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
-                  },
-                });
-
-                let project;
-                if (existingProject) {
-                  // Update existing project instead of creating duplicate
-                  project = await prisma.project.update({
-                    where: { id: existingProject.id },
-                    data: {
-                      episodeTitle: scrapedData.project.episodeTitle,
-                      status: 'ready',
-                      durationEst: scrapedData.project.durationEst,
-                      coverUrl: scrapedData.project.coverUrl,
-                    },
-                  });
-                  console.log(`[Batch Scraper] 🔄 Cập nhật project đã có: ${resolvedSeriesName} Ch.${resolvedChapterNum}`);
-                } else {
-                  project = await prisma.project.create({
-                    data: {
-                      seriesName: resolvedSeriesName,
-                      chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
-                      episodeTitle: scrapedData.project.episodeTitle,
-                      status: 'ready',
-                      durationEst: scrapedData.project.durationEst,
-                      coverUrl: scrapedData.project.coverUrl,
-                    },
-                  });
-                }
-                scrapedData.project.id = project.id;
-
-                if (scrapedData.pages && scrapedData.pages.length > 0) {
-                  // Only create chapter pages if project is new (no existing chapter)
-                  if (!existingProject) {
-                    await prisma.chapter.create({
-                      data: {
-                        projectId: project.id,
-                        number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
-                        title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
-                        pages: {
-                          create: scrapedData.pages.map((p, idx) => ({
-                            pageIndex: p.pageIndex || idx + 1,
-                            imageUrl: p.imageUrl || p.rawImageUrl || '',
-                          }))
-                        }
-                      }
-                    });
-                  }
-                }
-              } catch (dbErr) {
-                console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
-              }
-
-              db.projects = [scrapedData.project, ...db.projects.filter((p) => p.id !== scrapedData.project.id && (p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber))];
-              saveDB(db);
-
-              // Add to dedup set so subsequent iterations also skip this chapter
-              existingChapterKeys.add(chapKey);
-
-              global.batchScrapeProgress.completedProjects.push(scrapedData.project);
-            } catch (chErr) {
-              console.error(`[Batch Scraper] ❌ Lỗi cào ${ch.title}:`, chErr.message);
-              global.batchScrapeProgress.errors.push({ chapter: ch.title, error: chErr.message });
-            }
-
-            // Small delay to be polite to the target comic site
-            await new Promise((r) => setTimeout(r, 400));
           }
 
+          if (skippedCount > 0) {
+            console.log(`[Batch Scraper] ⏩ Đã bỏ qua ${skippedCount}/${totalChapters} chapter đã có sẵn trong O(1).`);
+          }
+
+          // High-speed concurrent worker pool
+          const CONCURRENCY = 5;
+          let queueIndex = 0;
+
+          const worker = async (workerId) => {
+            while (queueIndex < chaptersToScrape.length) {
+              const currentIndex = queueIndex++;
+              const { ch, originalIndex } = chaptersToScrape[currentIndex];
+
+              const cChapNum = typeof ch.chapterNumber === 'number' ? ch.chapterNumber : (parseInt(String(ch.chapterNumber)) || 0);
+              const chapKey = `${seriesName}::${cChapNum}`;
+
+              try {
+                console.log(`[Batch Scraper] ⏳ W${workerId} [${originalIndex + 1}/${totalChapters}] Đang cào ${ch.title} (${ch.url})...`);
+                const scrapedData = await scraperManager.scrape(ch.url);
+
+                try {
+                  const resolvedSeriesName = scrapedData.project.seriesName || seriesName;
+                  const resolvedChapterNum = ch.chapterNumber || scrapedData.project.chapterNumber;
+
+                  const existingProject = await prisma.project.findFirst({
+                    where: {
+                      seriesName: resolvedSeriesName,
+                      chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
+                    },
+                  });
+
+                  let project;
+                  if (existingProject) {
+                    project = await prisma.project.update({
+                      where: { id: existingProject.id },
+                      data: {
+                        episodeTitle: scrapedData.project.episodeTitle,
+                        status: 'ready',
+                        durationEst: scrapedData.project.durationEst,
+                        coverUrl: scrapedData.project.coverUrl,
+                      },
+                    });
+                    console.log(`[Batch Scraper] 🔄 W${workerId} Cập nhật project đã có: ${resolvedSeriesName} Ch.${resolvedChapterNum}`);
+                  } else {
+                    project = await prisma.project.create({
+                      data: {
+                        seriesName: resolvedSeriesName,
+                        chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
+                        episodeTitle: scrapedData.project.episodeTitle,
+                        status: 'ready',
+                        durationEst: scrapedData.project.durationEst,
+                        coverUrl: scrapedData.project.coverUrl,
+                      },
+                    });
+                  }
+                  scrapedData.project.id = project.id;
+
+                  if (scrapedData.pages && scrapedData.pages.length > 0) {
+                    if (!existingProject) {
+                      await prisma.chapter.create({
+                        data: {
+                          projectId: project.id,
+                          number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
+                          title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
+                          pages: {
+                            create: scrapedData.pages.map((p, idx) => ({
+                              pageIndex: p.pageIndex || idx + 1,
+                              imageUrl: p.imageUrl || p.rawImageUrl || '',
+                            }))
+                          }
+                        }
+                      });
+                    }
+                  }
+                } catch (dbErr) {
+                  console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
+                }
+
+                db.projects = [scrapedData.project, ...db.projects.filter((p) => p.id !== scrapedData.project.id && (p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber))];
+                scheduleSave();
+
+                existingChapterKeys.add(chapKey);
+                global.batchScrapeProgress.completedProjects.push(scrapedData.project);
+                updateProgress(`✅ Hoàn thành: ${ch.title}`);
+              } catch (chErr) {
+                console.error(`[Batch Scraper] ❌ W${workerId} Lỗi cào ${ch.title}:`, chErr.message);
+                global.batchScrapeProgress.errors.push({ chapter: ch.title, error: chErr.message });
+                updateProgress(`❌ Lỗi: ${ch.title}`);
+              }
+
+              // Small delay between chapters per worker
+              await new Promise((r) => setTimeout(r, 100));
+            }
+          };
+
+          // Spawn concurrent workers
+          const workers = [];
+          const numWorkers = Math.min(CONCURRENCY, chaptersToScrape.length);
+          for (let w = 1; w <= numWorkers; w++) {
+            workers.push(worker(w));
+          }
+          await Promise.all(workers);
+
+          if (saveTimer) {
+            clearTimeout(saveTimer);
+            saveTimer = null;
+          }
+          saveDB(db);
+
           global.batchScrapeProgress.isRunning = false;
-          console.log(`[Batch Scraper] ✅ Hoàn tất cào ${global.batchScrapeProgress.completedProjects.length}/${chapters.length} chapter cho ${seriesName}!`);
+          console.log(`[Batch Scraper] ✅ Hoàn tất cào ${global.batchScrapeProgress.completedProjects.length}/${totalChapters} chapter cho ${seriesName}! (Đã bỏ qua ${skippedCount} chapter đã có)`);
         })().catch((err) => {
           global.batchScrapeProgress.isRunning = false;
           console.error('[Batch Scraper] Fatal error:', err);
