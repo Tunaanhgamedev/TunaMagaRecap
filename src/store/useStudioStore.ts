@@ -68,6 +68,7 @@ interface StudioState {
   discoverSeriesFromUrl: (url: string) => Promise<void>;
   toggleSelectChapter: (url: string) => void;
   selectAllChapters: () => void;
+  selectNewChaptersOnly: () => void;
   deselectAllChapters: () => void;
   selectChapterRange: (startChap: number, endChap: number) => void;
   startBatchScrape: () => Promise<void>;
@@ -353,13 +354,17 @@ export const useStudioStore = create<StudioState>()(
       });
       const data = await res.json();
       if (data.success && data.series && Array.isArray(data.chapters)) {
-        const defaultSelected = data.chapters.map((c: any) => c.url);
+        const unscrapedChapters = data.chapters.filter((c: any) => !c.isScraped);
+        const defaultSelected = unscrapedChapters.length > 0
+          ? unscrapedChapters.map((c: any) => c.url)
+          : data.chapters.map((c: any) => c.url);
+
         set({
           isDiscoveringSeries: false,
           discoveredSeries: data.series,
           discoveredChapters: data.chapters,
           selectedChapterUrls: defaultSelected,
-          scrapeStatusMessage: `🎉 Tìm thấy ${data.totalChapters} chapter của truyện "${data.series.name}"!`,
+          scrapeStatusMessage: `🎉 Tìm thấy ${data.totalChapters} chapter (${unscrapedChapters.length} chapter mới chưa cào)!`,
         });
       } else {
         throw new Error(data.error || 'Không tìm thấy chapter');
@@ -384,6 +389,11 @@ export const useStudioStore = create<StudioState>()(
   selectAllChapters: () => {
     const allUrls = get().discoveredChapters.map((c) => c.url);
     set({ selectedChapterUrls: allUrls });
+  },
+
+  selectNewChaptersOnly: () => {
+    const newUrls = get().discoveredChapters.filter((c) => !c.isScraped).map((c) => c.url);
+    set({ selectedChapterUrls: newUrls });
   },
 
   deselectAllChapters: () => {

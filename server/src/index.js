@@ -558,13 +558,15 @@ const server = http.createServer(async (req, res) => {
               select: { seriesName: true, chapterNumber: true },
             });
             for (const ep of existingProjects) {
-              existingChapterKeys.add(`${ep.seriesName}::${ep.chapterNumber}`);
+              const chapNum = typeof ep.chapterNumber === 'number' ? ep.chapterNumber : (parseInt(String(ep.chapterNumber)) || 0);
+              existingChapterKeys.add(`${ep.seriesName}::${chapNum}`);
             }
           } catch (e) {}
           // Also check db.json local store
           for (const lp of db.projects) {
             if (lp.seriesName === seriesName) {
-              existingChapterKeys.add(`${lp.seriesName}::${lp.chapterNumber}`);
+              const chapNum = typeof lp.chapterNumber === 'number' ? lp.chapterNumber : (parseInt(String(lp.chapterNumber)) || 0);
+              existingChapterKeys.add(`${lp.seriesName}::${chapNum}`);
             }
           }
 
@@ -577,7 +579,8 @@ const server = http.createServer(async (req, res) => {
             global.batchScrapeProgress.percent = Math.round(((i + 1) / chapters.length) * 100);
 
             // === DEDUPLICATION CHECK: skip chapters that already exist ===
-            const chapKey = `${seriesName}::${ch.chapterNumber}`;
+            const cChapNum = typeof ch.chapterNumber === 'number' ? ch.chapterNumber : (parseInt(String(ch.chapterNumber)) || 0);
+            const chapKey = `${seriesName}::${cChapNum}`;
             if (existingChapterKeys.has(chapKey)) {
               console.log(`[Batch Scraper] ⏩ [${i + 1}/${chapters.length}] Bỏ qua ${ch.title} (đã tồn tại trong DB)`);
               skippedCount++;

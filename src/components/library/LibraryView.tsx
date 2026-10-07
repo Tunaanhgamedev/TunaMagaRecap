@@ -59,6 +59,7 @@ export const LibraryView: React.FC = () => {
     discoverSeriesFromUrl,
     toggleSelectChapter,
     selectAllChapters,
+    selectNewChaptersOnly,
     deselectAllChapters,
     selectChapterRange,
     startBatchScrape,
@@ -512,6 +513,13 @@ export const LibraryView: React.FC = () => {
                     className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-colors"
                   >
                     Tất Cả ({discoveredChapters.length})
+                  </button>
+                  <button
+                    onClick={selectNewChaptersOnly}
+                    className="px-2.5 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold transition-colors flex items-center space-x-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Chỉ Chap Mới ({discoveredChapters.filter((c) => !c.isScraped).length})</span>
                   </button>
                   <button
                     onClick={() => selectChapterRange(1, 10)}
