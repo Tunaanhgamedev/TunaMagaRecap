@@ -17,8 +17,9 @@ import { GENRE_DICTIONARIES } from './tts/textNormalizer.js';
 
 const PORT = 3001;
 const prisma = new PrismaClient();
-const DB_FILE = path.join(process.cwd(), 'server', 'db.json');
-const IMAGE_CACHE_DIR = path.join(process.cwd(), 'server', '.cache', 'images');
+const serverDir = path.basename(process.cwd()) === 'server' ? process.cwd() : path.join(process.cwd(), 'server');
+const DB_FILE = path.join(serverDir, 'db.json');
+const IMAGE_CACHE_DIR = path.join(serverDir, '.cache', 'images');
 try {
   fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
 } catch (e) {}
@@ -414,9 +415,9 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 3b. POST & DELETE Delete Project (Prisma SQLite & Local DB)
+  // 3b. POST & DELETE Delete Project or Entire Series (Prisma SQLite & Local DB)
   if (
-    (pathname === '/api/projects/delete' || pathname === '/api/projects' || pathname === '/api/projects/clear-all') &&
+    (pathname === '/api/projects/delete' || pathname === '/api/projects' || pathname === '/api/projects/clear-all' || pathname === '/api/series/delete') &&
     (req.method === 'POST' || req.method === 'DELETE')
   ) {
     let body = '';
@@ -425,16 +426,45 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = JSON.parse(body || '{}');
         const projId = payload.id || '';
+        const seriesName = payload.seriesName || '';
         const clearAll = payload.clearAll || pathname === '/api/projects/clear-all';
 
         if (clearAll) {
           try {
+            await prisma.chapter.deleteMany({});
             await prisma.project.deleteMany({});
           } catch (e) {}
           db.projects = [];
           saveDB(db);
+        } else if (seriesName) {
+          // Delete all chapters belonging to this series
+          const normTarget = normalizeSeriesName(seriesName);
+          console.log(`[Series Delete] 🗑️ Xóa toàn bộ danh mục bộ truyện: "${seriesName}" (norm: "${normTarget}")`);
+          try {
+            const allProjects = await prisma.project.findMany();
+            const matchingIds = allProjects
+              .filter((p) => {
+                const pNorm = normalizeSeriesName(p.seriesName);
+                return pNorm === normTarget || pNorm.includes(normTarget) || normTarget.includes(pNorm);
+              })
+              .map((p) => p.id);
+
+            if (matchingIds.length > 0) {
+              await prisma.chapter.deleteMany({ where: { projectId: { in: matchingIds } } });
+              await prisma.project.deleteMany({ where: { id: { in: matchingIds } } });
+            }
+          } catch (e) {
+            console.error('[Series Delete Error]', e.message);
+          }
+
+          db.projects = db.projects.filter((p) => {
+            const pNorm = normalizeSeriesName(p.seriesName);
+            return pNorm !== normTarget && !pNorm.includes(normTarget) && !normTarget.includes(pNorm);
+          });
+          saveDB(db);
         } else if (projId) {
           try {
+            await prisma.chapter.deleteMany({ where: { projectId: projId } });
             await prisma.project.delete({ where: { id: projId } });
           } catch (e) {}
 
@@ -443,7 +473,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, projects: db.projects, message: 'Đã xóa dự án thành công' }));
+        res.end(JSON.stringify({ success: true, projects: db.projects, message: 'Đã xóa thành công' }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));

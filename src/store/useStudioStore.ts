@@ -75,6 +75,7 @@ interface StudioState {
   setForceOverwrite: (v: boolean) => void;
   startBatchScrape: () => Promise<void>;
   fetchSeriesFolders: () => Promise<void>;
+  deleteSeriesFolder: (seriesName: string) => Promise<void>;
 
   // Auto URL Scraper
   mangaUrlInput: string;
@@ -494,6 +495,22 @@ export const useStudioStore = create<StudioState>()(
     } catch (err) {}
   },
 
+  deleteSeriesFolder: async (seriesName: string) => {
+    try {
+      await fetch(`${API_BASE_URL}/series/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seriesName }),
+      });
+    } catch (e) {}
+
+    await get().fetchSeriesFolders();
+    await get().fetchProjectsFromBackend();
+    set({
+      scrapeStatusMessage: `🗑️ Đã xóa toàn bộ các chapter của bộ truyện "${seriesName}"!`,
+    });
+  },
+
   mangaUrlInput: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html',
   setMangaUrlInput: (url) => set({ mangaUrlInput: url }),
   isLoadingUrl: false,
@@ -728,9 +745,11 @@ export const useStudioStore = create<StudioState>()(
       return {
         projects: updated,
         selectedProject: newSelected,
-        scrapeStatusMessage: '✓ Đã xóa dự án thành công!',
+        scrapeStatusMessage: '✓ Đã xóa chapter thành công!',
       };
     });
+
+    get().fetchSeriesFolders();
   },
   clearAllProjects: async () => {
     try {

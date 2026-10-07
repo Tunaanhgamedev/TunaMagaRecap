@@ -22,6 +22,7 @@ import {
   Clock,
   Film,
   Download,
+  Trash2,
 } from 'lucide-react';
 
 export const LibraryView: React.FC = () => {
@@ -43,6 +44,7 @@ export const LibraryView: React.FC = () => {
     deletePage,
     loadProject,
     isLoadingProject,
+    deleteProject,
 
     // Batch Series State & Actions
     librarySubTab,
@@ -66,6 +68,7 @@ export const LibraryView: React.FC = () => {
     setForceOverwrite,
     startBatchScrape,
     fetchSeriesFolders,
+    deleteSeriesFolder,
   } = useStudioStore();
 
   const [rangeStart, setRangeStart] = useState<number>(1);
@@ -676,16 +679,33 @@ export const LibraryView: React.FC = () => {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setLibrarySubTab('batch_series');
-                          discoverSeriesFromUrl(series.chapters[0]?.sourceUrl || series.seriesName);
-                        }}
-                        className="text-xs text-cyan-400 hover:underline font-semibold flex items-center space-x-1"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Cào Thêm Chapter Mới</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setLibrarySubTab('batch_series');
+                            discoverSeriesFromUrl(series.chapters[0]?.sourceUrl || series.seriesName);
+                          }}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-cyan-500/50 transition-colors"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                          <span>Cào Thêm Chapter Mới</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`⚠️ Bạn có chắc muốn XÓA TOÀN BỘ ${series.totalChapters} chapter của bộ truyện "${series.seriesName}" khỏi hệ thống không?`)) {
+                              deleteSeriesFolder(series.seriesName);
+                            }
+                          }}
+                          className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-rose-950/30 border border-rose-900/50 hover:bg-rose-900/40 hover:border-rose-500/60 transition-colors cursor-pointer"
+                          title="Xóa toàn bộ chapter của bộ truyện này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Xóa Toàn Bộ Truyện</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Chapter Folders Grid */}
@@ -710,11 +730,26 @@ export const LibraryView: React.FC = () => {
                                 <Folder className="w-3.5 h-3.5 text-cyan-400" />
                                 <span>Chap {ch.chapterNumber}</span>
                               </span>
-                              {isCurrentActive && (
-                                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                                  Đang Mở
-                                </span>
-                              )}
+                              <div className="flex items-center space-x-1.5">
+                                {isCurrentActive && (
+                                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                                    Đang Mở
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm(`Xác nhận xóa Chap ${ch.chapterNumber} (${ch.episodeTitle || ''})?`)) {
+                                      deleteProject(ch.id);
+                                    }
+                                  }}
+                                  className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 transition-colors cursor-pointer"
+                                  title={`Xóa Chap ${ch.chapterNumber}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
 
                             <div className="text-[10px] text-slate-400 truncate">
