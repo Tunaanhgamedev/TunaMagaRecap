@@ -633,7 +633,7 @@ const server = http.createServer(async (req, res) => {
     req.on('end', async () => {
       try {
         const payload = JSON.parse(body || '{}');
-        const { seriesName, chapters } = payload;
+        const { seriesName, chapters, forceOverwrite = false } = payload;
 
         if (!Array.isArray(chapters) || chapters.length === 0) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -656,7 +656,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
-          message: `Đã bắt đầu cào hàng loạt ${chapters.length} chapter trong nền.`,
+          message: `Đã bắt đầu cào hàng loạt ${chapters.length} chapter trong nền${forceOverwrite ? ' (Chế độ cào lại / ghi đè)' : ''}.`,
           total: chapters.length,
         }));
 
@@ -727,13 +727,13 @@ const server = http.createServer(async (req, res) => {
             }
           };
 
-          // Filter out chapters to scrape vs skip upfront
+          // Filter out chapters to scrape vs skip upfront (skip only if forceOverwrite is false)
           const chaptersToScrape = [];
           for (let i = 0; i < totalChapters; i++) {
             const ch = uniqueInputChapters[i];
             const cChapNum = normalizeChapterNumber(ch.chapterNumber);
             const chapKey = `${normTargetSeries}::${cChapNum}`;
-            if (existingChapterKeys.has(chapKey)) {
+            if (!forceOverwrite && existingChapterKeys.has(chapKey)) {
               console.log(`[Batch Scraper] ⏩ [${i + 1}/${totalChapters}] Bỏ qua ${ch.title || 'Chapter ' + cChapNum} (đã tồn tại trong DB)`);
               skippedCount++;
               updateProgress(`⏩ Bỏ qua: ${ch.title || 'Chapter ' + cChapNum} (đã có)`);
@@ -758,9 +758,8 @@ const server = http.createServer(async (req, res) => {
               const cChapNum = normalizeChapterNumber(ch.chapterNumber);
               const chapKey = `${normTargetSeries}::${cChapNum}`;
 
-              if (existingChapterKeys.has(chapKey) || inFlightKeys.has(chapKey)) {
-                console.log(`[Batch Scraper] ⏩ W${workerId} Bỏ qua ${ch.title || 'Chapter ' + cChapNum} (đang xử lý hoặc đã hoàn thành)`);
-                updateProgress(`⏩ Bỏ qua: ${ch.title || 'Chapter ' + cChapNum}`);
+              if (inFlightKeys.has(chapKey)) {
+                console.log(`[Batch Scraper] ⏩ W${workerId} Bỏ qua ${ch.title || 'Chapter ' + cChapNum} (đang được worker khác xử lý)`);
                 continue;
               }
 
@@ -791,38 +790,52 @@ const server = http.createServer(async (req, res) => {
                         coverUrl: scrapedData.project.coverUrl,
                       },
                     });
-                    console.log(`[Batch Scraper] 🔄 W${workerId} Cập nhật project đã có: ${resolvedSeriesName} Ch.${resolvedChapterNum}`);
+                    console.log(`[Batch Scraper] 🔄 W${workerId} Ghi đè cập nhật project: ${existingProject.seriesName} Ch.${resolvedChapterNum}`);
+
+                    // Cleanly remove old chapters & pages to overwrite without duplication
+                    try {
+                      await prisma.chapter.deleteMany({
+                        where: { projectId: existingProject.id },
+                      });
+                    } catch (e) {}
                   } else {
-                    project = await prisma.project.create({
-                      data: {
-                        seriesName: resolvedSeriesName,
-                        chapterNumber: resolvedChapterNum,
-                        episodeTitle: scrapedData.project.episodeTitle,
-                        status: 'ready',
-                        durationEst: scrapedData.project.durationEst,
-                        coverUrl: scrapedData.project.coverUrl,
-                      },
-                    });
+                    try {
+                      project = await prisma.project.create({
+                        data: {
+                          seriesName: resolvedSeriesName,
+                          chapterNumber: resolvedChapterNum,
+                          episodeTitle: scrapedData.project.episodeTitle,
+                          status: 'ready',
+                          durationEst: scrapedData.project.durationEst,
+                          coverUrl: scrapedData.project.coverUrl,
+                        },
+                      });
+                    } catch (createErr) {
+                      project = await prisma.project.findFirst({
+                        where: {
+                          seriesName: resolvedSeriesName,
+                          chapterNumber: resolvedChapterNum,
+                        },
+                      });
+                    }
                   }
                   scrapedData.project.id = project.id;
                   scrapedData.project.chapterNumber = resolvedChapterNum;
 
                   if (scrapedData.pages && scrapedData.pages.length > 0) {
-                    if (!existingProject) {
-                      await prisma.chapter.create({
-                        data: {
-                          projectId: project.id,
-                          number: resolvedChapterNum,
-                          title: scrapedData.project.episodeTitle || `Chapter ${resolvedChapterNum}`,
-                          pages: {
-                            create: scrapedData.pages.map((p, idx) => ({
-                              pageIndex: p.pageIndex || idx + 1,
-                              imageUrl: p.imageUrl || p.rawImageUrl || '',
-                            }))
-                          }
-                        }
-                      });
-                    }
+                    await prisma.chapter.create({
+                      data: {
+                        projectId: project.id,
+                        number: resolvedChapterNum,
+                        title: scrapedData.project.episodeTitle || `Chapter ${resolvedChapterNum}`,
+                        pages: {
+                          create: scrapedData.pages.map((p, idx) => ({
+                            pageIndex: p.pageIndex || idx + 1,
+                            imageUrl: p.imageUrl || p.rawImageUrl || '',
+                          })),
+                        },
+                      },
+                    });
                   }
                 } catch (dbErr) {
                   console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
@@ -885,7 +898,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4d. GET All Series Folders (Grouped by seriesName)
+  // 4d. GET All Series Folders (Grouped by normalized seriesName with chapter deduplication)
   if (pathname === '/api/series' && req.method === 'GET') {
     try {
       let allProjects = [];
@@ -897,22 +910,22 @@ const server = http.createServer(async (req, res) => {
         allProjects = db.projects;
       }
 
-      // Group projects by seriesName, with deduplication per chapterNumber
+      // Group projects by normalized series name, with strict chapterNumber deduplication
       const seriesMap = new Map();
       for (const p of allProjects) {
-        const sName = p.seriesName || 'Truyện Khác';
-        if (!seriesMap.has(sName)) {
-          seriesMap.set(sName, {
-            seriesName: sName,
+        const normKey = normalizeSeriesName(p.seriesName || 'Truyện Khác');
+        if (!seriesMap.has(normKey)) {
+          seriesMap.set(normKey, {
+            seriesName: p.seriesName || 'Truyện Khác',
             coverUrl: p.coverUrl || '',
             totalChapters: 0,
             chapters: [],
-            _seenChapNums: new Set(), // dedup tracker
+            _seenChapNums: new Set(),
             updatedAt: p.updatedAt,
           });
         }
-        const sObj = seriesMap.get(sName);
-        const chapNum = typeof p.chapterNumber === 'number' ? p.chapterNumber : (parseInt(String(p.chapterNumber)) || 0);
+        const sObj = seriesMap.get(normKey);
+        const chapNum = normalizeChapterNumber(p.chapterNumber);
         // === DEDUPLICATION: only keep first occurrence of each chapterNumber ===
         if (sObj._seenChapNums.has(chapNum)) {
           continue; // skip duplicate chapter entry
@@ -924,7 +937,7 @@ const server = http.createServer(async (req, res) => {
 
       // Sort chapters inside each series by chapterNumber ascending
       const seriesList = Array.from(seriesMap.values()).map((s) => {
-        const { _seenChapNums, ...cleanSeries } = s; // remove internal tracker
+        const { _seenChapNums, ...cleanSeries } = s;
         return {
           ...cleanSeries,
           chapters: cleanSeries.chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)),

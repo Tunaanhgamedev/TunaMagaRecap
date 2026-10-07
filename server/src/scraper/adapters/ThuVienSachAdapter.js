@@ -13,9 +13,15 @@ export const ThuVienSachAdapter = {
     const origin = `https://${domain}`;
 
     let target = url;
+    const cMatch = url.match(/chap(?:ter)?[-_\s]?(\d+)/i);
+    const parsedChapterNumber = cMatch ? parseInt(cMatch[1], 10) : 1;
+
     if (!target.includes('-chap-')) {
-      const slugMatch = target.match(/(?:thuviensach\.vn|dilib\.vn)\/([^\/]+)-(\d+)\.html/) || target.match(/\/([^\/]+)-(\d+)\.html/);
-      if (slugMatch) target = `${origin}/truyen-tranh/${slugMatch[1]}-${slugMatch[2]}-chap-1.html`;
+      const slugMatch = target.match(/(?:thuviensach\.vn|dilib\.vn)\/(?:truyen-tranh\/)?([^\/]+)-(\d+)(?:\.html|\/chapter-\d+|\/chap-\d+)?/) ||
+                        target.match(/\/([^\/]+)-(\d+)(?:\.html|\/chapter-\d+|\/chap-\d+)?/);
+      if (slugMatch) {
+        target = `${origin}/truyen-tranh/${slugMatch[1]}-${slugMatch[2]}-chap-${parsedChapterNumber}.html`;
+      }
     }
 
     let html = '';
@@ -30,15 +36,12 @@ export const ThuVienSachAdapter = {
     } catch (e) {}
 
     let title = 'Tôi Thăng Cấp Một Minh - Solo Leveling';
-    let chapterNumber = 1;
+    let chapterNumber = parsedChapterNumber;
 
     const tMatch = html.match(/<title>([^<]+)<\/title>/i);
     if (tMatch) {
       title = tMatch[1].replace(/Truyện Tranh\s*/gi, '').replace(/,\s*Thư Viện Sách.*/gi, '').replace(/- Chap.*/gi, '').trim();
     }
-
-    const cMatch = target.match(/chap(?:ter)?[-_\s]?(\d+)/i) || html.match(/Chap(?:ter)?\s*(\d+)/i);
-    if (cMatch) chapterNumber = parseInt(cMatch[1], 10);
 
     return {
       title,
@@ -70,6 +73,11 @@ export const ThuVienSachAdapter = {
       let slug = 'Solo-Leveling';
       if (url.includes('solo-leveling') || html.includes('solo-leveling')) {
         slug = 'Solo-Leveling';
+      } else {
+        const slugMatch = url.match(/(?:truyen-tranh\/|comic\/)?([a-zA-Z0-9-]+?)(?:-\d+)?(?:-chap|-chapter|\.html|\/|$)/i);
+        if (slugMatch && slugMatch[1]) {
+          slug = slugMatch[1].split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join('-');
+        }
       }
       for (let i = 1; i <= 15; i++) {
         const num = String(i).padStart(5, '0');

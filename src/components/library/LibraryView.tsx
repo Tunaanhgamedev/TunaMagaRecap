@@ -62,6 +62,8 @@ export const LibraryView: React.FC = () => {
     selectNewChaptersOnly,
     deselectAllChapters,
     selectChapterRange,
+    forceOverwrite,
+    setForceOverwrite,
     startBatchScrape,
     fetchSeriesFolders,
   } = useStudioStore();
@@ -570,6 +572,19 @@ export const LibraryView: React.FC = () => {
                     Áp Dụng
                   </button>
                 </div>
+
+                {/* Force Overwrite Toggle */}
+                <label className="flex items-center space-x-1.5 cursor-pointer bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-violet-500/50 transition-colors select-none">
+                  <input
+                    type="checkbox"
+                    checked={forceOverwrite}
+                    onChange={(e) => setForceOverwrite(e.target.checked)}
+                    className="rounded border-slate-700 text-violet-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span className={`text-[11px] font-semibold ${forceOverwrite ? 'text-amber-300' : 'text-slate-400'}`}>
+                    🔄 Cào lại / Ghi đè chapter đã có
+                  </span>
+                </label>
               </div>
 
               {/* Chapters Checklist Grid */}

@@ -71,6 +71,8 @@ interface StudioState {
   selectNewChaptersOnly: () => void;
   deselectAllChapters: () => void;
   selectChapterRange: (startChap: number, endChap: number) => void;
+  forceOverwrite: boolean;
+  setForceOverwrite: (v: boolean) => void;
   startBatchScrape: () => Promise<void>;
   fetchSeriesFolders: () => Promise<void>;
 
@@ -335,6 +337,8 @@ export const useStudioStore = create<StudioState>()(
   seriesFolders: [],
   selectedSeriesName: null,
   setSelectedSeriesName: (name) => set({ selectedSeriesName: name }),
+  forceOverwrite: false,
+  setForceOverwrite: (v) => set({ forceOverwrite: v }),
 
   discoverSeriesFromUrl: async (url: string) => {
     const rawUrl = url.trim();
@@ -442,6 +446,7 @@ export const useStudioStore = create<StudioState>()(
           seriesName: discoveredSeries.name,
           coverUrl: discoveredSeries.coverUrl,
           chapters: chaptersToScrape,
+          forceOverwrite: get().forceOverwrite,
         }),
       });
       const data = await res.json();
