@@ -57,6 +57,8 @@ model Project {
   assets        Asset[]
   jobs          Job[]
   syncCommits   SyncCommit[]
+
+  @@unique([seriesName, chapterNumber])
 }
 
 model Series {

@@ -93,6 +93,9 @@ const cleanUpDuplicateProjects = async () => {
 
     if (duplicateIdsToDelete.length > 0) {
       console.log(`[Prisma Deduplication] 🧹 Đã dọn dẹp ${duplicateIdsToDelete.length} project trùng lặp trong Prisma SQLite`);
+      await prisma.chapter.deleteMany({
+        where: { projectId: { in: duplicateIdsToDelete } },
+      });
       await prisma.project.deleteMany({
         where: { id: { in: duplicateIdsToDelete } },
       });
@@ -396,15 +399,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 3. GET Projects (Syncs with Prisma SQLite Database)
-  if (pathname === '/api/projects' && req.method === 'POST' || (pathname === '/api/projects' && req.method === 'GET')) {
+  if ((pathname === '/api/projects' && req.method === 'POST') || (pathname === '/api/projects' && req.method === 'GET')) {
     if (req.method === 'GET') {
       try {
         const prismaProjects = await prisma.project.findMany({
           orderBy: { updatedAt: 'desc' },
         });
-        sendJSON(res, { success: true, projects: prismaProjects.length > 0 ? prismaProjects : db.projects }, 200, req);
+        const rawList = prismaProjects.length > 0 ? prismaProjects : db.projects;
+        sendJSON(res, { success: true, projects: deduplicateProjectsList(rawList) }, 200, req);
       } catch (err) {
-        sendJSON(res, { success: true, projects: db.projects }, 200, req);
+        sendJSON(res, { success: true, projects: deduplicateProjectsList(db.projects) }, 200, req);
       }
       return;
     }
