@@ -1,6 +1,90 @@
 {
   "projects": [
     {
+      "id": "ff3c09f7-81c0-4e25-b952-ea628d5cd6c4",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 239,
+      "episodeTitle": "Chapter 239: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-239.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-239.html",
+      "updatedAt": "12:55:16"
+    },
+    {
+      "id": "6a1f98a7-5264-4320-9874-95d3b7b3f885",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 231,
+      "episodeTitle": "Chapter 231: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-231.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-231.html",
+      "updatedAt": "12:55:11"
+    },
+    {
+      "id": "70785383-8796-46b6-b6dd-f25772c3223a",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 175,
+      "episodeTitle": "Chapter 175: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-175.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-175.html",
+      "updatedAt": "12:54:29"
+    },
+    {
+      "id": "e7ad1142-bf0f-41a7-9778-f8dd02e496ec",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 163,
+      "episodeTitle": "Chapter 163: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-163.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-163.html",
+      "updatedAt": "12:54:20"
+    },
+    {
+      "id": "9af4871d-d6ce-4125-981e-3858730ae2c5",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 132,
+      "episodeTitle": "Chapter 132: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-132.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-132.html",
+      "updatedAt": "12:53:54"
+    },
+    {
+      "id": "ccb92ae1-1ca0-48e0-8b4f-ed6fb1c009e8",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 127,
+      "episodeTitle": "Chapter 127: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-127.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-127.html",
+      "updatedAt": "12:53:50"
+    },
+    {
+      "id": "734b6abc-ee04-45a0-a980-25fc47802eb1",
+      "seriesName": "Tôi Thăng Cấp Một Mình",
+      "chapterNumber": 53,
+      "episodeTitle": "Chapter 53: Tôi Thăng Cấp Một Mình (11 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 44,
+      "coverUrl": "/api/proxy-image?url=https%3A%2F%2Fdilib.vn%2Fimg%2Fnews%2F2024%2F03%2Flarger%2F14806-toi-thang-cap-mot-minh-solo-leveling-1.webp%3Fv%3D6900&referer=https%3A%2F%2Fdilib.vn%2Ftruyen-tranh%2Ftoi-thang-cap-mot-minh-solo-leveling-14806-chap-53.html",
+      "sourceName": "Generic Universal HTML5 Adapter",
+      "sourceUrl": "https://dilib.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-53.html",
+      "updatedAt": "12:53:01"
+    },
+    {
       "id": "d931e223-36d6-47a6-83e5-beeb5124eeb2",
       "seriesName": "Người Chơi Mới Cấp Tối Đa - Người Chơi Mới Solo Cấp Cao Nhất -  Tôi Là Tân Thủ Có Cấp Cao Nhất",
       "chapterNumber": 274,

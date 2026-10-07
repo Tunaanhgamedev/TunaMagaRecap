@@ -379,34 +379,61 @@ const server = http.createServer(async (req, res) => {
 
         const scrapedData = await scraperManager.scrape(mangaUrl);
 
-        // Sync to Prisma SQLite DB
+        // Sync to Prisma SQLite DB with upsert logic to prevent duplicate records
         try {
-          const project = await prisma.project.create({
-            data: {
-              seriesName: scrapedData.project.seriesName,
-              chapterNumber: scrapedData.project.chapterNumber,
-              episodeTitle: scrapedData.project.episodeTitle,
-              status: 'ready',
-              durationEst: scrapedData.project.durationEst,
-              coverUrl: scrapedData.project.coverUrl,
+          const resolvedSeriesName = scrapedData.project.seriesName;
+          const resolvedChapterNum = typeof scrapedData.project.chapterNumber === 'string'
+            ? parseInt(scrapedData.project.chapterNumber) || 1
+            : scrapedData.project.chapterNumber;
+
+          const existingProject = await prisma.project.findFirst({
+            where: {
+              seriesName: resolvedSeriesName,
+              chapterNumber: resolvedChapterNum,
             },
           });
+
+          let project;
+          if (existingProject) {
+            project = await prisma.project.update({
+              where: { id: existingProject.id },
+              data: {
+                episodeTitle: scrapedData.project.episodeTitle,
+                status: 'ready',
+                durationEst: scrapedData.project.durationEst,
+                coverUrl: scrapedData.project.coverUrl,
+              },
+            });
+          } else {
+            project = await prisma.project.create({
+              data: {
+                seriesName: resolvedSeriesName,
+                chapterNumber: resolvedChapterNum,
+                episodeTitle: scrapedData.project.episodeTitle,
+                status: 'ready',
+                durationEst: scrapedData.project.durationEst,
+                coverUrl: scrapedData.project.coverUrl,
+              },
+            });
+          }
           scrapedData.project.id = project.id;
 
           if (scrapedData.pages && scrapedData.pages.length > 0) {
-            await prisma.chapter.create({
-              data: {
-                projectId: project.id,
-                number: parseInt(scrapedData.project.chapterNumber) || 1,
-                title: scrapedData.project.episodeTitle || `Chapter ${scrapedData.project.chapterNumber}`,
-                pages: {
-                  create: scrapedData.pages.map((p, idx) => ({
-                    pageIndex: p.pageIndex || idx + 1,
-                    imageUrl: p.imageUrl || p.rawImageUrl || '',
-                  }))
+            if (!existingProject) {
+              await prisma.chapter.create({
+                data: {
+                  projectId: project.id,
+                  number: parseInt(scrapedData.project.chapterNumber) || 1,
+                  title: scrapedData.project.episodeTitle || `Chapter ${scrapedData.project.chapterNumber}`,
+                  pages: {
+                    create: scrapedData.pages.map((p, idx) => ({
+                      pageIndex: p.pageIndex || idx + 1,
+                      imageUrl: p.imageUrl || p.rawImageUrl || '',
+                    }))
+                  }
                 }
-              }
-            });
+              });
+            }
           }
         } catch (dbErr) {
           console.log('[Prisma Sync] Stored in cached memory store:', dbErr.message);
@@ -523,43 +550,101 @@ const server = http.createServer(async (req, res) => {
 
         // Execute batch in background
         (async () => {
+          // Pre-fetch all existing chapters for this series to enable O(1) dedup lookups
+          let existingChapterKeys = new Set();
+          try {
+            const existingProjects = await prisma.project.findMany({
+              where: { seriesName: seriesName },
+              select: { seriesName: true, chapterNumber: true },
+            });
+            for (const ep of existingProjects) {
+              existingChapterKeys.add(`${ep.seriesName}::${ep.chapterNumber}`);
+            }
+          } catch (e) {}
+          // Also check db.json local store
+          for (const lp of db.projects) {
+            if (lp.seriesName === seriesName) {
+              existingChapterKeys.add(`${lp.seriesName}::${lp.chapterNumber}`);
+            }
+          }
+
+          let skippedCount = 0;
+
           for (let i = 0; i < chapters.length; i++) {
             const ch = chapters[i];
             global.batchScrapeProgress.current = i + 1;
             global.batchScrapeProgress.currentChapter = ch.title || `Chapter ${ch.chapterNumber}`;
             global.batchScrapeProgress.percent = Math.round(((i + 1) / chapters.length) * 100);
 
+            // === DEDUPLICATION CHECK: skip chapters that already exist ===
+            const chapKey = `${seriesName}::${ch.chapterNumber}`;
+            if (existingChapterKeys.has(chapKey)) {
+              console.log(`[Batch Scraper] ⏩ [${i + 1}/${chapters.length}] Bỏ qua ${ch.title} (đã tồn tại trong DB)`);
+              skippedCount++;
+              global.batchScrapeProgress.currentChapter = `⏩ Bỏ qua: ${ch.title} (đã có)`;
+              continue;
+            }
+
             try {
               console.log(`[Batch Scraper] ⏳ [${i + 1}/${chapters.length}] Đang cào ${ch.title} (${ch.url})...`);
               const scrapedData = await scraperManager.scrape(ch.url);
 
               try {
-                const project = await prisma.project.create({
-                  data: {
-                    seriesName: scrapedData.project.seriesName || seriesName,
-                    chapterNumber: ch.chapterNumber || scrapedData.project.chapterNumber,
-                    episodeTitle: scrapedData.project.episodeTitle,
-                    status: 'ready',
-                    durationEst: scrapedData.project.durationEst,
-                    coverUrl: scrapedData.project.coverUrl,
+                // Use upsert-like logic: find existing first, only create if not found
+                const resolvedSeriesName = scrapedData.project.seriesName || seriesName;
+                const resolvedChapterNum = ch.chapterNumber || scrapedData.project.chapterNumber;
+
+                const existingProject = await prisma.project.findFirst({
+                  where: {
+                    seriesName: resolvedSeriesName,
+                    chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
                   },
                 });
+
+                let project;
+                if (existingProject) {
+                  // Update existing project instead of creating duplicate
+                  project = await prisma.project.update({
+                    where: { id: existingProject.id },
+                    data: {
+                      episodeTitle: scrapedData.project.episodeTitle,
+                      status: 'ready',
+                      durationEst: scrapedData.project.durationEst,
+                      coverUrl: scrapedData.project.coverUrl,
+                    },
+                  });
+                  console.log(`[Batch Scraper] 🔄 Cập nhật project đã có: ${resolvedSeriesName} Ch.${resolvedChapterNum}`);
+                } else {
+                  project = await prisma.project.create({
+                    data: {
+                      seriesName: resolvedSeriesName,
+                      chapterNumber: typeof resolvedChapterNum === 'string' ? parseInt(resolvedChapterNum) || 1 : resolvedChapterNum,
+                      episodeTitle: scrapedData.project.episodeTitle,
+                      status: 'ready',
+                      durationEst: scrapedData.project.durationEst,
+                      coverUrl: scrapedData.project.coverUrl,
+                    },
+                  });
+                }
                 scrapedData.project.id = project.id;
 
                 if (scrapedData.pages && scrapedData.pages.length > 0) {
-                  await prisma.chapter.create({
-                    data: {
-                      projectId: project.id,
-                      number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
-                      title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
-                      pages: {
-                        create: scrapedData.pages.map((p, idx) => ({
-                          pageIndex: p.pageIndex || idx + 1,
-                          imageUrl: p.imageUrl || p.rawImageUrl || '',
-                        }))
+                  // Only create chapter pages if project is new (no existing chapter)
+                  if (!existingProject) {
+                    await prisma.chapter.create({
+                      data: {
+                        projectId: project.id,
+                        number: parseInt(ch.chapterNumber || scrapedData.project.chapterNumber) || 1,
+                        title: scrapedData.project.episodeTitle || `Chapter ${ch.chapterNumber}`,
+                        pages: {
+                          create: scrapedData.pages.map((p, idx) => ({
+                            pageIndex: p.pageIndex || idx + 1,
+                            imageUrl: p.imageUrl || p.rawImageUrl || '',
+                          }))
+                        }
                       }
-                    }
-                  });
+                    });
+                  }
                 }
               } catch (dbErr) {
                 console.log('[Batch Prisma Sync] Stored in local JSON:', dbErr.message);
@@ -567,6 +652,9 @@ const server = http.createServer(async (req, res) => {
 
               db.projects = [scrapedData.project, ...db.projects.filter((p) => p.id !== scrapedData.project.id && (p.seriesName !== scrapedData.project.seriesName || p.chapterNumber !== scrapedData.project.chapterNumber))];
               saveDB(db);
+
+              // Add to dedup set so subsequent iterations also skip this chapter
+              existingChapterKeys.add(chapKey);
 
               global.batchScrapeProgress.completedProjects.push(scrapedData.project);
             } catch (chErr) {
@@ -606,7 +694,7 @@ const server = http.createServer(async (req, res) => {
         allProjects = db.projects;
       }
 
-      // Group projects by seriesName
+      // Group projects by seriesName, with deduplication per chapterNumber
       const seriesMap = new Map();
       for (const p of allProjects) {
         const sName = p.seriesName || 'Truyện Khác';
@@ -616,22 +704,31 @@ const server = http.createServer(async (req, res) => {
             coverUrl: p.coverUrl || '',
             totalChapters: 0,
             chapters: [],
+            _seenChapNums: new Set(), // dedup tracker
             updatedAt: p.updatedAt,
           });
         }
         const sObj = seriesMap.get(sName);
+        const chapNum = p.chapterNumber || 0;
+        // === DEDUPLICATION: only keep first occurrence of each chapterNumber ===
+        if (sObj._seenChapNums.has(chapNum)) {
+          continue; // skip duplicate chapter entry
+        }
+        sObj._seenChapNums.add(chapNum);
         sObj.totalChapters += 1;
         sObj.chapters.push(p);
       }
 
       // Sort chapters inside each series by chapterNumber ascending
-      const seriesList = Array.from(seriesMap.values()).map((s) => ({
-        ...s,
-        chapters: s.chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)),
-      }));
+      const seriesList = Array.from(seriesMap.values()).map((s) => {
+        const { _seenChapNums, ...cleanSeries } = s; // remove internal tracker
+        return {
+          ...cleanSeries,
+          chapters: cleanSeries.chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)),
+        };
+      });
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, series: seriesList }));
+      sendJSON(req, res, { success: true, series: seriesList });
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: err.message }));
@@ -1852,6 +1949,40 @@ server.on('error', (err) => {
   }
 });
 
-server.listen(PORT, () => {
+// Automatic cleanup of duplicate chapter records on startup
+async function cleanupDuplicateProjects() {
+  try {
+    const allProjects = await prisma.project.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    const seenMap = new Map();
+    const duplicateIdsToDelete = [];
+
+    for (const p of allProjects) {
+      const key = `${p.seriesName || ''}::${p.chapterNumber || 0}`;
+      if (seenMap.has(key)) {
+        duplicateIdsToDelete.push(p.id);
+      } else {
+        seenMap.set(key, p.id);
+      }
+    }
+
+    if (duplicateIdsToDelete.length > 0) {
+      console.log(`[DB Cleanup] 🧹 Tìm thấy ${duplicateIdsToDelete.length} bản ghi chapter trùng lặp cũ, đang dọn dẹp...`);
+      await prisma.chapter.deleteMany({
+        where: { projectId: { in: duplicateIdsToDelete } },
+      });
+      await prisma.project.deleteMany({
+        where: { id: { in: duplicateIdsToDelete } },
+      });
+      console.log(`[DB Cleanup] ✅ Đã xóa thành công ${duplicateIdsToDelete.length} bản ghi trùng lặp! DB đã sạch sẽ.`);
+    }
+  } catch (e) {
+    console.error('[DB Cleanup Error]:', e.message);
+  }
+}
+
+server.listen(PORT, async () => {
   console.log(`🚀 TunaMagaRecap Server with Prisma SQLite listening on http://localhost:${PORT}`);
+  await cleanupDuplicateProjects();
 });
