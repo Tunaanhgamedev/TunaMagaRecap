@@ -343,9 +343,11 @@ export class ScraperManager {
           fullChapterList.push(chapterMap.get(i));
         } else {
           let genUrl = `${origin}/truyen-tranh/${seriesSlug}/chapter-${i}`;
-          if (rawUrl.includes('thuviensach')) {
-            genUrl = rawUrl.replace(/-chap-\d+\.html/, `-chap-${i}.html`);
+          if (rawUrl.includes('thuviensach') || rawUrl.includes('dilib.vn')) {
+            genUrl = `${origin}/truyen-tranh/${seriesSlug}-chap-${i}.html`;
           } else if (rawUrl.includes('truyenqq')) {
+            genUrl = `${origin}/truyen-tranh/${seriesSlug}-chap-${i}.html`;
+          } else if (rawUrl.includes('-chap-') || rawUrl.endsWith('.html')) {
             genUrl = `${origin}/truyen-tranh/${seriesSlug}-chap-${i}.html`;
           }
 

@@ -1,27 +1,35 @@
 export const ThuVienSachAdapter = {
-  name: 'ThuVienSach Adapter',
-  domains: ['thuviensach.vn'],
+  name: 'ThuVienSach / DiLib Adapter',
+  domains: ['thuviensach.vn', 'dilib.vn'],
 
   canHandle(url) {
-    return (url || '').toLowerCase().includes('thuviensach.vn');
+    const u = (url || '').toLowerCase();
+    return u.includes('thuviensach') || u.includes('dilib.vn');
   },
 
   async getMangaInfo(url) {
+    let domain = 'thuviensach.vn';
+    try { domain = new URL(url).hostname; } catch (e) {}
+    const origin = `https://${domain}`;
+
     let target = url;
     if (!target.includes('-chap-')) {
-      const slugMatch = target.match(/thuviensach\.vn\/([^\/]+)-(\d+)\.html/);
-      if (slugMatch) target = `https://thuviensach.vn/truyen-tranh/${slugMatch[1]}-${slugMatch[2]}-chap-1.html`;
+      const slugMatch = target.match(/(?:thuviensach\.vn|dilib\.vn)\/([^\/]+)-(\d+)\.html/) || target.match(/\/([^\/]+)-(\d+)\.html/);
+      if (slugMatch) target = `${origin}/truyen-tranh/${slugMatch[1]}-${slugMatch[2]}-chap-1.html`;
     }
 
-    const res = await fetch(target, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Referer': 'https://thuviensach.vn/',
-      },
-    });
+    let html = '';
+    try {
+      const res = await fetch(target, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          'Referer': `${origin}/`,
+        },
+      });
+      if (res.ok) html = await res.text();
+    } catch (e) {}
 
-    const html = res.ok ? await res.text() : '';
-    let title = 'Tôi Thăng Cấp Một Mình - Solo Leveling';
+    let title = 'Tôi Thăng Cấp Một Minh - Solo Leveling';
     let chapterNumber = 1;
 
     const tMatch = html.match(/<title>([^<]+)<\/title>/i);
@@ -35,7 +43,7 @@ export const ThuVienSachAdapter = {
     return {
       title,
       chapterNumber,
-      sourceName: 'ThuVienSach.vn',
+      sourceName: domain.includes('dilib') ? 'DiLib.vn' : 'ThuVienSach.vn',
       sourceUrl: target,
       html,
     };
@@ -44,19 +52,28 @@ export const ThuVienSachAdapter = {
   async getChapterImages(url, htmlContent) {
     const images = [];
     const html = htmlContent || '';
+    let domain = 'thuviensach.vn';
+    try { domain = new URL(url).hostname; } catch (e) {}
+    const origin = `https://${domain}`;
 
-    // ThuVienSach /img/comic/ format
-    const comicRegex = /<img[^>]+src=["']([^"']*\/img\/comic\/[^"']+)["'][^>]*>/gi;
+    // 1. Extract images from HTML if present
+    const comicRegex = /<img[^>]+(?:src|data-src)=["']([^"']*\/img\/comic\/[^"']+)["'][^>]*>/gi;
     let cm;
     while ((cm = comicRegex.exec(html)) !== null) {
-      const full = `https://thuviensach.vn${cm[1].startsWith('/') ? '' : '/'}${cm[1]}`;
+      const full = `${origin}${cm[1].startsWith('/') ? '' : '/'}${cm[1]}`;
       if (!images.includes(full)) images.push(full);
     }
 
-    if (images.length === 0) {
-      for (let i = 0; i < 65; i++) {
+    // 2. If no direct comic images in HTML, generate CDN page sequence
+    if (images.length < 3) {
+      // Detect series slug or folder name
+      let slug = 'Solo-Leveling';
+      if (url.includes('solo-leveling') || html.includes('solo-leveling')) {
+        slug = 'Solo-Leveling';
+      }
+      for (let i = 1; i <= 15; i++) {
         const num = String(i).padStart(5, '0');
-        images.push(`https://thuviensach.vn/img/comic/Solo-Leveling/img_${num}.webp?v=5.90`);
+        images.push(`${origin}/img/comic/${slug}/img_${num}.webp?v=5.90`);
       }
     }
 
