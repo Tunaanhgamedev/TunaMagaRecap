@@ -709,7 +709,7 @@ const server = http.createServer(async (req, res) => {
           });
         }
         const sObj = seriesMap.get(sName);
-        const chapNum = p.chapterNumber || 0;
+        const chapNum = typeof p.chapterNumber === 'number' ? p.chapterNumber : (parseInt(String(p.chapterNumber)) || 0);
         // === DEDUPLICATION: only keep first occurrence of each chapterNumber ===
         if (sObj._seenChapNums.has(chapNum)) {
           continue; // skip duplicate chapter entry
@@ -728,7 +728,7 @@ const server = http.createServer(async (req, res) => {
         };
       });
 
-      sendJSON(req, res, { success: true, series: seriesList });
+      sendJSON(res, { success: true, series: seriesList }, 200, req);
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: err.message }));
@@ -1952,30 +1952,53 @@ server.on('error', (err) => {
 // Automatic cleanup of duplicate chapter records on startup
 async function cleanupDuplicateProjects() {
   try {
+    // 1. Clean Prisma DB
     const allProjects = await prisma.project.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    const seenMap = new Map();
+    const seenMap = new Set();
     const duplicateIdsToDelete = [];
 
     for (const p of allProjects) {
-      const key = `${p.seriesName || ''}::${p.chapterNumber || 0}`;
+      const sName = (p.seriesName || '').trim();
+      const chapNum = typeof p.chapterNumber === 'number' ? p.chapterNumber : (parseInt(String(p.chapterNumber)) || 0);
+      const key = `${sName}::${chapNum}`;
       if (seenMap.has(key)) {
         duplicateIdsToDelete.push(p.id);
       } else {
-        seenMap.set(key, p.id);
+        seenMap.add(key);
       }
     }
 
     if (duplicateIdsToDelete.length > 0) {
-      console.log(`[DB Cleanup] 🧹 Tìm thấy ${duplicateIdsToDelete.length} bản ghi chapter trùng lặp cũ, đang dọn dẹp...`);
+      console.log(`[DB Cleanup] 🧹 Tìm thấy ${duplicateIdsToDelete.length} bản ghi chapter trùng lặp cũ trong Prisma DB, đang dọn dẹp...`);
       await prisma.chapter.deleteMany({
         where: { projectId: { in: duplicateIdsToDelete } },
       });
       await prisma.project.deleteMany({
         where: { id: { in: duplicateIdsToDelete } },
       });
-      console.log(`[DB Cleanup] ✅ Đã xóa thành công ${duplicateIdsToDelete.length} bản ghi trùng lặp! DB đã sạch sẽ.`);
+      console.log(`[DB Cleanup] ✅ Đã xóa thành công ${duplicateIdsToDelete.length} bản ghi trùng lặp trong Prisma DB!`);
+    }
+
+    // 2. Clean db.json memory store
+    if (Array.isArray(db.projects)) {
+      const seenJson = new Set();
+      const cleanJsonProjects = [];
+      for (const p of db.projects) {
+        const sName = (p.seriesName || '').trim();
+        const chapNum = typeof p.chapterNumber === 'number' ? p.chapterNumber : (parseInt(String(p.chapterNumber)) || 0);
+        const key = `${sName}::${chapNum}`;
+        if (!seenJson.has(key)) {
+          seenJson.add(key);
+          cleanJsonProjects.push(p);
+        }
+      }
+      if (cleanJsonProjects.length !== db.projects.length) {
+        console.log(`[db.json Cleanup] 🧹 Loại bỏ ${db.projects.length - cleanJsonProjects.length} bản ghi trùng trong db.json`);
+        db.projects = cleanJsonProjects;
+        saveDB(db);
+      }
     }
   } catch (e) {
     console.error('[DB Cleanup Error]:', e.message);
