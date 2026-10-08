@@ -106,9 +106,9 @@ export const SubtitleView: React.FC = () => {
               <FileText className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-sm font-extrabold text-white">🎯 Panel SRT Generator</h2>
+              <h2 className="text-sm font-extrabold text-white">🎯 Đồng Bộ Phụ Đề Kịch Bản (Script Sync)</h2>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                Tự động tạo file .SRT từ nội dung lời thoại mỗi panel — thời gian ăn khớp 100% với video timeline (3.5s/panel).
+                Tự động trích xuất các câu thoại từ Kịch Bản AI để tạo file .SRT (ưu tiên H.A.C.C). Nếu không có kịch bản, hệ thống sẽ fallback lấy lời thoại từ OCR Panels.
               </p>
             </div>
           </div>
@@ -120,7 +120,7 @@ export const SubtitleView: React.FC = () => {
               className="flex items-center space-x-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Tạo SRT Từ Panel ({totalPanels} panels)</span>
+              <span>Đồng Bộ Kịch Bản {'&'} Panel ({totalPanels} panels)</span>
             </button>
 
             <button

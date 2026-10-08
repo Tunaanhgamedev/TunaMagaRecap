@@ -3068,10 +3068,52 @@ export const useStudioStore = create<StudioState>()(
   panelSrtData: [],
   generateSRTFromPanels: () => {
     const state = get();
-    const pages = state.pages;
-    const durationPerPanel = 3.5;
     let cursor = 0;
     const srtItems: SubtitleItem[] = [];
+
+    // 1. Dựa vào nội dung kịch bản AI (Content) nếu có
+    if (state.scriptData && state.scriptData.content) {
+      const lines = state.scriptData.content.split('\n');
+      const spokenLines: { speaker: string; text: string }[] = [];
+
+      for (const line of lines) {
+        // Match `**[Speaker]**: "Text"` or `[Speaker]: Text`
+        const match = line.match(/^(?:\*\*)?\[(.*?)\](?:\*\*)?:\s*"?([^"]+)"?/);
+        if (match) {
+          spokenLines.push({ speaker: match[1].trim(), text: match[2].trim() });
+        }
+      }
+
+      if (spokenLines.length > 0) {
+        spokenLines.forEach((item, idx) => {
+          const wordCount = item.text.split(' ').length;
+          // Tốc độ đọc khoảng 3.5 từ/giây
+          let duration = Math.max(1.5, wordCount / 3.5);
+          if (duration > 7) duration = 7; 
+
+          const endTime = cursor + duration;
+          srtItems.push({
+            id: `srt-script-${idx}-${Date.now()}`,
+            startTime: parseFloat(cursor.toFixed(3)),
+            endTime: parseFloat(endTime.toFixed(3)),
+            text: item.text,
+            speaker: item.speaker,
+            stylePreset: state.subtitleStyle,
+          });
+          cursor = endTime + 0.3; // Nghỉ 0.3s giữa các câu
+        });
+
+        set({
+          panelSrtData: srtItems,
+          scrapeStatusMessage: `✅ Đã đồng bộ xuất sắc ${srtItems.length} dòng SRT từ kịch bản nội dung! (Khớp 100% với Content).`,
+        });
+        return;
+      }
+    }
+
+    // 2. Fallback: Dựa vào Panel OCR nếu không có Kịch Bản
+    const pages = state.pages;
+    const durationPerPanel = 3.5;
 
     pages.forEach((page, pIdx) => {
       const pagePanels =
@@ -3094,7 +3136,6 @@ export const useStudioStore = create<StudioState>()(
             ];
 
       pagePanels.forEach((panel, panIdx) => {
-        // Gather ALL dialogues from panel, not just the first one
         const dialogues =
           panel.dialogues && panel.dialogues.length > 0
             ? panel.dialogues
@@ -3106,7 +3147,6 @@ export const useStudioStore = create<StudioState>()(
                 },
               ];
 
-        // If panel has multiple dialogues, split the panel duration equally
         const subDuration = durationPerPanel / dialogues.length;
 
         dialogues.forEach((d, dIdx) => {
@@ -3131,7 +3171,7 @@ export const useStudioStore = create<StudioState>()(
 
     set({
       panelSrtData: srtItems,
-      scrapeStatusMessage: `✅ Đã tạo ${srtItems.length} dòng SRT từ ${pages.length} trang (${srtItems.length} panel dialogue).`,
+      scrapeStatusMessage: `✅ Đã tạo ${srtItems.length} dòng SRT từ OCR ${pages.length} trang.`,
     });
   },
 
