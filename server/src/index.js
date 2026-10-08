@@ -1772,12 +1772,29 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
         const genre = payload.genre || null;
         const protagonist = payload.protagonist || '';
 
+        console.log(`[Server] Đang nạp hình ảnh từ ${pages.length} trang cho Gemini Vision AI...`);
+        const imagesBase64 = [];
+        for (const page of pages) {
+          if (page.imageUrl) {
+            try {
+              const buf = await resolveAndFetchImageBuffer(page.imageUrl);
+              if (buf) {
+                imagesBase64.push(buf.toString('base64'));
+              }
+            } catch (err) {
+              console.warn(`[Server] Lỗi nạp hình ảnh ${page.imageUrl}:`, err.message);
+            }
+          }
+        }
+        console.log(`[Server] Đã chuẩn bị xong ${imagesBase64.length} hình ảnh gửi cho AI phân tích.`);
+
         const generatedScript = await AIVisionEngine.generateMangaRecapScript({
           seriesName,
           chapterNumber,
           mode,
           dialogues,
           pages,
+          imagesBase64,
           customPrompt,
           apiKey,
           genre,

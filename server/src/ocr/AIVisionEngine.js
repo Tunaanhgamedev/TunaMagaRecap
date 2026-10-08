@@ -287,6 +287,7 @@ export async function generateMangaRecapScript({
   mode = 'review',
   dialogues = [],
   pages = [],
+  imagesBase64 = [],
   customPrompt = '',
   apiKey = '',
   genre = null,
@@ -320,14 +321,14 @@ export async function generateMangaRecapScript({
   const systemInstruction = `Bạn là Đạo Diễn & Biên Kịch Video Recap Truyện Tranh Chuyên Nghiệp Hàng Đầu YouTube / TikTok Triệu View. Phong cách của bạn cực kỳ cuốn hút, dí dỏm, nhịp độ nhanh và biết cách thao túng tâm lý người xem.
 Nhiệm vụ của bạn: Viết một kịch bản thuyết minh (Voiceover Script) siêu lôi cuốn, chi tiết, độ dài tối thiểu 2000 - 3500 từ, bao quát 100% TOÀN BỘ từ Trang 1 đến Trang ${totalPages} của Chapter ${chapterNumber} bộ truyện "${seriesName}".
 
-QUY TẮC CÔNG THỨC H.A.C.C (HOOK - AGGRAVATION - CATHARSIS - CLIFFHANGER) BẮT BUỘC:
-1. **H - Hook (5 giây đầu sinh tử)**: Không chào hỏi dài dòng. Mở đầu ngay bằng một tình huống giật gân, nghịch cảnh tột cùng hoặc khoảnh khắc main "out trình" bá đạo nhất để giữ chân.
-2. **A - Aggravation (Đẩy cao trào & Ức chế)**: Lời dẫn chuyện liên tục, phóng đại cảm xúc. Tập trung vào mâu thuẫn (nhân vật chính bị chèn ép, khinh bỉ, đường cùng). MỌI panel đều phải có lời dẫn.
-3. **C - Catharsis (Vả mặt sảng khoái)**: Dùng từ ngữ bắt trend GenZ, Wibu (out trình, bón hành, bay màu, phế vật, buff bẩn, chuyển sinh, vả mặt, ảo ma, cẩu lương, rén ngang). Chèn hiệu ứng [SFX: Tiếng chém chát chúa, nhạc epic].
-4. **C - Cliffhanger (Cú lật phút chót)**: Kết thúc ở một tình huống ngàn cân treo sợi tóc. Kêu gọi Like, Subscribe và đón xem phần tiếp theo một cách khéo léo.
-5. **Góc máy & Bối cảnh**: Dùng thẻ *🎨 [Trang X • Panel Y (Góc Máy)]* miêu tả hiệu ứng trực quan (Dramatic Zoom, Pan Right...). KHÔNG bỏ trống bất kỳ panel nào từ Trang 1 đến ${totalPages}.
-6. **Không đưa từ ngữ rác kỹ thuật**: Tuyệt đối KHÔNG xuất hiện "Bấm quét chữ", "OCR", "trích xuất văn bản".
-7. **Phân vai sắc nét**: Phân tách rõ **[Dẫn Chuyện]**, **[${protagonist || 'Nhân Vật Chính'}]**, **[Phản Diện / Kẻ Địch]**.
+QUY TẮC BẮT BUỘC (H.A.C.C & THUYẾT MINH HÌNH ẢNH):
+1. **Phân Tích Hình Ảnh (Micro-Expressions & Vibe)**: Không gọi tên cảm xúc chung chung. BẮT BUỘC miêu tả biểu cảm qua ánh mắt, gân xanh, nụ cười, đổ bóng... Dựa vào nét vẽ để lột tả không khí (sát khí, áp lực nghẹt thở, hay sự ma mị).
+2. **H - Hook (5 giây đầu sinh tử)**: Không chào hỏi dài dòng. Mở đầu bằng khoảnh khắc main "out trình" bá đạo hoặc nghẹt thở nhất.
+3. **A - Aggravation (Đẩy cao trào & Ức chế)**: Phóng đại cảm xúc, khoét sâu mâu thuẫn. Nhịp điệu câu văn dài ngắn linh hoạt theo bố cục khung tranh.
+4. **C - Catharsis (Vả mặt sảng khoái)**: Dùng từ lóng GenZ, Wibu (out trình, bón hành, bay màu). Khi miêu tả combat phải dùng động từ mạnh lột tả sức tàn phá bẻ nát khung hình.
+5. **C - Cliffhanger (Cú lật phút chót)**: Kết thúc lửng lơ ngàn cân treo sợi tóc. Kêu gọi Like/Subscribe.
+6. **Không đưa từ ngữ rác kỹ thuật**: Tuyệt đối KHÔNG xuất hiện "Bấm quét chữ", "OCR".
+7. **Phân vai sắc nét**: Phân tách rõ **[Dẫn Chuyện]**, **[${protagonist || 'Nhân Vật Chính'}]**, **[Phản Diện]**.
 
 DANH SÁCH CHI TIẾT TỪNG TRANG TRUYỆN (${totalPages} TRANG):
 ${pagesOverview}
@@ -340,12 +341,25 @@ Hãy xuất bản kịch bản hoàn chỉnh bằng Tiếng Việt chuẩn SEO Y
   if (key) {
     for (const model of MODEL_CANDIDATES) {
       try {
+        const parts = [];
+        if (imagesBase64 && imagesBase64.length > 0) {
+          imagesBase64.forEach((b64) => {
+            parts.push({
+              inlineData: {
+                data: b64,
+                mimeType: 'image/jpeg',
+              },
+            });
+          });
+        }
+        parts.push({ text: systemInstruction });
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: systemInstruction }] }],
+            contents: [{ parts }],
           }),
         });
 
