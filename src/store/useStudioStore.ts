@@ -2406,17 +2406,71 @@ export const useStudioStore = create<StudioState>()(
       if (!res.ok) throw new Error('Script fetch error');
       const data = await res.json();
       if (data.success && data.script) {
-        set({
-          scriptData: {
-            mode,
-            title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
-            content: data.script,
-            chunks: [
-              { id: 'sc-1', speaker: 'Dẫn Chuyện', text: data.script.slice(0, 100), emotion: 'excited', estDurationSec: 5.0 },
-            ],
-            wordCount: data.wordCount || data.script.split(/\s+/).length,
-            estReadTimeMinutes: Math.ceil((data.wordCount || 850) / 200),
-          },
+        set((state) => {
+          const updatedPages = [...state.pages];
+          const scriptStr = data.script as string;
+          let currentPage = -1;
+          let currentPanel = -1;
+          const lines = scriptStr.split('\n');
+
+          for (const line of lines) {
+            const headerMatch = line.match(/(?:Trang|Page)\s*(\d+).*?(?:Panel|Khung)\s*(\d+)(?:.*?\((.*?)\))?/i);
+            if (headerMatch) {
+              currentPage = parseInt(headerMatch[1], 10);
+              currentPanel = parseInt(headerMatch[2], 10);
+              const cameraEffect = headerMatch[3]?.toLowerCase().replace(/\s+/g, '_') || 'dramatic_zoom';
+
+              const pageIdx = updatedPages.findIndex(p => p.pageIndex === currentPage);
+              if (pageIdx !== -1) {
+                const panIdx = updatedPages[pageIdx].panels.findIndex(pan => pan.panelIndex === currentPanel);
+                if (panIdx !== -1) {
+                  // If camera effect is valid, use it
+                  if (['dramatic_zoom', 'zoom_in', 'zoom_out', 'pan_right', 'pan_left', 'pan_up', 'pan_down', 'shake', 'flash', 'slow_zoom_out'].includes(cameraEffect)) {
+                      updatedPages[pageIdx].panels[panIdx].suggestedCameraEffect = cameraEffect as any;
+                  }
+                  
+                  // Clear old OCR texts on first hit
+                  if (!(updatedPages[pageIdx].panels[panIdx] as any)._aiCleared) {
+                    updatedPages[pageIdx].panels[panIdx].dialogues = [];
+                    (updatedPages[pageIdx].panels[panIdx] as any)._aiCleared = true;
+                  }
+                }
+              }
+            } else if (currentPage !== -1 && currentPanel !== -1) {
+              const diagMatch = line.match(/^(?:\*\*)?\[(.*?)\](?:\*\*)?:\s*"?([^"]+)"?/);
+              if (diagMatch) {
+                const pageIdx = updatedPages.findIndex(p => p.pageIndex === currentPage);
+                if (pageIdx !== -1) {
+                  const panIdx = updatedPages[pageIdx].panels.findIndex(pan => pan.panelIndex === currentPanel);
+                  if (panIdx !== -1) {
+                    updatedPages[pageIdx].panels[panIdx].dialogues.push({
+                      id: `d-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                      speaker: diagMatch[1].trim(),
+                      text: diagMatch[2].trim(),
+                      originalText: diagMatch[2].trim(),
+                      translatedText: diagMatch[2].trim(),
+                      emotion: 'neutral',
+                      textType: 'DIALOGUE',
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          return {
+            pages: updatedPages,
+            scriptData: {
+              mode,
+              title: `Kịch Bản AI: ${sName} Chapter ${cNum}`,
+              content: data.script,
+              chunks: [
+                { id: 'sc-1', speaker: 'Dẫn Chuyện', text: data.script.slice(0, 100), emotion: 'excited', estDurationSec: 5.0 },
+              ],
+              wordCount: data.wordCount || data.script.split(/\s+/).length,
+              estReadTimeMinutes: Math.ceil((data.wordCount || 850) / 200),
+            },
+          };
         });
         return;
       }
