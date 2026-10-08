@@ -418,9 +418,15 @@ export const TimelineView: React.FC = () => {
 
         // Manga Recap Frame proportions:
         // In 16:9, card occupies ~52-58% of canvas width so 21-24% blurred background shines on each side!
-        const maxCardW = isPortrait ? canvas.width * 0.92 : canvas.width * 0.58;
-        const maxCardH = isPortrait ? canvas.height * 0.82 : canvas.height * 0.94;
+        let maxCardW = isPortrait ? canvas.width * 0.92 : canvas.width * 0.58;
+        let maxCardH = isPortrait ? canvas.height * 0.82 : canvas.height * 0.94;
         const minCardW = isPortrait ? canvas.width * 0.70 : canvas.width * 0.48;
+
+        const isZoomEffect = activeItem.cameraEffect.includes('zoom');
+        if (isZoomEffect) {
+          maxCardH = canvas.height;
+          maxCardW = canvas.width;
+        }
 
         let cardW = maxCardW;
         let cardH = maxCardH;
@@ -441,13 +447,13 @@ export const TimelineView: React.FC = () => {
         } else if (aspectCrop >= 0.55) {
           // Standard portrait comic panel (e.g. 3:4 or 4:5)
           cardH = maxCardH;
-          cardW = Math.max(minCardW * 0.75, maxCardH * aspectCrop);
+          cardW = isZoomEffect ? maxCardH * aspectCrop : Math.max(minCardW * 0.75, maxCardH * aspectCrop);
           scaledW = cardW;
-          scaledH = cardH;
+          scaledH = cardW / aspectCrop;
         } else {
           // Tall / narrow manhwa strip (e.g. 1:2 to 1:5)
           // Frame at balanced comic proportion (no 130px skinny stick, no lướt ảnh)
-          cardW = Math.min(maxCardW, Math.max(minCardW, maxCardH * 0.80));
+          cardW = isZoomEffect ? Math.max(minCardW, maxCardH * aspectCrop) : Math.min(maxCardW, Math.max(minCardW, maxCardH * 0.80));
           cardH = maxCardH;
           scaledW = cardW;
           scaledH = cardW / aspectCrop;
@@ -471,7 +477,7 @@ export const TimelineView: React.FC = () => {
         ctx.fillStyle = '#0a0d14';
         ctx.beginPath();
         if (typeof (ctx as any).roundRect === 'function') {
-          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, isZoomEffect ? 0 : 12);
         } else {
           ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
         }
@@ -482,7 +488,7 @@ export const TimelineView: React.FC = () => {
         ctx.save();
         ctx.beginPath();
         if (typeof (ctx as any).roundRect === 'function') {
-          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, isZoomEffect ? 0 : 12);
         } else {
           ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
         }
@@ -507,7 +513,7 @@ export const TimelineView: React.FC = () => {
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         if (typeof (ctx as any).roundRect === 'function') {
-          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
+          (ctx as any).roundRect(-cardW / 2, -cardH / 2, cardW, cardH, isZoomEffect ? 0 : 12);
         } else {
           ctx.rect(-cardW / 2, -cardH / 2, cardW, cardH);
         }
