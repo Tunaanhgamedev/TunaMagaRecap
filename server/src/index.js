@@ -1774,7 +1774,7 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
 
         console.log(`[Server] Đang nạp hình ảnh từ ${pages.length} trang cho Gemini Vision AI...`);
         const imagesBase64 = [];
-        for (const page of pages) {
+        for (const page of pages.slice(0, 12)) {
           if (page.imageUrl) {
             try {
               const buf = await resolveAndFetchImageBuffer(page.imageUrl);
@@ -2071,7 +2071,7 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
             where: { chapterId: chapter.id }
           });
 
-          for (const page of pages) {
+          for (const page of pages.slice(0, 12)) {
             await prisma.mangaPage.create({
               data: {
                 chapterId: chapter.id,

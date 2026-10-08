@@ -100,10 +100,16 @@ export const GenericAdapter = {
     }
 
     // Fallback: Parse all images from HTML with lazy load attributes
-    const regex = /<img[^>]+(?:data-src|data-original|data-cdn|data-lazy-src|data-url|data-srcset|srcset|src)=["']([^"']+)["'][^>]*>/gi;
+    const regex = /<img[^>]+>/gi;
     let m;
     while ((m = regex.exec(html)) !== null) {
-      let src = m[1].trim();
+      const tag = m[0];
+      const dataSrcMatch = tag.match(/(?:data-src|data-original|data-cdn|data-lazy-src|data-url|data-srcset|srcset)=["']([^"']+)["']/i);
+      const srcMatch = tag.match(/src=["']([^"']+)["']/i);
+      
+      let src = '';
+      if (dataSrcMatch) src = dataSrcMatch[1].trim();
+      else if (srcMatch) src = srcMatch[1].trim();
       if (src.includes(' ')) src = src.split(' ')[0];
 
       // Check if the img tag has width/height hints suggesting a very small image (icon, thumb)

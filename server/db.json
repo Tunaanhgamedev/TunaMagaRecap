@@ -1,6 +1,18 @@
 {
   "projects": [
     {
+      "id": "b176e926-1555-4688-9ce9-476fae13f696",
+      "seriesName": "",
+      "chapterNumber": 1,
+      "episodeTitle": "Chapter 1:  (4 trang ảnh thật)",
+      "status": "ready",
+      "durationEst": 16,
+      "coverUrl": "/api/proxy-image?url=%2Fmedia%2Fimages%2Fm8e7salrxoyacd.webp&referer=https%3A%2F%2Ftruyenqq.com.vn%2Ftrong-sinh-thanh-ke-tam-thuong-cua-danh-gia-vong-toc-kiep-truoc-toi-la-ke-manh-nhat%2Fchapter-1",
+      "sourceName": "TruyenQQ Adapter",
+      "sourceUrl": "https://truyenqq.com.vn/trong-sinh-thanh-ke-tam-thuong-cua-danh-gia-vong-toc-kiep-truoc-toi-la-ke-manh-nhat/chapter-1",
+      "updatedAt": "01:10:56"
+    },
+    {
       "id": "7a3893a0-bab6-4fa0-b6fd-f59e4cee0bc4",
       "seriesName": "Tôi Thăng Cấp Một Mình - Solo Leveling",
       "chapterNumber": 106,

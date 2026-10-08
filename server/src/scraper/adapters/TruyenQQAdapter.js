@@ -69,7 +69,7 @@ export const TruyenQQAdapter = {
     const html = htmlContent || '';
 
     // Extract all real comic images (e.g. truyenvua.com / truyenqq CDN)
-    const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+    const regex = /<img[^>]+(?:data-src|data-original|src)=["']([^"']+)["'][^>]*>/gi;
     let m;
     while ((m = regex.exec(html)) !== null) {
       const src = m[1].trim();
@@ -77,6 +77,7 @@ export const TruyenQQAdapter = {
         src &&
         (src.includes('truyenvua.com') ||
           src.includes('truyenqq') ||
+          src.includes('cc3t.net') ||
           src.includes('/fix-') ||
           src.includes('.jpg') ||
           src.includes('.webp') ||
@@ -87,7 +88,8 @@ export const TruyenQQAdapter = {
         !src.includes('logo') &&
         !src.includes('favicon') &&
         !src.includes('banner') &&
-        !src.includes('ads')
+        !src.includes('ads') &&
+        !src.includes('/media/')
       ) {
         if (!images.includes(src)) images.push(src);
       }
