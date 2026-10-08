@@ -2342,7 +2342,7 @@ export const useStudioStore = create<StudioState>()(
   setMangaGenre: (mangaGenre) => set({ mangaGenre }),
   protagonistName: '',
   setProtagonistName: (protagonistName) => set({ protagonistName }),
-  customScriptPrompt: 'Tập trung vào cảm xúc nhân vật, mở đầu giật gân 5s đầu, lồng ghép phân vai Dẫn chuyện và Lời thoại kịch tính chuẩn YouTube triệu view.',
+  customScriptPrompt: 'Áp dụng công thức H.A.C.C (Hook sốc nhiệt - Khoét sâu nỗi đau - Vả mặt sảng khoái - Cliffhanger). Dùng từ lóng (out trình, bón hành, bay màu, rén ngang), nhịp độ dồn dập, giật gân.',
   setCustomScriptPrompt: (customScriptPrompt) => set({ customScriptPrompt }),
   setScriptMode: (mode) =>
     set((state) => (state.scriptData ? { scriptData: { ...state.scriptData, mode } } : {})),

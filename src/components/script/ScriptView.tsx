@@ -88,6 +88,10 @@ export const ScriptView: React.FC = () => {
 
   const promptPresets = [
     {
+      title: '🚀 Đẳng Cấp Lôi Cuốn (Triệu View)',
+      prompt: 'Áp dụng công thức H.A.C.C (Hook sốc nhiệt - Khoét sâu nỗi đau - Vả mặt sảng khoái - Cliffhanger). Dùng từ lóng (out trình, bón hành, bay màu, rén ngang), nhịp độ dồn dập, giật gân.',
+    },
+    {
       title: '🎯 Hook Triệu View (5s Đầu)',
       prompt: 'Viết kịch bản giật gân, mở đầu với câu hook gây tò mò cao trào trong 5s đầu, phân vai lời thoại kịch tính và kêu gọi đăng ký kênh.',
     },
@@ -419,7 +423,7 @@ export const ScriptView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   appendScriptSection(
-                    '## 🎯 HOOK GIỮ CHÂN 5S ĐẦU:\n**[Dẫn Chuyện]**: "Khoan đã! Bạn có tin chỉ trong một khoảnh khắc ngắn ngủi, toàn bộ thế trận đã bị đảo ngược hoàn toàn không? Hãy xem hết video để biết lý do tại sao!"'
+                    '## 🎯 HOOK GIỮ CHÂN 5S ĐẦU (H.A.C.C):\n**[Dẫn Chuyện]**: "Chỉ vì sinh ra không có ma pháp, cậu bị gia tộc ruồng bỏ, bị khinh bỉ là đồ phế vật. Nhưng chúng đâu ngờ, ngay khoảnh khắc ngàn cân treo sợi tóc, hệ thống bá đạo nhất đã thức tỉnh! Chuyện gì sẽ xảy ra tiếp theo?"'
                   )
                 }
                 className="text-[10px] bg-slate-900 hover:bg-violet-900/40 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-800 hover:border-violet-500/40 cursor-pointer flex items-center space-x-1"
@@ -432,7 +436,7 @@ export const ScriptView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   appendScriptSection(
-                    '## ⚔️ PHÂN TÍCH SỨC MẠNH & CHIẾN THUẬT:\n**[Dẫn Chuyện]**: "Chiêu thức vừa rồi không chỉ đơn thuần là đòn tấn công vật lý, mà nó là sự kết hợp hoàn hảo giữa năng lượng bộc phát và tốc độ vượt qua giới hạn âm thanh!"'
+                    '## ⚔️ PHÂN TÍCH COMBAT / VẢ MẶT:\n**[Dẫn Chuyện]**: "Đúng là out trình thực sự các đạo hữu ạ! Chỉ với một cái búng tay, main đã bón hành ngập mồm tên gia chủ, tiễn hắn đăng xuất khỏi server. Cả hội trường câm nín, rén ngang!"'
                   )
                 }
                 className="text-[10px] bg-slate-900 hover:bg-cyan-900/40 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-800 hover:border-cyan-500/40 cursor-pointer flex items-center space-x-1"
@@ -445,7 +449,7 @@ export const ScriptView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   appendScriptSection(
-                    '## 🎭 ĐOẠN ĐỐI THOẠI KỊCH TÍNH:\n**[Nhân Vật Chính]**: "Ngươi nghĩ mình có thể thoát khỏi đây sau những gì đã gây ra sao?"\n**[Kẻ Địch]**: "Đừng có đắc ý quá sớm! Trận chiến thực sự chỉ mới bắt đầu thôi!"'
+                    '## 🎭 ĐỐI THOẠI KỊCH TÍNH:\n**[Nhân Vật Chính]**: "Bọn mày nghĩ tao vẫn là thằng phế vật ngày xưa sao? Hôm nay tao sẽ cho bọn mày biết thế nào là buff bẩn!"\n**[Kẻ Địch]**: "Cái... cái tốc độ ảo ma Canada gì thế này?! Không thể nào!"'
                   )
                 }
                 className="text-[10px] bg-slate-900 hover:bg-pink-900/40 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-800 hover:border-pink-500/40 cursor-pointer flex items-center space-x-1"
@@ -458,7 +462,7 @@ export const ScriptView: React.FC = () => {
                 type="button"
                 onClick={() =>
                   appendScriptSection(
-                    '## 🔔 KÊU GỌI ĐĂNG KÝ & THẢO LUẬN:\n**[Dẫn Chuyện]**: "Nếu bạn thấy video recap này hấp dẫn, đừng quên bấm Like, Đăng ký kênh và để lại bình luận xem ai sẽ là người chiến thắng trong tập tiếp theo nhé!"'
+                    '## 🔔 CLIFFHANGER & CTA:\n**[Dẫn Chuyện]**: "Đúng lúc main định ra đòn kết liễu, bầu trời bỗng nứt toác, trùm cuối giáng lâm. Chênh lệch sức mạnh quá lớn! Liệu main sẽ lật kèo thế nào? Các đạo hữu hãy để lại 1 Like, 1 Đăng ký kênh và đón xem phần 2 nhé!"'
                   )
                 }
                 className="text-[10px] bg-slate-900 hover:bg-emerald-900/40 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-800 hover:border-emerald-500/40 cursor-pointer flex items-center space-x-1"
