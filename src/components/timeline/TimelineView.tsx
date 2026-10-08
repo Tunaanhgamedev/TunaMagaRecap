@@ -564,8 +564,8 @@ export const TimelineView: React.FC = () => {
         const autoSfx = cinematicSoundEngine.detectSfxFromText(activeItem.dialogueText);
         if (autoSfx) {
           cinematicSoundEngine.playSFX(autoSfx);
-        } else if (activeItem.cameraEffect === 'dramatic_zoom') {
-          cinematicSoundEngine.playSFX('whoosh');
+        
+          
         }
 
         if (canSpeak && activeItem.dialogueText) {
