@@ -15,6 +15,8 @@ import { AIVisionEngine } from './ocr/AIVisionEngine.js';
 import { EdgeTtsService } from './tts/edgeTtsService.js';
 import { GENRE_DICTIONARIES } from './tts/textNormalizer.js';
 
+process.on('uncaughtException', err => console.error('UNCAUGHT EXCEPTION:', err));
+process.on('unhandledRejection', err => console.error('UNHANDLED REJECTION:', err));
 const PORT = 3001;
 const prisma = new PrismaClient();
 const serverDir = path.basename(process.cwd()) === 'server' ? process.cwd() : path.join(process.cwd(), 'server');
@@ -261,7 +263,9 @@ async function resolveAndFetchImage(imageUrl, initialReferer = null) {
         candidateReferers.push('https://nhattruyen.com/');
       } else if (targetUrl.includes('thuviensach') || (customReferer && customReferer.includes('thuviensach'))) {
         candidateReferers.push('https://thuviensach.vn/');
-      } else if (targetUrl.includes('asura') || (customReferer && customReferer.includes('asura'))) {
+      } else if (targetUrl.includes('truyenqq') || targetUrl.includes('cc3t.net') || (customReferer && customReferer.includes('truyenqq'))) {
+          candidateReferers.push('https://truyenqq.com.vn/');
+        } else if (targetUrl.includes('asura') || (customReferer && customReferer.includes('asura'))) {
         candidateReferers.push('https://asuracomic.net/');
       } else if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
         candidateReferers.push('https://truyenqqko.com/');
@@ -605,7 +609,7 @@ const server = http.createServer(async (req, res) => {
           const prismaProjects = await prisma.project.findMany();
           for (const p of prismaProjects) {
             const pNormSeries = normalizeSeriesName(p.seriesName);
-            if (pNormSeries === normTargetSeries || pNormSeries.includes(normTargetSeries) || normTargetSeries.includes(pNormSeries)) {
+            if (pNormSeries === normTargetSeries) {
               const chapNum = normalizeChapterNumber(p.chapterNumber);
               existingProjectsMap.set(chapNum, p.id);
             }
@@ -614,7 +618,7 @@ const server = http.createServer(async (req, res) => {
 
         for (const lp of db.projects) {
           const lpNormSeries = normalizeSeriesName(lp.seriesName);
-          if (lpNormSeries === normTargetSeries || lpNormSeries.includes(normTargetSeries) || normTargetSeries.includes(lpNormSeries)) {
+          if (lpNormSeries === normTargetSeries) {
             const chapNum = normalizeChapterNumber(lp.chapterNumber);
             if (!existingProjectsMap.has(chapNum)) {
               existingProjectsMap.set(chapNum, lp.id);
@@ -702,7 +706,7 @@ const server = http.createServer(async (req, res) => {
             for (const ep of existingProjects) {
               const epNormSeries = normalizeSeriesName(ep.seriesName);
               const chapNum = normalizeChapterNumber(ep.chapterNumber);
-              if (epNormSeries === normTargetSeries || epNormSeries.includes(normTargetSeries) || normTargetSeries.includes(epNormSeries)) {
+              if (epNormSeries === normTargetSeries) {
                 existingChapterKeys.add(`${normTargetSeries}::${chapNum}`);
               }
             }
@@ -711,7 +715,7 @@ const server = http.createServer(async (req, res) => {
           for (const lp of db.projects) {
             const lpNormSeries = normalizeSeriesName(lp.seriesName);
             const chapNum = normalizeChapterNumber(lp.chapterNumber);
-            if (lpNormSeries === normTargetSeries || lpNormSeries.includes(normTargetSeries) || normTargetSeries.includes(lpNormSeries)) {
+            if (lpNormSeries === normTargetSeries) {
               existingChapterKeys.add(`${normTargetSeries}::${chapNum}`);
             }
           }

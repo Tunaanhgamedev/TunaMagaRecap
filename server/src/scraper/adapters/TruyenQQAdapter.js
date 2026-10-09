@@ -68,11 +68,19 @@ export const TruyenQQAdapter = {
     const images = [];
     const html = htmlContent || '';
 
-    // Extract all real comic images (e.g. truyenvua.com / truyenqq CDN)
-    const regex = /<img[^>]+(?:data-src|data-original|src)=["']([^"']+)["'][^>]*>/gi;
+    const regex = /<img[^>]+>/gi;
     let m;
     while ((m = regex.exec(html)) !== null) {
-      const src = m[1].trim();
+      const tag = m[0];
+      const dataSrcMatch = tag.match(/(?:data-src|data-original|data-cdn)=["']([^"']+)["']/i);
+      const srcMatch = tag.match(/src=["']([^"']+)["']/i);
+      
+      let src = '';
+      if (dataSrcMatch) src = dataSrcMatch[1].trim();
+      else if (srcMatch) src = srcMatch[1].trim();
+      
+      if (src.includes(' ')) src = src.split(' ')[0];
+
       if (
         src &&
         (src.includes('truyenvua.com') ||
