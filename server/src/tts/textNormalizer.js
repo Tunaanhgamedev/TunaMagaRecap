@@ -209,6 +209,8 @@ export function normalizeRecapText(text, options = {}) {
   cleaned = cleaned.replace(/~~(.*?)~~/g, '$1');
 
   // 4. Remove emojis
+  cleaned = cleaned.replace(/\.{2,}/g, ', ');
+  cleaned = cleaned.replace(/\s*,\s*,/g, ',');
   cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
 
   // 5. Apply User Project-Specific Custom Rules First (Highest Priority)
