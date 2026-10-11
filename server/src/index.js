@@ -1321,6 +1321,28 @@ const server = http.createServer(async (req, res) => {
             description: '⭐ [HOT VBEE] Giọng nữ Sài Gòn nhẹ nhàng, trong trẻo, tự nhiên. Cực kỳ bắt tai khi kể chuyện tình cảm, hài hước, đời thường.',
           },
           {
+            id: 'vbee_vi_ngochuyen',
+            name: 'Vbee - Ngọc Huyền (Hà Nội - Truyện Đêm Khuya, Ma Mị, Trinh Thám)',
+            gender: 'female',
+            lang: 'vi-VN',
+            provider: 'Vbee Studio',
+            recommendedRate: '-2%',
+            recommendedPitch: '-2.8Hz',
+            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            description: '⭐ [VBEE ĐÊM KHUYA] Giọng nữ Hà Nội thì thầm huyền bí, ma mị, rùng rợn. Tuyệt đỉnh cho truyện Kinh Dị, Ma Quái, Tu Tiên Ma Thần.',
+          },
+          {
+            id: 'vbee_vi_huonggiang',
+            name: 'Vbee - Hương Giang (Huế - Dịu Dàng, Trầm Lắng, Hoài Niệm)',
+            gender: 'female',
+            lang: 'vi-VN',
+            provider: 'Vbee Studio',
+            recommendedRate: '+0%',
+            recommendedPitch: '-0.8Hz',
+            avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150',
+            description: 'Giọng nữ xứ Huế êm ả, hoài niệm, sâu lắng. Thích hợp cho truyện Cổ Trang, Dã Sử, Tình Cảm Bi Thương.',
+          },
+          {
             id: 'capcut_vi_diudang',
             name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
             gender: 'female',
@@ -1548,6 +1570,8 @@ const server = http.createServer(async (req, res) => {
         const pitch = payload.pitch || '+0Hz';
         const genre = payload.genre || '';
         const customDictionary = payload.customDictionary || [];
+        const vbeeAppId = payload.vbeeAppId || process.env.VBEE_APP_ID || '';
+        const vbeeToken = payload.vbeeToken || process.env.VBEE_ACCESS_TOKEN || process.env.VBEE_TOKEN || '';
 
         if (!text || typeof text !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1563,6 +1587,8 @@ const server = http.createServer(async (req, res) => {
           pitch,
           genre,
           customDictionary,
+          vbeeAppId,
+          vbeeToken,
         });
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1695,10 +1721,17 @@ Hãy trả về DUY NHẤT một JSON Array hợp lệ theo định dạng:
     return;
   }
 
-  // 5f. GET Stream Cached MP3 Audio File
+  // 5f. GET Stream Cached MP3 Audio File (Edge & Vbee)
   if (pathname.startsWith('/api/tts/audio/') && req.method === 'GET') {
-    const filename = pathname.replace('/api/tts/audio/', '');
-    const audioBuffer = EdgeTtsService.getAudioFile(filename);
+    let audioBuffer = null;
+    if (pathname.startsWith('/api/tts/audio/vbee/')) {
+      const filename = pathname.replace('/api/tts/audio/vbee/', '');
+      audioBuffer = EdgeTtsService.getVbeeAudioFile(filename);
+    } else {
+      const filename = pathname.replace('/api/tts/audio/', '');
+      audioBuffer = EdgeTtsService.getAudioFile(filename);
+    }
+
     if (!audioBuffer) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: 'File audio không tồn tại.' }));

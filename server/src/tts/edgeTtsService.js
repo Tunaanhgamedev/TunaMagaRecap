@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { normalizeRecapText, splitTextIntoChunks } from './textNormalizer.js';
+import { VbeeTtsService, VBEE_VOICE_MAP } from './vbeeTtsService.js';
 
 const BASE_SERVER_DIR = process.cwd().endsWith('server') ? process.cwd() : path.join(process.cwd(), 'server');
 const CACHE_DIR = path.join(BASE_SERVER_DIR, 'cache', 'audio');
@@ -70,47 +71,69 @@ export const VOICE_PROFILES = {
     engine: 'edge',
   },
 
-  // 2. Vbee Thảo Trinh (Ngôn Tình, Kể Chuyện Đêm Khuya / Sâu Lắng)
+  // 2. Vbee Thảo Trinh (Hà Nội Nữ - Kể Chuyện Ngôn Tình, Drama, Truyền Cảm)
   'vbee_vi_thaotrinh': {
     id: 'vbee_vi_thaotrinh',
-    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+4%',
-    defaultPitch: '-1.5Hz',
+    defaultRate: '+2%',
+    defaultPitch: '-1.2Hz',
     engine: 'edge',
   },
   'vbee_vi_thaotrinh_emotional': {
     id: 'vbee_vi_thaotrinh_emotional',
-    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+4%',
-    defaultPitch: '-1.5Hz',
+    defaultRate: '+2%',
+    defaultPitch: '-1.2Hz',
     engine: 'edge',
   },
   'v-vbee-thaotrinh': {
     id: 'v-vbee-thaotrinh',
-    name: 'Vbee - Thảo Trinh (Hà Nội - Truyền Cảm, Ngôn Tình / Drama)',
+    name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+4%',
-    defaultPitch: '-1.5Hz',
+    defaultRate: '+2%',
+    defaultPitch: '-1.2Hz',
     engine: 'edge',
   },
 
-  // 3. Vbee Quỳnh Anh (Miền Nam - Ngọt Ngào, Nữ Sinh Dịu Dàng)
+  // 3. Vbee Ngọc Huyền (Hà Nội Nữ - Kể Chuyện Đêm Khuya, Ma Mị, Trinh Thám)
+  'vbee_vi_ngochuyen': {
+    id: 'vbee_vi_ngochuyen',
+    name: 'Vbee - Ngọc Huyền (Hà Nội - Truyện Đêm Khuya, Ma Mị, Trinh Thám)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '-2%',
+    defaultPitch: '-2.8Hz',
+    engine: 'edge',
+  },
+  'v-vbee-ngochuyen': {
+    id: 'v-vbee-ngochuyen',
+    name: 'Vbee - Ngọc Huyền (Hà Nội - Truyện Đêm Khuya, Ma Mị, Trinh Thám)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '-2%',
+    defaultPitch: '-2.8Hz',
+    engine: 'edge',
+  },
+
+  // 4. Vbee Quỳnh Anh (Sài Gòn Nữ - Ngọt Ngào, Nhẹ Nhàng, Nữ Sinh)
   'vbee_vi_quynhanh': {
     id: 'vbee_vi_quynhanh',
     name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+2.0Hz',
+    defaultRate: '+4%',
+    defaultPitch: '+1.8Hz',
     engine: 'edge',
   },
   'vbee_vi_quynhanh_south': {
@@ -119,8 +142,8 @@ export const VOICE_PROFILES = {
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+2.0Hz',
+    defaultRate: '+4%',
+    defaultPitch: '+1.8Hz',
     engine: 'edge',
   },
   'v-vbee-quynhanh': {
@@ -129,8 +152,30 @@ export const VOICE_PROFILES = {
     gender: 'female',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+2.0Hz',
+    defaultRate: '+4%',
+    defaultPitch: '+1.8Hz',
+    engine: 'edge',
+  },
+
+  // 5. Vbee Hương Giang (Huế Nữ - Dịu Dàng, Hoài Niệm)
+  'vbee_vi_huonggiang': {
+    id: 'vbee_vi_huonggiang',
+    name: 'Vbee - Hương Giang (Huế - Dịu Dàng, Trầm Lắng, Hoài Niệm)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+0%',
+    defaultPitch: '-0.8Hz',
+    engine: 'edge',
+  },
+  'v-vbee-huonggiang': {
+    id: 'v-vbee-huonggiang',
+    name: 'Vbee - Hương Giang (Huế - Dịu Dàng, Trầm Lắng, Hoài Niệm)',
+    gender: 'female',
+    provider: 'Vbee Studio',
+    baseVoice: 'vi-VN-HoaiMyNeural',
+    defaultRate: '+0%',
+    defaultPitch: '-0.8Hz',
     engine: 'edge',
   },
 
@@ -297,7 +342,39 @@ export class EdgeTtsService {
     pitch,
     genre = '',
     customDictionary = [],
+    vbeeAppId = '',
+    vbeeToken = '',
   }) {
+    // 0. Check if user configured Vbee API and wants Vbee Official Voice
+    const isVbeeVoice = voice.includes('vbee') || voice.startsWith('v-vbee');
+    if (isVbeeVoice && VbeeTtsService.isConfigured(vbeeAppId, vbeeToken)) {
+      try {
+        const cleanedText = normalizeRecapText(text, { genre, customDictionary, voice: 'vi-VN-HoaiMyNeural' });
+        const vbeeResult = await VbeeTtsService.synthesize({
+          text: cleanedText,
+          voice,
+          rate: typeof rate === 'number' ? rate : 1.0,
+          appId: vbeeAppId,
+          token: vbeeToken,
+        });
+        if (vbeeResult && vbeeResult.buffer) {
+          return {
+            fileName: vbeeResult.fileName,
+            filePath: vbeeResult.filePath,
+            audioUrl: vbeeResult.audioUrl,
+            base64: `data:audio/mp3;base64,${vbeeResult.buffer.toString('base64')}`,
+            cached: vbeeResult.cached,
+            cleanedText,
+            duration: Math.max(1, Math.round(vbeeResult.buffer.length / 12000)),
+            voice,
+            provider: 'Vbee Official Studio',
+          };
+        }
+      } catch (vbeeErr) {
+        console.warn('[EdgeTtsService] Vbee Official API call failed, falling back to Vbee Storytelling Neural Engine:', vbeeErr.message);
+      }
+    }
+
     // 1. Resolve Voice Profile
     const profile = VOICE_PROFILES[voice];
     const isGoogleEngine = profile?.engine === 'google' || voice.includes('google');
@@ -307,9 +384,9 @@ export class EdgeTtsService {
       selectedVoice = profile.baseVoice;
     } else if (voice.endsWith('Neural')) {
       selectedVoice = voice;
-    } else if (voice.includes('hoaimy') || voice.includes('thanhnu') || voice.includes('thaotrinh') || voice.includes('quynhanh') || voice.includes('diudang')) {
+    } else if (voice.includes('hoaimy') || voice.includes('thanhnu') || voice.includes('thaotrinh') || voice.includes('quynhanh') || voice.includes('diudang') || voice.includes('ngochuyen') || voice.includes('huonggiang') || voice.includes('maiphuong')) {
       selectedVoice = 'vi-VN-HoaiMyNeural';
-    } else if (voice.includes('namminh') || voice.includes('manhdung') || voice.includes('bahung')) {
+    } else if (voice.includes('namminh') || voice.includes('manhdung') || voice.includes('bahung') || voice.includes('phongvu')) {
       selectedVoice = 'vi-VN-NamMinhNeural';
     } else if (voice.startsWith('en-') || voice.startsWith('ja-') || voice.startsWith('ko-') || voice.startsWith('zh-') || voice.startsWith('es-') || voice.startsWith('fr-') || voice.startsWith('de-')) {
       selectedVoice = voice;
@@ -413,6 +490,18 @@ export class EdgeTtsService {
   static getAudioFile(fileName) {
     const safeName = path.basename(fileName);
     const filePath = path.join(CACHE_DIR, safeName);
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath);
+    }
+    return null;
+  }
+
+  /**
+   * Get Cached Vbee Audio file buffer
+   */
+  static getVbeeAudioFile(fileName) {
+    const safeName = path.basename(fileName);
+    const filePath = path.join(CACHE_DIR, 'vbee', safeName);
     if (fs.existsSync(filePath)) {
       return fs.readFileSync(filePath);
     }
