@@ -248,13 +248,32 @@ export function normalizeRecapText(text, options = {}) {
     }
   }
 
-  // 8. Handle breathing pauses and punctuation
-  // Ellipses "..." often cause long awkward silence; replace with comma for dramatic suspense
-  cleaned = cleaned.replace(/\.{3,}/g, ', ');
+  // 8. Storytelling Conversational Rhythm & Breathing Cadence (Vbee Style)
+  // Auto-insert natural breathing pauses after dramatic narrative transition phrases
+  cleaned = cleaned.replace(
+    /\b(Bất ngờ thay|Thế nhưng|Không ngờ rằng|Đột nhiên|Lúc này|Hóa ra|Ngay sau đó|Chưa dừng lại ở đó|Đúng lúc này|Ngay lập tức|Vừa dứt lời|Trong nháy mắt|Thật không ngờ|Không chần chừ)\b(?!\s*[,.?!])/gi,
+    '$1, '
+  );
+
+  // Normalize dialogues and quotes: Remove quote marks and replace with clean breathing space
+  cleaned = cleaned.replace(/["“”«»]/g, ' ');
+
+  // Normalize common percentages, matchups, and numbers
+  cleaned = cleaned.replace(/(\d+)%/g, '$1 phần trăm');
+  cleaned = cleaned.replace(/\b1v1\b/gi, 'một đấu một');
+  cleaned = cleaned.replace(/\b2v2\b/gi, 'hai đấu hai');
+  cleaned = cleaned.replace(/\b5v5\b/gi, 'năm đấu năm');
+  cleaned = cleaned.replace(/\btop\s*(\d+)\b/gi, 'tốp $1');
+  cleaned = cleaned.replace(/\b(\d+)\s*k\b/gi, '$1 nghìn');
+
+  // Ellipses "..." and dramatic dashes: replace with comma for dramatic suspense
+  cleaned = cleaned.replace(/\.{2,}/g, ', ');
   cleaned = cleaned.replace(/…/g, ', ');
+  cleaned = cleaned.replace(/\s+[-–—]\s+/g, ', ');
   cleaned = cleaned.replace(/[;:]/g, ', ');
 
-  // Clean excessive spaces and newlines
+  // Clean duplicate commas and spaces
+  cleaned = cleaned.replace(/\s*,\s*(?:,\s*)+/g, ', ');
   cleaned = cleaned.replace(/\s+/g, ' ');
   cleaned = cleaned.trim();
 
