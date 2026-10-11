@@ -57,9 +57,14 @@ export async function synthesizeVoiceAudioApi(options: {
   pitch?: number | string;
   genre?: string;
   customDictionary?: Array<{ term: string; reading: string }>;
+  vbeeAppId?: string;
+  vbeeToken?: string;
 }): Promise<TTSResponse | null> {
   const cleanText = sanitizeTextForSpeech(options.text);
   if (!cleanText) return null;
+
+  const vbeeAppId = options.vbeeAppId || (typeof window !== 'undefined' ? localStorage.getItem('tuna_vbee_app_id') || '' : '');
+  const vbeeToken = options.vbeeToken || (typeof window !== 'undefined' ? localStorage.getItem('tuna_vbee_access_token') || '' : '');
 
   try {
     const res = await fetch('/api/tts/synthesize', {
@@ -72,6 +77,8 @@ export async function synthesizeVoiceAudioApi(options: {
         pitch: options.pitch || '+0Hz',
         genre: options.genre || '',
         customDictionary: options.customDictionary || [],
+        vbeeAppId,
+        vbeeToken,
       }),
     });
 

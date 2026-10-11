@@ -78,6 +78,59 @@ export const VoiceView: React.FC = () => {
     return customTestText || SAMPLE_SENTENCES_BY_LANG[lang] || SAMPLE_SENTENCES_BY_LANG.vi;
   };
 
+  // Vbee API Config State
+  const [showVbeeModal, setShowVbeeModal] = useState<boolean>(false);
+  const [vbeeAppId, setVbeeAppId] = useState<string>(() => (typeof window !== 'undefined' ? localStorage.getItem('tuna_vbee_app_id') || '' : ''));
+  const [vbeeToken, setVbeeToken] = useState<string>(() => (typeof window !== 'undefined' ? localStorage.getItem('tuna_vbee_access_token') || '' : ''));
+  const [vbeeSavedSuccess, setVbeeSavedSuccess] = useState<boolean>(false);
+
+  const isVbeeConnected = Boolean(vbeeAppId && vbeeToken);
+
+  const handleSaveVbeeConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tuna_vbee_app_id', vbeeAppId.trim());
+      localStorage.setItem('tuna_vbee_access_token', vbeeToken.trim());
+      setVbeeSavedSuccess(true);
+      setTimeout(() => setVbeeSavedSuccess(false), 2000);
+    }
+  };
+
+  const STORYTELLING_PRESETS = [
+    {
+      id: 'truyencam',
+      name: 'Ngôn Tình / Drama',
+      icon: '🎙️',
+      speed: 1.0,
+      pitch: 0.95,
+      desc: 'Truyền cảm, ấm áp, sâu lắng',
+    },
+    {
+      id: 'haohung',
+      name: 'Tu Tiên / Hào Hùng',
+      icon: '⚡',
+      speed: 1.08,
+      pitch: 1.0,
+      desc: 'Uy lực, đĩnh đạc, đột phá',
+    },
+    {
+      id: 'demkhuya',
+      name: 'Truyện Đêm Khuya',
+      icon: '🌙',
+      speed: 0.92,
+      pitch: 0.85,
+      desc: 'Huyền bí, thì thầm, ma mị',
+    },
+    {
+      id: 'review',
+      name: 'Review Triệu View',
+      icon: '🚀',
+      speed: 1.15,
+      pitch: 1.05,
+      desc: 'Nhanh nhịp, bắt tai, viral TikTok',
+    },
+  ];
+
   // Dictionary Tab State
   const [dictTab, setDictTab] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -301,42 +354,183 @@ export const VoiceView: React.FC = () => {
 
       {/* Services Info Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {vbeeServices.map((service) => (
-          <a
-            key={service.title}
-            href={service.url}
-            target="_blank"
-            rel="noreferrer"
-            className={`p-3.5 rounded-xl border transition-all group block shadow-md ${
-              service.active
-                ? 'bg-gradient-to-br from-emerald-950/50 via-slate-950 to-cyan-950/40 border-emerald-500/60 ring-1 ring-emerald-500/30'
-                : 'bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 border-slate-800 hover:border-violet-500/60'
+        {/* Card 1: Edge Neural */}
+        <div className="p-3.5 rounded-xl border bg-gradient-to-br from-emerald-950/50 via-slate-950 to-cyan-950/40 border-emerald-500/60 ring-1 ring-emerald-500/30 shadow-md">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-emerald-300 flex items-center space-x-1">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Edge Neural TTS (Đang Bật)</span>
+            </span>
+          </div>
+          <p className="text-[10.5px] text-slate-400 leading-snug">
+            Giọng đọc AI tự nhiên 100% như MC review thật. Hoàn toàn miễn phí, không giới hạn.
+          </p>
+          <span className="inline-block mt-2 text-[9px] font-mono px-1.5 py-0.2 rounded border text-emerald-300 bg-emerald-950/80 border-emerald-700/60 font-bold">
+            ⚡ MIỄN PHÍ KHÔNG GIỚI HẠN
+          </span>
+        </div>
+
+        {/* Card 2: Vbee AI Studio */}
+        <div
+          onClick={() => setShowVbeeModal(true)}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer shadow-md group ${
+            isVbeeConnected
+              ? 'bg-gradient-to-br from-amber-950/60 via-slate-950 to-yellow-950/40 border-amber-500/80 ring-1 ring-amber-500/50'
+              : 'bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950/30 border-slate-800 hover:border-amber-500/60'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors flex items-center space-x-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Vbee AI Studio Việt Nam</span>
+            </span>
+            <span className="text-[10px] text-amber-400 group-hover:underline font-bold">
+              {isVbeeConnected ? '⚙️ Đã Kết Nối' : '+ Nhập Key'}
+            </span>
+          </div>
+          <p className="text-[10.5px] text-slate-400 leading-snug">
+            {isVbeeConnected
+              ? 'Đang kích hoạt Vbee Official API với App ID & Token. Chất lượng giọng đọc nguyên bản từ Vbee!'
+              : 'Hỗ trợ kết nối API Vbee chính thức hoặc dùng chế độ mô phỏng Storytelling Vbee siêu cuốn!'}
+          </p>
+          <span
+            className={`inline-block mt-2 text-[9px] font-mono px-1.5 py-0.2 rounded border font-bold ${
+              isVbeeConnected
+                ? 'text-amber-300 bg-amber-950 border-amber-600'
+                : 'text-amber-400 bg-amber-950/60 border-amber-800/60'
             }`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-violet-300 group-hover:text-cyan-300 transition-colors flex items-center space-x-1">
-                {service.active ? (
-                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                ) : (
-                  <Radio className="w-3.5 h-3.5 text-cyan-400" />
-                )}
-                <span>{service.title}</span>
-              </span>
-              <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
-            </div>
-            <p className="text-[10.5px] text-slate-400 leading-snug">{service.desc}</p>
-            <span
-              className={`inline-block mt-2 text-[9px] font-mono px-1.5 py-0.2 rounded border ${
-                service.active
-                  ? 'text-emerald-300 bg-emerald-950/80 border-emerald-700/60'
-                  : 'text-cyan-400 bg-cyan-950/70 border-cyan-800/40'
-              }`}
-            >
-              {service.badge}
+            {isVbeeConnected ? '🟢 VBEE OFFICIAL API ACTIVE' : '⭐ VBEE STORYTELLING ENGINE'}
+          </span>
+        </div>
+
+        {/* Card 3: ElevenLabs */}
+        <a
+          href="https://elevenlabs.io"
+          target="_blank"
+          rel="noreferrer"
+          className="p-3.5 rounded-xl border bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 border-slate-800 hover:border-violet-500/60 transition-all group block shadow-md"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-violet-300 group-hover:text-cyan-300 transition-colors flex items-center space-x-1">
+              <Radio className="w-3.5 h-3.5 text-cyan-400" />
+              <span>ElevenLabs Multilingual</span>
             </span>
-          </a>
-        ))}
+            <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+          </div>
+          <p className="text-[10.5px] text-slate-400 leading-snug">
+            Công nghệ tái tạo cảm xúc điện ảnh Hollywood (Adam, Rachel, Josh).
+          </p>
+          <span className="inline-block mt-2 text-[9px] font-mono px-1.5 py-0.2 rounded border text-cyan-400 bg-cyan-950/70 border-cyan-800/40 font-bold">
+            ELEVENLABS.IO
+          </span>
+        </a>
       </div>
+
+      {/* Vbee API Configuration Modal */}
+      {showVbeeModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-950 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-amber-950 border border-amber-600/50 text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Cấu Hình Vbee AI Studio API</h3>
+                  <p className="text-[10.5px] text-slate-400">Kết nối tài khoản vbee.vn để đọc giọng nguyên bản</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVbeeModal(false)}
+                className="text-slate-400 hover:text-white text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVbeeConfig} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span>Vbee App ID</span>
+                  <a
+                    href="https://vbee.vn"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-amber-400 hover:underline flex items-center space-x-0.5"
+                  >
+                    <span>Lấy tại vbee.vn</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </label>
+                <input
+                  type="text"
+                  value={vbeeAppId}
+                  onChange={(e) => setVbeeAppId(e.target.value)}
+                  placeholder="Ví dụ: 64b1f2e8..."
+                  className="w-full bg-slate-900 text-xs text-white p-2.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">Vbee Access Token (Bearer Token)</label>
+                <input
+                  type="password"
+                  value={vbeeToken}
+                  onChange={(e) => setVbeeToken(e.target.value)}
+                  placeholder="Nhập Access Token từ tài khoản Vbee..."
+                  className="w-full bg-slate-900 text-xs text-white p-2.5 rounded-lg border border-slate-700 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-800/40 text-[10.5px] text-amber-300 space-y-1">
+                <p className="font-semibold">💡 Lưu ý hữu ích:</p>
+                <p className="text-slate-300 leading-snug">
+                  Nếu bạn không có tài khoản trả phí Vbee, <strong>TunaRecap vẫn tự động kích hoạt bộ giả lập Vbee Storytelling Neural miễn phí</strong> với đầy đủ các giọng Mạnh Dũng, Thảo Trinh, Quỳnh Anh, Ngọc Huyền siêu hay!
+                </p>
+              </div>
+
+              {vbeeSavedSuccess && (
+                <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-bold text-center">
+                  ✓ Đã lưu cấu hình Vbee thành công!
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVbeeAppId('');
+                    setVbeeToken('');
+                    localStorage.removeItem('tuna_vbee_app_id');
+                    localStorage.removeItem('tuna_vbee_access_token');
+                  }}
+                  className="text-xs text-slate-400 hover:text-rose-400 cursor-pointer"
+                >
+                  Xóa kết nối
+                </button>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowVbeeModal(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-xs font-bold text-white shadow-md cursor-pointer transition-all active:scale-95"
+                  >
+                    Lưu Cấu Hình
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Split: Left Voice Selection + Right Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -437,12 +631,20 @@ export const VoiceView: React.FC = () => {
                           <h4 className="text-xs font-bold text-white">{actor.name}</h4>
                           <span
                             className={`text-[8.5px] font-mono uppercase px-1.5 py-0.2 rounded border ${
-                              actor.id.includes('Neural')
+                              actor.provider === 'vbee'
+                                ? 'bg-amber-950/80 text-amber-300 border-amber-600/70 font-bold shadow-sm shadow-amber-900/30'
+                                : actor.id.includes('Neural')
                                 ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/60 font-bold'
                                 : 'bg-violet-600/30 text-violet-300 border-violet-500/30'
                             }`}
                           >
-                            {actor.id.includes('Neural') ? 'EDGE NEURAL 48KHZ' : actor.provider.toUpperCase()}
+                            {actor.provider === 'vbee'
+                              ? isVbeeConnected
+                                ? '⭐ VBEE OFFICIAL 48KHZ'
+                                : '⭐ VBEE KỂ CHUYỆN'
+                              : actor.id.includes('Neural')
+                              ? 'EDGE NEURAL 48KHZ'
+                              : actor.provider.toUpperCase()}
                           </span>
                         </div>
                         <p className="text-[10.5px] text-slate-400 leading-snug">{actor.description}</p>
@@ -544,6 +746,44 @@ export const VoiceView: React.FC = () => {
                     {label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Storytelling Mode Presets (Vbee Style) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                <span className="flex items-center space-x-1 text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Phong Cách Kể Chuyện Siêu Cuốn (Vbee Presets)</span>
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400">1-Click Tối Ưu Tốc Độ & Cao Độ</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {STORYTELLING_PRESETS.map((preset) => {
+                  const isActive =
+                    Math.abs(speechSpeed - preset.speed) < 0.03 && Math.abs(speechPitch - preset.pitch) < 0.03;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setSpeechSpeed(preset.speed);
+                        setSpeechPitch(preset.pitch);
+                      }}
+                      className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-amber-950/60 border-amber-500/80 text-white shadow-sm ring-1 ring-amber-500/40'
+                          : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-1.5 text-xs font-bold">
+                        <span>{preset.icon}</span>
+                        <span className="truncate">{preset.name}</span>
+                      </div>
+                      <p className="text-[9.5px] text-slate-400 truncate mt-0.5">{preset.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

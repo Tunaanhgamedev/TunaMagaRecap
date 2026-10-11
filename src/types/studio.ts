@@ -216,7 +216,7 @@ export interface VoiceActor {
   id: string;
   name: string;
   gender: 'male' | 'female';
-  provider: 'elevenlabs' | 'azure' | 'openai' | 'browser' | 'capcut_edge';
+  provider: 'elevenlabs' | 'azure' | 'openai' | 'browser' | 'capcut_edge' | 'vbee';
   voiceKey: string;
   avatarUrl: string;
   sampleAudioUrl?: string;
