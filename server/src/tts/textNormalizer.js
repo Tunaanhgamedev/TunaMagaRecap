@@ -227,7 +227,16 @@ export function normalizeRecapText(text, options = {}) {
   }
 
   // 6. Apply Specific Genre Dictionary & Recap Terminology ONLY for Vietnamese voices
-  const isVietnameseVoice = !options.voice || options.voice.startsWith('vi-');
+  const voiceId = (options.voice || '').toLowerCase();
+  const isVietnameseVoice =
+    !voiceId ||
+    voiceId.startsWith('vi-') ||
+    voiceId.includes('_vi_') ||
+    voiceId.includes('vbee') ||
+    voiceId.includes('capcut') ||
+    voiceId.includes('google') ||
+    voiceId.includes('hoaimy') ||
+    voiceId.includes('namminh');
   if (isVietnameseVoice) {
     if (options.genre && GENRE_DICTIONARIES[options.genre]) {
       for (const [pattern, replacement] of GENRE_DICTIONARIES[options.genre]) {

@@ -48,20 +48,11 @@ async function synthesizeChunkWithRetry(chunkText, voice, rate, pitch, retries =
   throw lastErr || new Error('Không thể kết nối đến máy chủ Edge Neural TTS.');
 }
 
-export const VOICE_PROFILES = {
+// Canonical Voice Profiles
+const CANONICAL_PROFILES = {
   // 1. CapCut Viral Female (Thanh Nữ / Hoạt Ngôn)
-  'capcut_vi_thanhnu': {
+  capcut_vi_thanhnu: {
     id: 'capcut_vi_thanhnu',
-    name: 'CapCut - Thanh Nữ (Hoạt Ngôn, Review Manga Triệu View)',
-    gender: 'female',
-    provider: 'CapCut AI',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+3.5Hz',
-    engine: 'edge',
-  },
-  'v-capcut-thanhnu': {
-    id: 'v-capcut-thanhnu',
     name: 'CapCut - Thanh Nữ (Hoạt Ngôn, Review Manga Triệu View)',
     gender: 'female',
     provider: 'CapCut AI',
@@ -72,28 +63,8 @@ export const VOICE_PROFILES = {
   },
 
   // 2. Vbee Thảo Trinh (Hà Nội Nữ - Kể Chuyện Ngôn Tình, Drama, Truyền Cảm)
-  'vbee_vi_thaotrinh': {
+  vbee_vi_thaotrinh: {
     id: 'vbee_vi_thaotrinh',
-    name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+2%',
-    defaultPitch: '-1.2Hz',
-    engine: 'edge',
-  },
-  'vbee_vi_thaotrinh_emotional': {
-    id: 'vbee_vi_thaotrinh_emotional',
-    name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+2%',
-    defaultPitch: '-1.2Hz',
-    engine: 'edge',
-  },
-  'v-vbee-thaotrinh': {
-    id: 'v-vbee-thaotrinh',
     name: 'Vbee - Thảo Trinh (Hà Nội - Kể Chuyện Truyền Cảm, Ngôn Tình / Drama)',
     gender: 'female',
     provider: 'Vbee Studio',
@@ -104,18 +75,8 @@ export const VOICE_PROFILES = {
   },
 
   // 3. Vbee Ngọc Huyền (Hà Nội Nữ - Kể Chuyện Đêm Khuya, Ma Mị, Trinh Thám)
-  'vbee_vi_ngochuyen': {
+  vbee_vi_ngochuyen: {
     id: 'vbee_vi_ngochuyen',
-    name: 'Vbee - Ngọc Huyền (Hà Nội - Truyện Đêm Khuya, Ma Mị, Trinh Thám)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '-2%',
-    defaultPitch: '-2.8Hz',
-    engine: 'edge',
-  },
-  'v-vbee-ngochuyen': {
-    id: 'v-vbee-ngochuyen',
     name: 'Vbee - Ngọc Huyền (Hà Nội - Truyện Đêm Khuya, Ma Mị, Trinh Thám)',
     gender: 'female',
     provider: 'Vbee Studio',
@@ -126,28 +87,8 @@ export const VOICE_PROFILES = {
   },
 
   // 4. Vbee Quỳnh Anh (Sài Gòn Nữ - Ngọt Ngào, Nhẹ Nhàng, Nữ Sinh)
-  'vbee_vi_quynhanh': {
+  vbee_vi_quynhanh: {
     id: 'vbee_vi_quynhanh',
-    name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+4%',
-    defaultPitch: '+1.8Hz',
-    engine: 'edge',
-  },
-  'vbee_vi_quynhanh_south': {
-    id: 'vbee_vi_quynhanh_south',
-    name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+4%',
-    defaultPitch: '+1.8Hz',
-    engine: 'edge',
-  },
-  'v-vbee-quynhanh': {
-    id: 'v-vbee-quynhanh',
     name: 'Vbee - Quỳnh Anh (TP.HCM - Ngọt Ngào, Nữ Sinh Dịu Dàng)',
     gender: 'female',
     provider: 'Vbee Studio',
@@ -158,7 +99,7 @@ export const VOICE_PROFILES = {
   },
 
   // 5. Vbee Hương Giang (Huế Nữ - Dịu Dàng, Hoài Niệm)
-  'vbee_vi_huonggiang': {
+  vbee_vi_huonggiang: {
     id: 'vbee_vi_huonggiang',
     name: 'Vbee - Hương Giang (Huế - Dịu Dàng, Trầm Lắng, Hoài Niệm)',
     gender: 'female',
@@ -168,19 +109,9 @@ export const VOICE_PROFILES = {
     defaultPitch: '-0.8Hz',
     engine: 'edge',
   },
-  'v-vbee-huonggiang': {
-    id: 'v-vbee-huonggiang',
-    name: 'Vbee - Hương Giang (Huế - Dịu Dàng, Trầm Lắng, Hoài Niệm)',
-    gender: 'female',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '+0%',
-    defaultPitch: '-0.8Hz',
-    engine: 'edge',
-  },
 
-  // 4. CapCut Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị / Tu Tiên)
-  'capcut_vi_diudang': {
+  // 6. CapCut Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị / Tu Tiên)
+  capcut_vi_diudang: {
     id: 'capcut_vi_diudang',
     name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
     gender: 'female',
@@ -190,34 +121,17 @@ export const VOICE_PROFILES = {
     defaultPitch: '-3.0Hz',
     engine: 'edge',
   },
-  'v-capcut-diudang': {
-    id: 'v-capcut-diudang',
-    name: 'CapCut - Nữ Dịu Dàng (Kể Chuyện Đêm Khuya / Ma Mị)',
-    gender: 'female',
-    provider: 'CapCut AI',
-    baseVoice: 'vi-VN-HoaiMyNeural',
-    defaultRate: '-2%',
-    defaultPitch: '-3.0Hz',
-    engine: 'edge',
-  },
 
-  // 5. Chị Google (Huyền thoại Meme / TikTok)
-  'google_vi_chigoogle': {
+  // 7. Chị Google (Huyền thoại Meme / TikTok)
+  google_vi_chigoogle: {
     id: 'google_vi_chigoogle',
     name: 'Chị Google (Huyền Thoại Meme / Tấu Hài TikTok)',
     gender: 'female',
     provider: 'Google Translate',
     engine: 'google',
   },
-  'v-google-chigoogle': {
-    id: 'v-google-chigoogle',
-    name: 'Chị Google (Huyền Thoại Meme / Tấu Hài TikTok)',
-    gender: 'female',
-    provider: 'Google Translate',
-    engine: 'google',
-  },
 
-  // 6. Hoài My (Edge Neural Original)
+  // 8. Hoài My (Edge Neural Original)
   'vi-VN-HoaiMyNeural': {
     id: 'vi-VN-HoaiMyNeural',
     name: 'Hoài My (Microsoft Edge Neural Nguyên Bản)',
@@ -229,8 +143,8 @@ export const VOICE_PROFILES = {
     engine: 'edge',
   },
 
-  // 7. Vbee Mạnh Dũng (Nam MC Hà Nội Hào Hùng)
-  'vbee_vi_manhdung': {
+  // 9. Vbee Mạnh Dũng (Nam MC Hà Nội Hào Hùng)
+  vbee_vi_manhdung: {
     id: 'vbee_vi_manhdung',
     name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
     gender: 'male',
@@ -240,28 +154,8 @@ export const VOICE_PROFILES = {
     defaultPitch: '-0.5Hz',
     engine: 'edge',
   },
-  'vbee_vi_manhdung_pro': {
-    id: 'vbee_vi_manhdung_pro',
-    name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
-    gender: 'male',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-NamMinhNeural',
-    defaultRate: '+8%',
-    defaultPitch: '-0.5Hz',
-    engine: 'edge',
-  },
-  'v-vbee-manhdung': {
-    id: 'v-vbee-manhdung',
-    name: 'Vbee - Mạnh Dũng (Hà Nội - Nam MC Trầm Ấm, Hào Hùng)',
-    gender: 'male',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-NamMinhNeural',
-    defaultRate: '+8%',
-    defaultPitch: '-0.5Hz',
-    engine: 'edge',
-  },
 
-  // 8. Nam Minh (Edge Neural Original)
+  // 10. Nam Minh (Edge Neural Original)
   'vi-VN-NamMinhNeural': {
     id: 'vi-VN-NamMinhNeural',
     name: 'Nam Minh (Microsoft Edge Neural - Hào Hùng Cấp SSS)',
@@ -273,8 +167,8 @@ export const VOICE_PROFILES = {
     engine: 'edge',
   },
 
-  // 9. Vbee Bá Hùng (Nam Miền Nam Kịch Tính)
-  'vbee_vi_bahung': {
+  // 11. Vbee Bá Hùng (Nam Miền Nam Kịch Tính)
+  vbee_vi_bahung: {
     id: 'vbee_vi_bahung',
     name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
     gender: 'male',
@@ -284,26 +178,46 @@ export const VOICE_PROFILES = {
     defaultPitch: '+0Hz',
     engine: 'edge',
   },
-  'vbee_vi_bahung_action': {
-    id: 'vbee_vi_bahung_action',
-    name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
+
+  // 12. Vbee Phong Vũ (Nam Miền Nam Trầm Ấm, Triết Lý)
+  vbee_vi_phongvu: {
+    id: 'vbee_vi_phongvu',
+    name: 'Vbee - Phong Vũ (TP.HCM - Nam Trầm Ấm, Triết Lý)',
     gender: 'male',
     provider: 'Vbee Studio',
     baseVoice: 'vi-VN-NamMinhNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+0Hz',
+    defaultRate: '+6%',
+    defaultPitch: '-1.5Hz',
     engine: 'edge',
   },
-  'v-vbee-bahung': {
-    id: 'v-vbee-bahung',
-    name: 'Vbee - Bá Hùng (TP.HCM - Nam Hào Sảng, Kịch Tính)',
-    gender: 'male',
-    provider: 'Vbee Studio',
-    baseVoice: 'vi-VN-NamMinhNeural',
-    defaultRate: '+10%',
-    defaultPitch: '+0Hz',
-    engine: 'edge',
-  },
+};
+
+// Aliases for backward compatibility and alternate naming conventions
+const ALIAS_MAP = {
+  'v-capcut-thanhnu': 'capcut_vi_thanhnu',
+  'vbee_vi_thaotrinh_emotional': 'vbee_vi_thaotrinh',
+  'v-vbee-thaotrinh': 'vbee_vi_thaotrinh',
+  'v-vbee-ngochuyen': 'vbee_vi_ngochuyen',
+  'vbee_vi_quynhanh_south': 'vbee_vi_quynhanh',
+  'v-vbee-quynhanh': 'vbee_vi_quynhanh',
+  'v-vbee-huonggiang': 'vbee_vi_huonggiang',
+  'v-capcut-diudang': 'capcut_vi_diudang',
+  'v-google-chigoogle': 'google_vi_chigoogle',
+  'vbee_vi_manhdung_pro': 'vbee_vi_manhdung',
+  'v-vbee-manhdung': 'vbee_vi_manhdung',
+  'vbee_vi_bahung_action': 'vbee_vi_bahung',
+  'v-vbee-bahung': 'vbee_vi_bahung',
+  'v-vbee-phongvu': 'vbee_vi_phongvu',
+};
+
+export const VOICE_PROFILES = {
+  ...CANONICAL_PROFILES,
+  ...Object.fromEntries(
+    Object.entries(ALIAS_MAP).map(([alias, target]) => [
+      alias,
+      { ...CANONICAL_PROFILES[target], id: alias },
+    ])
+  ),
 };
 
 export class EdgeTtsService {

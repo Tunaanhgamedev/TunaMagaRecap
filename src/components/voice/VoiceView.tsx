@@ -294,30 +294,6 @@ export const VoiceView: React.FC = () => {
 
   const displayTerms = getDisplayTerms();
 
-  const vbeeServices = [
-    {
-      title: 'Edge Neural TTS (Đang Bật)',
-      url: 'https://speech.platform.bing.com',
-      desc: 'Giọng đọc AI tự nhiên 100% như MC review thật (Nam Minh & Hoài My). Hoàn toàn miễn phí, không giới hạn.',
-      badge: 'Edge Neural Studio 48kHz',
-      active: true,
-    },
-    {
-      title: 'Vbee AI Studio Việt Nam',
-      url: 'https://studio.vbee.vn/studio/text-to-speech',
-      desc: 'Giọng đọc AI chuẩn tiếng Việt đa vùng miền (Mạnh Dũng, Thảo Trinh, Quỳnh Anh, Bá Hùng).',
-      badge: 'studio.vbee.vn',
-      active: false,
-    },
-    {
-      title: 'ElevenLabs Multilingual',
-      url: 'https://elevenlabs.io',
-      desc: 'Công nghệ tái tạo cảm xúc điện ảnh Hollywood (Adam, Rachel).',
-      badge: 'elevenlabs.io',
-      active: false,
-    },
-  ];
-
   return (
     <div className="p-4 space-y-5 max-w-7xl mx-auto select-none">
       {/* Top Header */}

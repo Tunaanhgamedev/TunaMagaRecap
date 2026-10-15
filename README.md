@@ -11,7 +11,7 @@
 
 **Hệ sinh thái tự động hóa sản xuất Video Tóm Tắt Truyện Tranh (Manga/Manhwa/Manhua Recap) chuẩn YouTube & TikTok triệu view chỉ với 1-Click.**
 
-[Tính Năng Pro](#-tính-năng-nổi-bật) • [Viral Lab](#10--viral-video-lab--phân-tích-kênh-đối-thủ-top-view-retention-optimization) • [Cài Đặt](#-hướng-dẫn-cài-đặt--khởi-chạy) • [Quy Trình Sản Xuất](#-quy-trình-sản-xuất-video-tự-động) • [Xuất Dữ Liệu](#-các-định-dạng-xuất-dữ-liệu) • [Tech Stack](#-công-nghệ-sử-dụng)
+[Tính Năng Pro](#-tính-năng-nổi-bật) • [Vbee Studio](#16--tích-hợp-vbee-ai-studio--động-cơ-kể-chuyện-siêu-cuốn-vbee-official-api--storytelling-engine) • [Viral Lab](#10--viral-video-lab--phân-tích-kênh-đối-thủ-top-view-retention-optimization) • [Cài Đặt](#-hướng-dẫn-cài-đặt--khởi-chạy) • [Quy Trình Sản Xuất](#-quy-trình-sản-xuất-video-tự-động) • [Xuất Dữ Liệu](#-các-định-dạng-xuất-dữ-liệu) • [Tech Stack](#-công-nghệ-sử-dụng)
 
 </div>
 
@@ -54,18 +54,21 @@
   - `🌧️ Mưa Sấm (Rain Storm)`: Mưa rơi kèm tia chớp flash kịch tính.
 
 ### 6. 🌍 Multi-Language Global Dubbing (Kiếm Tiền RPM Mỹ & Giọng Đọc Cuốn Hút)
-- **Hệ thống diễn viên lồng tiếng AI chất lượng cao (Microsoft Edge Neural + Google TTS)**:
+- **Hệ thống diễn viên lồng tiếng AI chất lượng cao (Vbee Official API + Microsoft Edge Neural + Google TTS)**:
   - 🇻🇳 **Bộ Sưu Tập Giọng Nữ Truyện Tranh Cực Hay (CapCut & Vbee Pro)**:
-    - 🌸 **CapCut - Thanh Nữ**: Trẻ trung, hoạt ngôn, dứt khoát (`+18% rate, +3.5Hz pitch`) — chuẩn giọng review tóm tắt manga triệu view TikTok/Shorts.
-    - 🎭 **Vbee - Thảo Trinh (Hà Nội)**: Ấm áp, sâu lắng, ngọt ngào (`+4% rate, -1.5Hz pitch`) — chuyên Ngôn Tình, Drama, Isekai, Nữ Phụ Phản Diện.
-    - 🍯 **Vbee - Quỳnh Anh (TP.HCM)**: Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn (`+10% rate, +2.0Hz pitch`).
+    - 🌸 **CapCut - Thanh Nữ**: Trẻ trung, hoạt ngôn, dứt khoát (`+10% rate, +3.5Hz pitch`) — chuẩn giọng review tóm tắt manga triệu view TikTok/Shorts.
+    - 🎭 **Vbee - Thảo Trinh (Hà Nội)**: Ấm áp, sâu lắng, ngọt ngào (`+2% rate, -1.2Hz pitch`) — chuyên Ngôn Tình, Drama, Isekai, Nữ Phụ Phản Diện.
+    - 🌙 **Vbee - Ngọc Huyền (Hà Nội)**: Thì thầm huyền bí, ma mị, rùng rợn (`-2% rate, -2.8Hz pitch`) — tuyệt đỉnh cho truyện Kinh Dị, Ma Quái, Đêm Khuya, Tu Tiên Ma Thần.
+    - 🍯 **Vbee - Quỳnh Anh (TP.HCM)**: Giọng nữ miền Nam dịu dàng, tự nhiên, lôi cuốn (`+4% rate, +1.8Hz pitch`) — chuyên Đời Thường, Hài Hước, Tình Cảm.
+    - 🌸 **Vbee - Hương Giang (Huế)**: Giọng nữ xứ Huế êm ả, hoài niệm, sâu lắng (`+0% rate, -0.8Hz pitch`) — chuyên Cổ Trang, Dã Sử, Bi Thương.
     - ✨ **CapCut - Nữ Dịu Dàng**: Trầm ấm huyền bí, thì thầm truyền cảm (`-2% rate, -3.0Hz pitch`) — chuyên Tu Tiên, Huyền Huyễn, Ma Mị.
     - 🤖 **Chị Google Huyền Thoại**: Giọng đọc kinh điển Google Translate tiếng Việt, phản hồi siêu tốc `< 200ms`, phong cách tấu hài viral TikTok.
-    - 👑 **Hoài My**: Giọng nữ phát thanh viên Microsoft Edge Neural nguyên bản.
-  - 🇻🇳 **Giọng Nam Hào Hùng**:
-    - 🔥 **Nam Minh**: Giọng nam hào hùng, uy lực, chuyên review Manhwa Tu Tiên cấp SSS.
-    - ⚡ **Vbee - Mạnh Dũng (Hà Nội)**: Nam MC trầm ấm, truyền cảm, phong thái điện ảnh.
-    - ⚔️ **Vbee - Bá Hùng (TP.HCM)**: Nam miền Nam hào sảng, kịch tính, chuyên phân cảnh combat.
+    - 👑 **Hoài My**: Giọng nữ phát thanh viên Microsoft Edge Neural nguyên bản (`+10% rate, +0Hz pitch`).
+  - 🇻🇳 **Giọng Nam Hào Hùng & Điện Ảnh**:
+    - 🔥 **Nam Minh**: Giọng nam hào hùng, uy lực (`+10% rate, +0Hz pitch`) — chuyên review Manhwa Tu Tiên cấp SSS.
+    - ⚡ **Vbee - Mạnh Dũng (Hà Nội)**: Nam MC trầm ấm, truyền cảm, phong thái điện ảnh (`+8% rate, -0.5Hz pitch`) — chuyên review phim & truyện tranh.
+    - ⚔️ **Vbee - Bá Hùng (TP.HCM)**: Nam miền Nam hào sảng, kịch tính (`+10% rate, +0Hz pitch`) — chuyên phân cảnh combat và đột phá cảnh giới.
+    - 📜 **Vbee - Phong Vũ (TP.HCM)**: Nam miền Nam trầm lắng, suy ngẫm, triết lý nhân sinh (`+6% rate, -1.5Hz pitch`) — rất hợp Dã Sử, Đô Thị, Hồi Quy.
   - 🇺🇸 **Tiếng Anh (US RPM Cao)**: Guy (US Manhwa Narrator Pro), Christopher (Epic Movie Narrator), Jenny (US Female Anime Host).
   - 🇯🇵 **Tiếng Nhật**: Keita (Anime Narrator), Nanami (Anime Heroine).
   - 🇰🇷 **Tiếng Hàn**: InJoon (Korean Manhwa Narrator), SunHi (Webtoon Heroine).
@@ -145,6 +148,20 @@
   - Bọc bộ nhớ `safeLocalStorage` chống lỗi tràn hạn mức trình duyệt (`QuotaExceededError` 5MB), chỉ lưu thông tin metadata cần thiết của dự án.
   - Tích hợp thuộc tính CSS hiện đại `content-visibility: auto` và `contain-intrinsic-size` cho dải cuộn thumbnail trang truyện, giúp trình duyệt bỏ qua tính toán layout và render của các trang ngoài khung nhìn.
 
+### 16. 🎙️ Tích Hợp Vbee AI Studio & Động Cơ Kể Chuyện Siêu Cuốn (Vbee Official API & Storytelling Engine)
+- **Tích Hợp Vbee Official API (vbee.vn)**: Hỗ trợ kết nối trực tiếp tài khoản Vbee bằng `Vbee App ID` và `Access Token`. Toàn bộ giọng đọc nguyên bản từ Vbee AI Studio (Thảo Trinh, Mạnh Dũng, Quỳnh Anh, Ngọc Huyền, Bá Hùng, Phong Vũ, Hương Giang) với chuẩn phòng thu 48kHz, cảm xúc tự nhiên, phát âm tiếng Việt đa vùng miền.
+- **Vbee Storytelling Neural Engine (Mô Phỏng Siêu Cuốn Không Cần Key)**: Với người dùng không có tài khoản Vbee trả phí, TunaRecap cung cấp chế độ giả lập Storytelling Neural Engine độc quyền hoàn toàn miễn phí. Thuật toán tinh chỉnh tần số âm sắc (timbre) và trường cao độ (pitch range) mô phỏng chuẩn xác phong thái kể chuyện của các MC Vbee hàng đầu.
+- **4 Storytelling Presets (1-Click Tối Ưu Tốc Độ & Cao Độ Kể Chuyện)**:
+  - ⚡ **Hồi Hộp / Kịch Tính** (`1.15x speed, +1.5Hz pitch`): Nhịp điệu dồn dập, sắc thái gấp gáp cho các phân cảnh truy đuổi, combat nghẹt thở, đột phá cấp độ.
+  - 💖 **Truyền Cảm / Ngôn Tình** (`1.00x speed, -1.0Hz pitch`): Giọng ấm áp, sâu lắng, chậm rãi cho truyện Ngôn Tình, Drama, Isekai, cảm xúc nhân vật.
+  - ⚔️ **Hào Hùng / Chiến Đấu** (`1.20x speed, +0.0Hz pitch`): Khí thế ngút trời, uy lực vang dội cho các đại chiến Tu Tiên, Shonen, diệt quái vật.
+  - 🌙 **Rùng Rợn / Đêm Khuya** (`0.95x speed, -2.5Hz pitch`): Thì thầm ma mị, trầm mặc, tạo không khí u tối rùng mình cho truyện Kinh Dị, Ma Quái, Trinh Thám.
+- **Thuật Toán Storytelling Rhythm & Breathing Pauses (Nhịp Thở Truyện Tranh)**:
+  - **Tự động ngắt nghỉ sau liên từ chuyển cảnh**: Tự động chèn khoảng dừng nhịp thở tự nhiên sau các câu dẫn chuyện cao trào (`Bất ngờ thay,`, `Thế nhưng,`, `Không ngờ rằng,`, `Đột nhiên,`, `Lúc này,`, `Hóa ra,`, `Chưa dừng lại ở đó,`, `Trong nháy mắt,`...).
+  - **Khử lỗi ngắt quãng & nuốt chữ**: Dọn sạch dấu ngoặc kép, dấu ba chấm `...`, dấu gạch ngang thoại thành dấu phẩy nghỉ hơi nhịp nhàng, triệt tiêu 100% hiện tượng vấp chữ của TTS.
+  - **Phiên âm số liệu & thuật ngữ manga/gaming**: Tự động chuyển đổi `1v1` ➔ `một đấu một`, `50%` ➔ `50 phần trăm`, `top 1` ➔ `tốp 1`, `10k` ➔ `10 nghìn`, `SSS-rank` ➔ `hạng tam ét`...
+- **Hộp Thoại Cấu Hình Vbee API Trực Quan (In-App GUI Modal)**: Cửa sổ popup ngay trong Voice Studio cho phép nhập, kiểm tra và lưu an toàn App ID & Access Token vào `localStorage` trình duyệt hoặc cấu hình trong `.env`.
+
 ---
 
 ## 📁 Cấu Trúc Thư Mục Dự Án
@@ -156,7 +173,8 @@ TunaRecap/
 │   └── src/
 │       ├── index.js        # REST API Router, YouTube Publisher & SQLite
 │       ├── ocr/            # AI Vision Engine & Story Knowledge
-│       └── scraper/        # Scraper Manager & 11 Manga Adapters
+│       ├── scraper/        # Scraper Manager & 11 Manga Adapters
+│       └── tts/            # Vbee AIVoice, Edge Neural TTS & Text Normalizer
 ├── src/                    # Frontend React 19 & TypeScript
 │   ├── assets/             # Vector icons & sample graphics
 │   ├── components/
@@ -229,6 +247,18 @@ npm run dev
 ```
 > Ứng dụng web sẽ mở tại: `http://localhost:5173/`
 
+### 4. Cấu Hình Biến Môi Trường (Tùy Chọn)
+Tạo file `.env` tại thư mục gốc (hoặc sao chép từ `.env.example`):
+```bash
+# Google Gemini API Key (Vision OCR phân tích tranh & trích xuất văn bản)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Vbee AIVoice Studio API (Tùy chọn - Dành cho tài khoản Vbee chính thức)
+# Lưu ý: Bạn cũng có thể nhập trực tiếp qua popup trên web mà không cần sửa file .env
+VBEE_APP_ID=your_vbee_app_id
+VBEE_ACCESS_TOKEN=your_vbee_access_token
+```
+
 ---
 
 ## 📖 Quy Trình Sản Xuất Video Tự Động
@@ -272,7 +302,7 @@ flowchart LR
 
 - **Frontend Core**: React 19, TypeScript, Vite, Zustand với `persist` middleware, Code-Splitting với React.lazy & Suspense.
 - **Giao Diện & Hiệu Ứng**: Tailwind CSS, Lucide Icons, HTML5 Canvas 2D & Web Audio API, TikTok Punch Viral Subtitles Engine.
-- **Xử Lý Âm Thanh & Giọng Đọc**: Microsoft Edge Neural TTS Backend (48kHz), Google Translate Official TTS Engine, CapCut & Vbee Acoustic Profile Tuner, Web Audio Synthesizer, Real-Time Audio Ducking Engine, Proactive Audio Pre-Caching.
+- **Xử Lý Âm Thanh & Giọng Đọc**: Vbee AIVoice Official API Service, Vbee Storytelling Neural Engine, Microsoft Edge Neural TTS Backend (48kHz), Google Translate Official TTS Engine, CapCut & Vbee Acoustic Profile Tuner, Storytelling Rhythm Normalizer (phân bổ nhịp thở và ngắt nghỉ kịch tính), Web Audio Synthesizer, Real-Time Audio Ducking Engine, Proactive Audio Pre-Caching.
 - **Xử Lý Hình Ảnh & Video**: AI Speech Bubble Inpainter, 2.5D Motion Comic VFX Particles Engine, MediaRecorder Canvas Stream Exporter, NLE Realtime Video Render Loop.
 - **Phân Tích Dữ Liệu & Viral AI**: Viral Video Lab Engine, Benchmark 4 Kênh Triệu View, Algorithmic Pacing & Hook Generator.
 - **Backend & Crawler**: Node.js, Express REST API, Multi-Referer Image Streaming Proxy, Prisma ORM với SQLite, Multi-Language Edge TTS Router.

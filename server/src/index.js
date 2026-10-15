@@ -1409,6 +1409,17 @@ const server = http.createServer(async (req, res) => {
             description: 'Giọng nam miền Nam hào sảng, kịch tính, phù hợp phân cảnh chiến đấu gay cấn.',
           },
           {
+            id: 'vbee_vi_phongvu',
+            name: 'Vbee - Phong Vũ (TP.HCM - Nam Trầm Ấm, Triết Lý)',
+            gender: 'male',
+            lang: 'vi-VN',
+            provider: 'Vbee Studio',
+            recommendedRate: '+6%',
+            recommendedPitch: '-1.5Hz',
+            avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            description: '⭐ [VBEE SÂU LẮNG] Giọng nam miền Nam trầm lắng, suy ngẫm, triết lý nhân sinh. Rất hợp truyện Dã Sử, Đô Thị, Hồi Quy.',
+          },
+          {
             id: 'en-US-GuyNeural',
             name: 'Guy (US Manhwa Narrator Pro)',
             gender: 'male',
