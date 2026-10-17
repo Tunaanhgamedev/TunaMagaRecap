@@ -9,6 +9,7 @@ import { CatsComicAdapter } from './adapters/CatsComicAdapter.js';
 import { KhoTruyenAdapter } from './adapters/KhoTruyenAdapter.js';
 import { MangaDexAdapter } from './adapters/MangaDexAdapter.js';
 import { WebtoonAdapter } from './adapters/WebtoonAdapter.js';
+import { MangaPillAdapter } from './adapters/MangaPillAdapter.js';
 import { MangaToonAdapter } from './adapters/MangaToonAdapter.js';
 import { MangaKakalotAdapter } from './adapters/MangaKakalotAdapter.js';
 import { GenericAdapter } from './adapters/GenericAdapter.js';
@@ -29,6 +30,7 @@ export class ScraperManager {
       AsuraScansAdapter,
       MangaDexAdapter,
       WebtoonAdapter,
+      MangaPillAdapter,
       MangaToonAdapter,
       MangaKakalotAdapter,
       // Fallback
@@ -79,11 +81,35 @@ export class ScraperManager {
     }
 
     // 4. Build Manga Pages with Accurate OCR from Image and Language Detection
-    const isKorean = info.title.toLowerCase().includes('solo') || info.title.toLowerCase().includes('leveling') || rawUrl.includes('solo') || rawUrl.includes('leveling');
-    const isJapanese = info.title.toLowerCase().includes('one piece') || info.title.toLowerCase().includes('dandadan') || info.title.toLowerCase().includes('naruto') || info.title.toLowerCase().includes('jujutsu');
+    const isVietnamese =
+      info.title.toLowerCase().includes('tieng viet') ||
+      rawUrl.includes('truyen-tranh') ||
+      rawUrl.includes('truyenqq') ||
+      rawUrl.includes('nettruyen') ||
+      rawUrl.includes('thuviensach') ||
+      rawUrl.includes('blogtruyen') ||
+      rawUrl.includes('mieutruyen') ||
+      rawUrl.includes('dantruyen');
+    const isKorean =
+      info.title.toLowerCase().includes('solo') ||
+      info.title.toLowerCase().includes('leveling') ||
+      rawUrl.includes('solo') ||
+      rawUrl.includes('leveling') ||
+      rawUrl.includes('manhwa');
+    const isEnglish =
+      rawUrl.includes('webtoons.com') ||
+      rawUrl.includes('mangapill.com') ||
+      rawUrl.includes('asuracomic') ||
+      rawUrl.includes('mangafire') ||
+      info.title.toLowerCase().includes('[en]');
+    const isJapanese =
+      info.title.toLowerCase().includes('one piece') ||
+      info.title.toLowerCase().includes('dandadan') ||
+      info.title.toLowerCase().includes('naruto') ||
+      info.title.toLowerCase().includes('jujutsu') ||
+      rawUrl.includes('rawkuma');
     const isChinese = info.title.toLowerCase().includes('manhua') || rawUrl.includes('manhua');
-    const isVietnamese = info.title.toLowerCase().includes('tieng viet') || rawUrl.includes('truyen-tranh');
-    const detectedLang = isKorean ? 'ko' : isJapanese ? 'ja' : isChinese ? 'zh' : isVietnamese ? 'vi' : 'ko';
+    const detectedLang = isVietnamese ? 'vi' : isEnglish ? 'en' : isKorean ? 'ko' : isJapanese ? 'ja' : isChinese ? 'zh' : 'en';
 
     const pages = finalImages.map((rawImgUrl, idx) => {
       const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(rawImgUrl)}&referer=${encodeURIComponent(rawUrl)}`;

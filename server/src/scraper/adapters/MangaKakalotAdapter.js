@@ -3,7 +3,7 @@ export const MangaKakalotAdapter = {
   domains: [
     'mangakakalot.com', 'mangakakalot.tv', 'manganato.com', 'manganelo.com',
     'readmanganato.com', 'chapmanganato.com', 'chapmanganelo.com',
-    'mangabuddy.com', 'mangapill.com',
+    'mangabuddy.com',
   ],
 
   canHandle(url) {

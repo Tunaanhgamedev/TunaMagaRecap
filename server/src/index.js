@@ -264,15 +264,42 @@ async function resolveAndFetchImage(imageUrl, initialReferer = null) {
       } else if (targetUrl.includes('thuviensach') || (customReferer && customReferer.includes('thuviensach'))) {
         candidateReferers.push('https://thuviensach.vn/');
       } else if (targetUrl.includes('truyenqq') || targetUrl.includes('cc3t.net') || (customReferer && customReferer.includes('truyenqq'))) {
-          candidateReferers.push('https://truyenqq.com.vn/');
-        } else if (targetUrl.includes('asura') || (customReferer && customReferer.includes('asura'))) {
-        candidateReferers.push('https://asuracomic.net/');
-      } else if (targetUrl.includes('truyenvua') || targetUrl.includes('truyenqq') || (customReferer && customReferer.includes('truyenqq'))) {
+        candidateReferers.push('https://truyenqq.com.vn/');
         candidateReferers.push('https://truyenqqko.com/');
+      } else if (targetUrl.includes('asura') || (customReferer && customReferer.includes('asura'))) {
+        candidateReferers.push('https://asuracomic.net/');
+      } else if (targetUrl.includes('truyenvua') || (customReferer && customReferer.includes('truyenvua'))) {
         candidateReferers.push('https://truyenvua.com/');
+        candidateReferers.push('https://truyenqqko.com/');
       } else if (targetUrl.includes('blogtruyen') || (customReferer && customReferer.includes('blogtruyen'))) {
         candidateReferers.push('https://blogtruyen.vn/');
         candidateReferers.push('https://blogtruyenmoi.com/');
+      } else if (
+        targetUrl.includes('pstatic.net') ||
+        targetUrl.includes('wevpstatic.net') ||
+        targetUrl.includes('webtoon') ||
+        (customReferer && customReferer.includes('webtoon'))
+      ) {
+        candidateReferers.push('https://www.webtoons.com/');
+        candidateReferers.push('https://webtoons.com/');
+      } else if (
+        targetUrl.includes('mangadex.org') ||
+        targetUrl.includes('mangadex.network') ||
+        (customReferer && customReferer.includes('mangadex'))
+      ) {
+        candidateReferers.push('https://mangadex.org/');
+      } else if (
+        targetUrl.includes('mangapill.com') ||
+        targetUrl.includes('readdetectiveconan.com') ||
+        (customReferer && customReferer.includes('mangapill'))
+      ) {
+        candidateReferers.push('https://mangapill.com/');
+      } else if (targetUrl.includes('rawkuma') || (customReferer && customReferer.includes('rawkuma'))) {
+        candidateReferers.push('https://rawkuma.com/');
+      } else if (targetUrl.includes('mangafire') || (customReferer && customReferer.includes('mangafire'))) {
+        candidateReferers.push('https://mangafire.to/');
+      } else if (targetUrl.includes('flame') || (customReferer && customReferer.includes('flame'))) {
+        candidateReferers.push('https://flamecomics.xyz/');
       }
 
       if (customReferer) {

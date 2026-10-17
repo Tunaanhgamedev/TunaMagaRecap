@@ -236,9 +236,12 @@ export const LibraryView: React.FC = () => {
   };
 
   const quickLinks = [
-    { title: 'Ví Dụ: ThuVienSach Chapter 1', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
-    { title: 'Ví Dụ: AsuraScans Chapter 178', url: 'https://asuracomic.net/series/solo-leveling-chapter-178' },
-    { title: 'Ví Dụ: NetTruyen Kì Nguyên Anh Hùng', url: 'https://nettruyen.africa/truyen-tranh/ki-nguyen-cua-anh-hung/chapter-220/754844' },
+    { title: 'Webtoons: Tower of God Ep 1', url: 'https://www.webtoons.com/en/fantasy/tower-of-god/season-1-ep-0/viewer?title_no=95&episode_no=1' },
+    { title: 'MangaPill: One Piece Chap 1', url: 'https://mangapill.com/chapters/2-10001000/one-piece-chapter-1' },
+    { title: 'MangaDex: Boku wa Ohime Chap 1', url: 'https://mangadex.org/chapter/0aaf8b27-0013-4ae0-8935-91a089466874' },
+    { title: 'ThuVienSach: Solo Leveling Chap 1', url: 'https://thuviensach.vn/truyen-tranh/toi-thang-cap-mot-minh-solo-leveling-14806-chap-1.html' },
+    { title: 'NetTruyen: Kì Nguyên Anh Hùng', url: 'https://nettruyen.africa/truyen-tranh/ki-nguyen-cua-anh-hung/chapter-220/754844' },
+    { title: 'AsuraScans: Chap 178', url: 'https://asuracomic.net/series/solo-leveling-chapter-178' },
   ];
 
   return (
@@ -251,7 +254,7 @@ export const LibraryView: React.FC = () => {
             <span>Thư Viện & Quản Lý Chapter Truyện Tranh</span>
           </h1>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Dán link để cào 1 chapter hoặc tự động dò toàn bộ 200+ chapter và lưu vào từng thư mục riêng.
+            Dán link để cào 1 chapter hoặc tự động dò toàn bộ 200+ chapter từ web Việt & Quốc Tế (Webtoons, MangaDex, MangaPill, NetTruyen, TruyenQQ...) và lưu vào từng thư mục riêng.
           </p>
         </div>
 
@@ -325,7 +328,7 @@ export const LibraryView: React.FC = () => {
                 <span>1. Dán Đường Link Chapter Truyện Cần Làm Video</span>
               </span>
               <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                Hỗ trợ 13+ nguồn: Nettruyen, TruyenQQ, ThuVienSach, MangaDex...
+                Hỗ trợ 15+ nguồn Việt & Quốc Tế: Webtoons, MangaDex, MangaPill, NetTruyen, TruyenQQ...
               </span>
             </div>
 
@@ -335,7 +338,7 @@ export const LibraryView: React.FC = () => {
                   type="text"
                   value={mangaUrlInput}
                   onChange={(e) => setMangaUrlInput(e.target.value)}
-                  placeholder="Dán link chapter (VD: https://nettruyen.africa/truyen-tranh/ki-nguyen-cua-anh-hung/chapter-220/754844)..."
+                  placeholder="Dán link chapter Việt hoặc Quốc Tế (Webtoons, MangaDex, MangaPill, NetTruyen, TruyenQQ...)..."
                   className="w-full bg-slate-950 text-slate-100 text-xs px-3.5 py-2.5 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500 font-mono"
                 />
               </div>
@@ -527,7 +530,7 @@ export const LibraryView: React.FC = () => {
                 <span>Dò & Quét Toàn Bộ Danh Sách Chapter Của Bộ Truyện</span>
               </span>
               <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                Tự động tìm từ Chap 1 đến Chap mới nhất
+                Tự động tìm từ Chap 1 đến Chap mới nhất (Hỗ trợ cả web truyện nước ngoài)
               </span>
             </div>
 
@@ -537,7 +540,7 @@ export const LibraryView: React.FC = () => {
                   type="text"
                   value={mangaUrlInput}
                   onChange={(e) => setMangaUrlInput(e.target.value)}
-                  placeholder="Dán link trang chủ truyện hoặc link bất kỳ chapter nào (VD: https://nettruyen.africa/truyen-tranh/ki-nguyen-cua-anh-hung/chapter-220/754844)..."
+                  placeholder="Dán link truyện hoặc chapter bất kỳ (VD: Webtoons, MangaPill, MangaDex, NetTruyen, TruyenQQ...)..."
                   className="w-full bg-slate-950 text-slate-100 text-xs px-3.5 py-2.5 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500 font-mono"
                 />
               </div>

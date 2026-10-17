@@ -75,8 +75,8 @@ export const GenericAdapter = {
 
     // Try to extract reading container content first (most manga sites wrap images in a specific div)
     const readingContainerPatterns = [
-      /class=["'][^"']*(?:reading-detail|chapter-content|page-chapter|lst-content|chapter_content|content-manga|manga-reading|comic-content|viewer|listImgChapter)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
-      /id=["'][^"']*(?:content|chapter-content|page-chapter|listImgChapter|reading-detail|all-page|viewer)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
+      /class=["'][^"']*(?:reading-content|reading-detail|chapter-content|page-break|rdcontainer|readerarea|entry-content|page-chapter|lst-content|chapter_content|content-manga|manga-reading|comic-content|viewer|listImgChapter|_imageList)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
+      /id=["'][^"']*(?:readerarea|reading-content|content|chapter-content|page-chapter|listImgChapter|reading-detail|all-page|viewer|_imageList)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
     ];
 
     let contentHtml = html;

@@ -25,8 +25,12 @@
 
 ## ⚡ Tính Năng Nổi Bật
 
-### 1. 🚀 Dò & Cào Cả Bộ Truyện Hàng Loạt (Batch Series Scanner & Folders)
-- **Tự động quét từ Chap 1 đến 200+**: Dán bất kỳ link truyện nào (NetTruyen, TruyenQQ, ThuVienSach, MangaDex, BlogTruyen, MieuTruyen...), AI tự động trích xuất toàn bộ danh sách chapter.
+### 1. 🚀 Dò & Cào Cả Bộ Truyện Hàng Loạt (Hỗ Trợ Web Truyện Việt & Quốc Tế)
+- **Hỗ trợ 15+ nền tảng truyện tranh Việt Nam & Quốc tế**:
+  - 🌐 **Quốc tế**: **Webtoons.com** (toàn bộ manhwa bản quyền Naver/Line), **MangaDex.org** (cộng đồng dịch thuật lớn nhất thế giới, ưu tiên bản EN/VI), **MangaPill.com** (scans nét cao siêu tốc 1000+ chap One Piece, Jujutsu Kaisen), **AsuraScans**, **FlameComics**, **RawKuma** (manga raw Nhật Bản), v.v.
+  - 🇻🇳 **Việt Nam**: **NetTruyen**, **TruyenQQ**, **ThuVienSach**, **BlogTruyen**, **MieuTruyen**, **DanTruyen**, **CatsComic**, **KhoTruyen**...
+- **Cơ chế Anti-Hotlinking Image Proxy thông minh**: Tự động vượt rào bảo vệ chống hotlink của Webtoons (`pstatic.net`), MangaDex (`uploads.mangadex.org`), MangaPill (`cdn.readdetectiveconan.com`) với header Referer chuẩn domain gốc, loại bỏ hoàn toàn lỗi 403 Forbidden.
+- **Tự động quét từ Chap 1 đến 1200+**: Dán bất kỳ link truyện hoặc link chapter nào, AI tự động dò tìm cấu trúc và tạo danh sách toàn bộ chapter chuẩn xác theo thứ tự tăng dần.
 - **Bộ công cụ chọn linh hoạt**: Chọn tất cả, chọn 10/20/50 chap đầu hoặc chọn theo khoảng tùy chỉnh `Từ Chap [ 1 ] Đến [ 100 ]`.
 - **Thư mục Chapter (Folders Explorer)**: Mỗi chapter được lưu trữ thành 1 thư mục dự án độc lập, click vào bất kỳ chapter nào để chỉnh sửa và render video riêng biệt.
 
@@ -173,7 +177,7 @@ TunaRecap/
 │   └── src/
 │       ├── index.js        # REST API Router, YouTube Publisher & SQLite
 │       ├── ocr/            # AI Vision Engine & Story Knowledge
-│       ├── scraper/        # Scraper Manager & 11 Manga Adapters
+│       ├── scraper/        # Scraper Manager & 15+ Manga Adapters (VN & Global)
 │       └── tts/            # Vbee AIVoice, Edge Neural TTS & Text Normalizer
 ├── src/                    # Frontend React 19 & TypeScript
 │   ├── assets/             # Vector icons & sample graphics
