@@ -1022,6 +1022,7 @@ const server = http.createServer(async (req, res) => {
         const payload = JSON.parse(body || '{}');
         const pIdx = Number(payload.pageIndex) || 1;
         const lang = payload.language || 'ko';
+        const targetLang = payload.targetLanguage || 'vi';
         const imageUrl = payload.imageUrl || '';
 
         if (!imageUrl) {
@@ -1118,7 +1119,7 @@ const server = http.createServer(async (req, res) => {
 
         // 2. Fallback to Local Tesseract + Sharp with Smart Noise Cleaning
         if (!ocrResult) {
-          ocrResult = await ocrExtractText(imageSource, lang, pIdx);
+          ocrResult = await ocrExtractText(imageSource, lang, pIdx, targetLang);
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1149,8 +1150,9 @@ const server = http.createServer(async (req, res) => {
         const payload = JSON.parse(body || '{}');
         const pagesToProcess = payload.pages || [];
         const requestedLang = payload.language || 'vi';
+        const targetLang = payload.targetLanguage || 'vi';
 
-        console.log(`[Server] 🚀 Starting Parallel Batch OCR on ${pagesToProcess.length} pages (lang: ${requestedLang})`);
+        console.log(`[Server] 🚀 Starting Parallel Batch OCR on ${pagesToProcess.length} pages (source: ${requestedLang}, target: ${targetLang})`);
 
         const results = [];
         const CHUNK_SIZE = 5; // Process 5 pages in parallel
@@ -1249,7 +1251,7 @@ const server = http.createServer(async (req, res) => {
               }
 
               if (!ocrRes) {
-                ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex);
+                ocrRes = await ocrExtractText(imageSource, requestedLang, pageIndex, targetLang);
               }
 
               return {

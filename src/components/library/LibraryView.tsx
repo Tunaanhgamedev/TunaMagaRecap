@@ -127,6 +127,8 @@ export const LibraryView: React.FC = () => {
     loadProject,
     isLoadingProject,
     deleteProject,
+    recognizeAndTranslateAll,
+    isBatchOCRLoading,
 
     // Batch Series State & Actions
     librarySubTab,
@@ -423,6 +425,18 @@ export const LibraryView: React.FC = () => {
                     className="text-[11px] text-slate-400 hover:text-rose-400 px-2.5 py-1 rounded bg-slate-900 border border-slate-800 transition-colors"
                   >
                     Làm Mới / Đổi Link
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setActiveTab('ocr');
+                      await recognizeAndTranslateAll('vi');
+                    }}
+                    disabled={isBatchOCRLoading}
+                    className="flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                    title="Nhận diện chữ gốc từ ảnh truyện nước ngoài (Hàn, Nhật, Trung, Anh) và tự động dịch ngay sang Tiếng Việt để tạo kịch bản recap"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                    <span>{isBatchOCRLoading ? "Đang Quét & Dịch..." : "⚡ Quét & Dịch Tiếng Việt Tạo Content"}</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('ocr')}

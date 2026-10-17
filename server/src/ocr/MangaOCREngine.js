@@ -8,6 +8,7 @@
  */
 import Tesseract from 'tesseract.js';
 import sharp from 'sharp';
+import { translateWithFreeGoogleTranslate } from './AIVisionEngine.js';
 
 /**
  * Get accurate image dimensions and preprocess image for OCR
@@ -320,7 +321,7 @@ function clusterLinesToSpeechBubbles(rawLines, imgWidth, imgHeight, avgConfidenc
 /**
  * Real OCR extraction with script-sniffing, line-clustering speech bubble segmentation, and Tesseract v5/v6 structure traversal.
  */
-export async function ocrExtractText(imageSource, requestedLang = 'ko', pageIndex = 1) {
+export async function ocrExtractText(imageSource, requestedLang = 'ko', pageIndex = 1, targetLang = 'vi') {
   try {
     const { buffer: cleanedImage, width: imgWidth, height: imgHeight } =
       await inspectAndPreprocessMangaImage(imageSource);
@@ -478,6 +479,41 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
       }
     }
 
+    // Automatic Neural Translation pass to target language (e.g. Vietnamese) if text is foreign
+    if (targetLang && (targetLang !== detectedLang || detectedLang !== 'vi') && panels.length > 0) {
+      console.log(`[MangaOCR Page ${pageIndex}] 🌐 Auto-translating extracted ${detectedLang} text to ${targetLang}...`);
+      try {
+        await Promise.all(
+          panels.map(async (panel) => {
+            for (const d of panel.dialogues) {
+              if (d.textType !== 'NARRATION' && d.originalText && d.originalText.trim().length > 1) {
+                const viTrans = await translateWithFreeGoogleTranslate(d.originalText, targetLang);
+                if (viTrans && viTrans !== d.originalText) {
+                  d.translatedText = viTrans;
+                  d.text = viTrans;
+                  d.language = targetLang;
+                }
+              }
+            }
+          })
+        );
+      } catch (tErr) {
+        console.warn(`[MangaOCR Page ${pageIndex}] Auto-translation warning:`, tErr.message);
+      }
+    }
+
+    // Build meaningful Vietnamese narration summary for AI Recap script
+    const translatedHighlights = panels
+      .flatMap((p) => p.dialogues)
+      .filter((d) => d.textType !== 'NARRATION' && d.translatedText && !d.translatedText.startsWith('['))
+      .map((d) => d.translatedText)
+      .slice(0, 2)
+      .join('; ');
+
+    const narrationContent = translatedHighlights
+      ? `[Dẫn truyện Trang ${pageIndex}]: ${translatedHighlights}`
+      : `[Dẫn truyện Trang ${pageIndex}]: Diễn biến kịch tính phân cảnh tiếp theo...`;
+
     // Always append 1 dedicated Narration panel for video recap scriptwriting
     panels.push({
       id: `panel-${pageIndex}-narration`,
@@ -491,10 +527,10 @@ export async function ocrExtractText(imageSource, requestedLang = 'ko', pageInde
           id: `d-${pageIndex}-narr`,
           panelId: `panel-${pageIndex}-narration`,
           speaker: 'Dẫn Chuyện',
-          text: `[Dẫn truyện Trang ${pageIndex}]`,
+          text: narrationContent,
           originalText: `[Dẫn truyện Trang ${pageIndex}]`,
-          translatedText: `[Dẫn truyện Trang ${pageIndex}]`,
-          language: detectedLang,
+          translatedText: narrationContent,
+          language: targetLang || 'vi',
           textType: 'NARRATION',
           fontFamily: 'Inter',
           fontSize: 14,

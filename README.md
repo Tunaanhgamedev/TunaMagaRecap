@@ -34,22 +34,32 @@
 - **Bộ công cụ chọn linh hoạt**: Chọn tất cả, chọn 10/20/50 chap đầu hoặc chọn theo khoảng tùy chỉnh `Từ Chap [ 1 ] Đến [ 100 ]`.
 - **Thư mục Chapter (Folders Explorer)**: Mỗi chapter được lưu trữ thành 1 thư mục dự án độc lập, click vào bất kỳ chapter nào để chỉnh sửa và render video riêng biệt.
 
-### 2. 🎵 AI BGM & Sound FX Auto-Ducker Engine
+### 2. 🌐 Trạm Nhận Dạng Chữ Ngoại & Dịch Sang Tiếng Việt Tạo Content (Foreign Manga Vision & Translation)
+- **Chuyên xử lý ảnh truyện nước ngoài**: Hàn Quốc (Manhwa), Nhật Bản (Manga), Trung Quốc (Manhua), Tiếng Anh (Webtoons).
+- **Quy trình 2 giai đoạn tạo Content thông minh**:
+  - **Giai đoạn 1 (Tạo Content Tiếng Việt)**: Tự động nhận diện chữ nước ngoài qua Manga-OCR & AI Vision Engine, dịch ngay sang Tiếng Việt chuẩn ngữ nghĩa review truyện, loại bỏ rác và chuẩn hóa câu thoại để AI Script Director sinh kịch bản recap cuốn hút nhất.
+  - **Giai đoạn 2 (Mở Rộng Kênh Quốc Tế / US RPM)**: Sau khi kịch bản và câu từ Tiếng Việt đã được kiểm duyệt chỉn chu, người dùng có thể bấm 1-click để dịch toàn bộ sang Tiếng Anh (US RPM cao gấp 5-10 lần), Tiếng Nhật, Hàn, Tây Ban Nha... để xuất bản video đa quốc gia.
+- **Nút 1-Click Tiện Lợi**:
+  - `⚡ Quét & Dịch Tiếng Việt Tạo Content` ngay trong Thư Viện và Trình OCR.
+  - Hiển thị song song bản gốc (`originalText`) và bản dịch (`translatedText`) trên giao diện Figma-like.
+  - Đồng bộ tự động với hệ thống phụ đề và AI Script Director.
+
+### 3. 🎵 AI BGM & Sound FX Auto-Ducker Engine
 - **Mood BGM Synthesizer**: 6 phong cách nhạc nền điện ảnh (`⚔️ Chiến Đấu (Epic Battle)`, `🔮 Bí Ẩn (Mysterious Lore)`, `⚡ Kịch Tính (Tension)`, `🥀 Cảm Động (Sad Piano)`, `🔥 Phonk Hype (TikTok)`, `☕ Chill Lofi`).
 - **Anime Sound FX Launchpad**: 8 hiệu ứng âm thanh kích hoạt tức thì hoặc tự động theo thoại: `⚔️ Chém Kiếm`, `💥 Đấm Bốc`, `⚡ Sấm Chớp`, `🔔 Level Up Ting Ting`, `✨ Ma Pháp`, `💨 Tốc Biến`, `🔥 Tụ Lực`, `💓 Tim Đập`.
 - **Real-Time Audio Ducking**: Tự động giảm âm lượng nhạc nền xuống `-18dB` khi có giọng đọc thuyết minh và đẩy lên `+6dB` ở các đoạn chuyển cảnh kịch tính.
 
-### 3. 🪄 AI Bubble Cleaner & Smart Inpainting
+### 4. 🪄 AI Bubble Cleaner & Smart Inpainting
 - **Tẩy bóng thoại thông minh**: Thuật toán Color Sampling & Seamless Inpainting xóa sạch 100% chữ tiếng Hàn/Nhật/Trung hoặc bản dịch cũ trong bong bóng thoại, trả lại nền tranh sạch nguyên bản không tì vết.
 - Nút bấm `🪄 Tẩy Sạch Bóng Thoại` (trang hiện tại) và `🪄 Tẩy Toàn Bộ N Trang`.
 - Tranh sạch tự động nạp thẳng vào NLE Video Timeline.
 
-### 4. 📱 1-Click Viral Shorts / TikTok 9:16 Clipper
+### 5. 📱 1-Click Viral Shorts / TikTok 9:16 Clipper
 - **Nút chuyển đổi tỉ lệ 16:9 YouTube & 9:16 Shorts/TikTok** ngay trên thanh điều khiển Timeline.
 - **TikTok / Shorts Viral Punch Subtitles**: Render phụ đề chữ to viền đen dày, chữ vàng neon nổi bật ở trung tâm màn hình chuẩn phong cách video triệu view.
 - Tự động lấy nét trung tâm và xử lý nền mờ 2 bên chống viền đen.
 
-### 5. ✨ 2.5D Motion Comic & VFX Particle Layer (60 FPS)
+### 6. ✨ 2.5D Motion Comic & VFX Particle Layer (60 FPS)
 - Hiệu ứng hạt chuyển động chân thực phủ lên khung hình:
   - `🔥 Tàn Lửa (Ember Sparks)`: Tàn lửa bốc cháy bay lên từ đáy màn hình.
   - `🔮 Hào Quang (Aura Smoke)`: Khói năng lượng tím bốc lên quanh nhân vật.
@@ -57,7 +67,7 @@
   - `👁️ Mắt Lóe Sáng (Eye Flare)`: Mắt lóe sáng đỏ neon khi tung chiêu.
   - `🌧️ Mưa Sấm (Rain Storm)`: Mưa rơi kèm tia chớp flash kịch tính.
 
-### 6. 🌍 Multi-Language Global Dubbing (Kiếm Tiền RPM Mỹ & Giọng Đọc Cuốn Hút)
+### 7. 🌍 Multi-Language Global Dubbing (Kiếm Tiền RPM Mỹ & Giọng Đọc Cuốn Hút)
 - **Hệ thống diễn viên lồng tiếng AI chất lượng cao (Vbee Official API + Microsoft Edge Neural + Google TTS)**:
   - 🇻🇳 **Bộ Sưu Tập Giọng Nữ Truyện Tranh Cực Hay (CapCut & Vbee Pro)**:
     - 🌸 **CapCut - Thanh Nữ**: Trẻ trung, hoạt ngôn, dứt khoát (`+10% rate, +3.5Hz pitch`) — chuẩn giọng review tóm tắt manga triệu view TikTok/Shorts.
@@ -81,21 +91,21 @@
   - 🇫🇷 **Tiếng Pháp**: Henri (French Cinema Narrator).
   - 🇩🇪 **Tiếng Đức**: Conrad (German Epic Voice).
 
-### 7. 🚀 Direct YouTube Uploader & Channel Publisher
+### 8. 🚀 Direct YouTube Uploader & Channel Publisher
 - Nút **"🚀 Đăng YouTube"** trực tiếp trên Timeline.
 - Tự động đồng bộ Video Recap + Thumbnail 4K + Tiêu đề & Thẻ Tags SEO AI.
 - Hỗ trợ xuất bản ngay (**Public / Unlisted / Private**) hoặc **Hẹn giờ công chiếu (Scheduled Premiere)**.
 
-### 8. 🎨 AI Thumbnail Studio (3D CTR Booster)
+### 9. 🎨 AI Thumbnail Studio (3D CTR Booster)
 - 8 Preset phong cách: Solo Awakening, Dark Monarch, Tu Tiên Long Hồn, Isekai Ma Pháp, Cuồng Nộ Báo Thù, Shonen Action, Cyber Hacker.
 - Typography 3D viền đen dày, góc nghiêng giật gân, sticker triệu view (`🔥 SSS-RANK`, `👑 TRÙM CUỐI`, `💎 FULL 4K 60FPS`).
 - Xuất file `.png` sắc nét chuẩn **16:9 YouTube (1920x1080)** và **9:16 TikTok (1080x1920)**.
 
-### 9. 🎞️ 5-Track NLE Timeline & CapCut Export
+### 10. 🎞️ 5-Track NLE Timeline & CapCut Export
 - Dựng phim đa kênh: Track Ảnh/Chuyển Động, Track Voice Thuyết Minh, Track Phụ Đề, Track Nhạc Nền (BGM), Track Hiệu Ứng (VFX).
 - Xuất dự án **CapCut Draft JSON 1-Click** hoặc **Render Video MP4/WebM trực tiếp**.
 
-### 10. 🔥 Viral Video Lab & Phân Tích Kênh Đối Thủ (Top View Retention Optimization)
+### 11. 🔥 Viral Video Lab & Phân Tích Kênh Đối Thủ (Top View Retention Optimization)
 - **Benchmark 4 Kênh Recap Triệu View Hàng Đầu**:
   - `Manga Hype (1.2M Subs)`: Nhịp cắt cực nhanh 1.8s, giữ chân khán giả liên tục.
   - `Anime Recap Pro (850K Subs)`: Nhịp cân bằng 3.2s, nhấn mạnh cảm xúc nhân vật.
@@ -270,22 +280,24 @@ VBEE_ACCESS_TOKEN=your_vbee_access_token
 ```mermaid
 flowchart LR
     A[Dán Link Truyện / Chapter] --> B[Cào Hàng Loạt & Lưu Folder]
-    B --> C[Tẩy Bóng Thoại & AI Inpainting]
-    C --> D[Biên Soạn Kịch Bản AI]
-    D --> E[Lồng Tiếng Global, CapCut & Vbee]
-    E --> F[Thiết Kế Thumbnail 3D]
-    F --> G[Viral Lab Tối Ưu Giữ Chân Khán Giả]
-    G --> H[Dựng NLE Timeline, VFX 60FPS & Bật/Tắt Sub]
-    H --> I[Xuất CapCut / Đăng YouTube Trực Tiếp]
+    B --> C[Quét Chữ & Dịch Tiếng Việt Tạo Content]
+    C --> D[Tẩy Bóng Thoại & AI Inpainting]
+    D --> E[Biên Soạn Kịch Bản AI]
+    E --> F[Lồng Tiếng Global, CapCut & Vbee]
+    F --> G[Thiết Kế Thumbnail 3D]
+    G --> H[Viral Lab Tối Ưu Giữ Chân Khán Giả]
+    H --> I[Dựng NLE Timeline, VFX 60FPS & Bật/Tắt Sub]
+    I --> J[Xuất CapCut / Đăng YouTube Trực Tiếp]
 ```
 
-1. **Bước 1 (Thư Viện)**: Dán link bộ truyện để quét toàn bộ 200+ chapter, chọn khoảng cần cào và lưu vào từng thư mục chapter.
-2. **Bước 2 (OCR & Inpainting)**: Bấm `🪄 Tẩy Sạch Bóng Thoại` để xóa sạch chữ cũ trong bong bóng thoại, trả lại nền tranh nguyên bản.
-3. **Bước 3 (Kịch Bản)**: Chọn phong cách recap (Review Chi Tiết, Tóm Tắt Nhanh, Hài Hước, Hồi Hộp, Tu Tiên, Thợ Săn...).
-4. **Bước 4 (Lồng Tiếng)**: Chọn giọng đọc (Giọng nữ CapCut/Vbee, Chị Google, Nam Minh, hoặc Tiếng Anh/Mỹ để ăn RPM ngoại).
-5. **Bước 5 (Thumbnail Studio)**: Tùy biến bìa 3D giật gân, chọn nhãn badge và xuất ảnh 16:9 / 9:16 Full HD.
-6. **Bước 6 (Viral Lab)**: So sánh với 4 kênh recap top đầu, kiểm tra điểm Viral Score, gắn Hook mở màn và tối ưu nhịp cắt chuyển cảnh.
-7. **Bước 7 (Timeline & Xuất Bản)**: Chọn Mood BGM, bật hiệu ứng VFX hạt 60 FPS, bấm `⚡ Nạp Voice 0ms`, tùy biến Bật/Tắt Phụ Đề, chọn tỉ lệ 16:9 hoặc 9:16 và bấm **"🚀 Đăng YouTube"** hoặc **"Xuất Video MP4"**.
+1. **Bước 1 (Thư Viện)**: Dán link bộ truyện (trong nước hoặc quốc tế Webtoons, MangaDex, MangaPill...) để quét toàn bộ 200+ chapter, chọn khoảng cần cào và lưu vào từng thư mục chapter.
+2. **Bước 2 (Nhận Dạng & Dịch Tiếng Việt Tạo Content)**: Bấm `⚡ Quét & Dịch Tiếng Việt Tạo Content` để tự động nhận diện chữ gốc (Hàn, Nhật, Trung, Anh) và chuyển ngữ tức thì sang Tiếng Việt chuẩn review truyện, đồng thời hỗ trợ chuyển ngữ sang Tiếng Anh (US RPM) khi muốn làm kênh quốc tế.
+3. **Bước 3 (OCR & Inpainting)**: Bấm `🪄 Tẩy Sạch Bóng Thoại` để xóa sạch chữ cũ trong bong bóng thoại, trả lại nền tranh nguyên bản.
+4. **Bước 4 (Kịch Bản)**: Chọn phong cách recap (Review Chi Tiết, Tóm Tắt Nhanh, Hài Hước, Hồi Hộp, Tu Tiên, Thợ Săn...).
+5. **Bước 5 (Lồng Tiếng)**: Chọn giọng đọc (Giọng nữ CapCut/Vbee, Chị Google, Nam Minh, hoặc Tiếng Anh/Mỹ để ăn RPM ngoại).
+6. **Bước 6 (Thumbnail Studio)**: Tùy biến bìa 3D giật gân, chọn nhãn badge và xuất ảnh 16:9 / 9:16 Full HD.
+7. **Bước 7 (Viral Lab)**: So sánh với 4 kênh recap top đầu, kiểm tra điểm Viral Score, gắn Hook mở màn và tối ưu nhịp cắt chuyển cảnh.
+8. **Bước 8 (Timeline & Xuất Bản)**: Chọn Mood BGM, bật hiệu ứng VFX hạt 60 FPS, bấm `⚡ Nạp Voice 0ms`, tùy biến Bật/Tắt Phụ Đề, chọn tỉ lệ 16:9 hoặc 9:16 và bấm **"🚀 Đăng YouTube"** hoặc **"Xuất Video MP4"**.
 
 ---
 

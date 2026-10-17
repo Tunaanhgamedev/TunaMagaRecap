@@ -282,6 +282,7 @@ interface StudioState {
   isAutoPipelineRunning: boolean;
   pipelineStep: number;
   runFullPipeline: (url: string) => Promise<void>;
+  recognizeAndTranslateAll: (targetLang?: TargetLanguage) => Promise<void>;
   playNarrationAudio: (text: string) => void;
   preloadNarrationAudio: (text: string) => void;
   stopNarrationAudio: () => void;
@@ -2299,12 +2300,14 @@ export const useStudioStore = create<StudioState>()(
     });
 
     try {
+      const targetLang = get().targetLanguage || 'vi';
       const res = await fetch(`${API_BASE_URL}/ocr/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pages: currentPages,
           language: get().detectedLanguage,
+          targetLanguage: targetLang,
           apiKey: get().geminiApiKey,
         }),
       });
@@ -2326,7 +2329,7 @@ export const useStudioStore = create<StudioState>()(
           return {
             pages: updatedPages,
             isBatchOCRLoading: false,
-            scrapeStatusMessage: `🎉 Quét OCR thành công toàn bộ ${data.count} trang! Đã trích xuất xong toàn bộ chữ thật.`,
+            scrapeStatusMessage: `🎉 Quét OCR thành công toàn bộ ${data.count} trang! Đã trích xuất & dịch xong toàn bộ chữ thật.`,
           };
         });
       } else {
@@ -2335,6 +2338,45 @@ export const useStudioStore = create<StudioState>()(
     } catch (err: any) {
       set({ isBatchOCRLoading: false, scrapeStatusMessage: `❌ Lỗi kết nối Batch OCR: ${err.message}` });
     }
+  },
+
+  recognizeAndTranslateAll: async (targetLang: TargetLanguage = 'vi') => {
+    const currentPages = get().pages;
+    if (!currentPages || currentPages.length === 0) return;
+
+    set({
+      isBatchOCRLoading: true,
+      scrapeStatusMessage: `⚡ BƯỚC 1/2: Đang nhận diện chữ gốc (OCR) từ ${currentPages.length} trang tranh...`,
+    });
+
+    // 1. Run batch OCR across all pages
+    await get().batchOCRAllPages();
+
+    // 2. Ensure all dialogues are translated to target language (default 'vi')
+    set({
+      scrapeStatusMessage: `🌐 BƯỚC 2/2: Đang dịch thuật sang ${targetLang === 'vi' ? 'Tiếng Việt' : targetLang.toUpperCase()} để tạo Content Kịch Bản...`,
+    });
+    await get().translateAllDialogues(targetLang);
+
+    // 3. Synchronize timeline subtitles with translated text
+    const updatedPages = get().pages;
+    const newSubtitles = updatedPages.flatMap((p: any, pIdx: number) =>
+      p.panels.flatMap((panel: any, panIdx: number) =>
+        panel.dialogues.map((d: any, dIdx: number) => ({
+          id: `sub-${pIdx}-${panIdx}-${dIdx}`,
+          startTime: pIdx * 4.0 + panIdx * 1.5,
+          endTime: pIdx * 4.0 + panIdx * 1.5 + 2.5,
+          text: d.translatedText || d.text,
+          speaker: d.speaker,
+          stylePreset: 'tiktok_yellow' as const,
+        }))
+      )
+    );
+
+    set({
+      subtitles: newSubtitles,
+      scrapeStatusMessage: `🎉 Đã hoàn tất Nhận Dạng & Dịch Sang ${targetLang === 'vi' ? 'Tiếng Việt' : targetLang.toUpperCase()} cho toàn bộ ${updatedPages.length} trang! Sẵn sàng biên soạn kịch bản.`,
+    });
   },
 
   scriptData: null,
@@ -3539,9 +3581,9 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
     // Step 1: Scrape Chapter
     await get().fetchMangaFromUrl(rawUrl);
 
-    // Step 2: Auto OCR & Panel Detection
-    set({ pipelineStep: 2, scrapeStatusMessage: '⚡ BƯỚC 2/6: AI đang phát hiện khung tranh (Panels) & nhận diện bóng thoại (OCR)...' });
-    await new Promise((r) => setTimeout(r, 600));
+    // Step 2: Auto OCR & Panel Detection & Vietnamese Translation
+    set({ pipelineStep: 2, scrapeStatusMessage: '⚡ BƯỚC 2/6: AI đang nhận diện chữ (OCR) & tự động dịch sang Tiếng Việt để tạo Content...' });
+    await get().recognizeAndTranslateAll('vi');
 
     // Step 3: AI Script Generation
     set({ pipelineStep: 3, scrapeStatusMessage: '⚡ BƯỚC 3/6: AI Director đang biên soạn kịch bản Review & Dẫn truyện...' });

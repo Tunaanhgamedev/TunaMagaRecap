@@ -89,6 +89,7 @@ export const OCRView: React.FC = () => {
     replacePagePanels,
     batchOCRAllPages,
     isBatchOCRLoading,
+    recognizeAndTranslateAll,
     geminiApiKey,
     setGeminiApiKey,
     isAIConfigModalOpen,
@@ -479,6 +480,81 @@ export const OCRView: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+      {/* 0. DEDICATED WORKFLOW: NHẬN DẠNG CHỮ GỐC & DỊCH SANG TIẾNG VIỆT TẠO CONTENT RECAP */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950/70 p-4 rounded-xl border border-indigo-500/30 shadow-xl space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-indigo-900/40 pb-3">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="text-xl">🌐</span>
+              <h2 className="text-sm font-bold text-white flex items-center space-x-2">
+                <span>Trạm Nhận Dạng Chữ Ngoại & Dịch Sang Tiếng Việt Tạo Content</span>
+                <span className="text-[10px] font-mono bg-gradient-to-r from-emerald-950 to-teal-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-700/60 font-semibold">
+                  Manga Foreign ➔ Vietnamese Content Engine
+                </span>
+              </h2>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              Chuyên xử lý ảnh truyện nước ngoài (Hàn Quốc, Nhật Bản, Trung Quốc, Tiếng Anh). 
+              <strong className="text-cyan-300 ml-1">Bước 1:</strong> Tự động nhận diện chữ gốc và dịch chuẩn Tiếng Việt để viết kịch bản, lời dẫn, phụ đề.
+              <strong className="text-amber-300 ml-1">Bước 2:</strong> Khi đã có content Tiếng Việt chuẩn, có thể dịch sang ngôn ngữ khác (Anh, Nhật, Hàn...) để mở rộng kênh YouTube quốc tế RPM cao!
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Primary Action Button: 1-Click Recognize & Translate to Vietnamese */}
+            <button
+              onClick={() => recognizeAndTranslateAll('vi')}
+              disabled={isRunningOCR || isBatchOCRLoading}
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-emerald-900/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              title="Quét toàn bộ ảnh truyện nước ngoài, nhận diện chữ gốc và dịch ngay sang Tiếng Việt để tạo kịch bản recap"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
+              <span>
+                {isBatchOCRLoading
+                  ? "Đang Quét & Dịch Tiếng Việt..."
+                  : "⚡ 1-Click: Quét Chữ & Dịch Sang Tiếng Việt Tạo Content"}
+              </span>
+            </button>
+
+            {/* Quick Export to Other Languages */}
+            <button
+              onClick={() => translateAllDialogues(targetLanguage)}
+              disabled={isRunningOCR || isBatchOCRLoading}
+              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-violet-300 border border-violet-700/70 text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              title="Dịch toàn bộ thoại từ Tiếng Việt sang ngôn ngữ đích đã chọn (English US RPM, Nhật, Hàn...)"
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Dịch Sang {targetLanguage.toUpperCase()} (Kênh Quốc Tế)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Workflow Guidance Steps */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+          <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 flex items-start space-x-2">
+            <span className="w-5 h-5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">1</span>
+            <div>
+              <p className="font-bold text-slate-200">Quét Chữ Gốc Đa Ngôn Ngữ</p>
+              <p className="text-[10px] text-slate-400">Tự động nhận diện chữ Hàn (Manhwa), Nhật (Manga), Trung (Manhua), hoặc Tiếng Anh qua Manga-OCR & AI Vision.</p>
+            </div>
+          </div>
+          <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 flex items-start space-x-2">
+            <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</span>
+            <div>
+              <p className="font-bold text-slate-200">Dịch Ngay Sang Tiếng Việt Tạo Content</p>
+              <p className="text-[10px] text-slate-400">Dịch chuẩn ngữ nghĩa, loại bỏ rác, tạo khung dẫn chuyện phục vụ AI Script Director sinh kịch bản review cuốn hút.</p>
+            </div>
+          </div>
+          <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 flex items-start space-x-2">
+            <span className="w-5 h-5 rounded-full bg-violet-950 text-violet-400 border border-violet-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">3</span>
+            <div>
+              <p className="font-bold text-slate-200">Mở Rộng Kênh Quốc Tế (US RPM)</p>
+              <p className="text-[10px] text-slate-400">Dễ dàng chuyển đổi kịch bản đã duyệt sang Tiếng Anh / Nhật / Hàn để xuất video đa ngôn ngữ kiếm view toàn cầu.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. TOP CHAPTER ANALYSIS & MULTI-LANGUAGE / TYPOGRAPHY CONTROL BAR */}
       <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
