@@ -47,8 +47,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'settings', label: 'Plugin & API Keys', icon: Settings },
 ];
 
-export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab } = useStudioStore();
+export const Sidebar: React.FC = React.memo(() => {
+  const activeTab = useStudioStore((state) => state.activeTab);
+  const setActiveTab = useStudioStore((state) => state.setActiveTab);
 
   return (
     <aside className="w-52 border-r border-slate-800/80 bg-[#0b0d14]/95 flex flex-col justify-between select-none h-[calc(100vh-3rem)] sticky top-12">
@@ -109,4 +110,5 @@ export const Sidebar: React.FC = () => {
       </div>
     </aside>
   );
-};
+});
+Sidebar.displayName = 'Sidebar';

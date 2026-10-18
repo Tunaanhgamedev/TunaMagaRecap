@@ -31,7 +31,7 @@ const TabSpinner = () => (
 );
 
 export function App() {
-  const { activeTab } = useStudioStore();
+  const activeTab = useStudioStore((state) => state.activeTab);
 
   const renderActiveView = () => {
     switch (activeTab) {

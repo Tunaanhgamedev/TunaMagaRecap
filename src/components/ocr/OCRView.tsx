@@ -35,7 +35,66 @@ import {
   MangaFontFamily,
   TextType,
   TextCaseType,
+  MangaPage,
 } from "../../types/studio";
+
+interface PageThumbnailItemProps {
+  page: MangaPage;
+  index: number;
+  isActive: boolean;
+  sourceUrl?: string;
+  onSelect: (idx: number) => void;
+  onDelete: (idx: number) => void;
+}
+
+const PageThumbnailItem = React.memo<PageThumbnailItemProps>(({
+  page,
+  index,
+  isActive,
+  sourceUrl,
+  onSelect,
+  onDelete,
+}) => {
+  return (
+    <div
+      onClick={() => onSelect(index)}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '96px 128px' }}
+      className={`group relative shrink-0 w-24 h-32 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
+        isActive
+          ? "border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10"
+          : "border-slate-800 hover:border-violet-500 opacity-70 hover:opacity-100"
+      }`}
+    >
+      <img
+        src={getProxyImageUrl((page as any).rawImageUrl || page.imageUrl, sourceUrl)}
+        alt={`Thumb ${index + 1}`}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = page.imageUrl;
+        }}
+      />
+      <div className="absolute top-1 left-1 bg-slate-950/90 border border-slate-700 text-cyan-300 text-[9px] font-black px-1.5 py-0.2 rounded">
+        P{index + 1}
+      </div>
+      <div className="absolute bottom-1 right-1 bg-violet-950/90 border border-violet-800 text-violet-300 text-[8.5px] font-mono px-1 rounded">
+        {page.panels?.length || 0} pan
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(index);
+        }}
+        className="absolute top-1 right-1 bg-red-950/90 text-red-300 hover:bg-red-600 hover:text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
+        title="Xóa trang này"
+      >
+        <Trash2 className="w-2.5 h-2.5" />
+      </button>
+    </div>
+  );
+});
+PageThumbnailItem.displayName = 'PageThumbnailItem';
 
 export const OCRView: React.FC = () => {
   const {
@@ -1006,54 +1065,17 @@ export const OCRView: React.FC = () => {
             ref={thumbnailStripRef}
             className="flex items-center space-x-2.5 overflow-x-auto py-2 px-8 scrollbar-thin scrollbar-thumb-slate-700 w-full scroll-smooth"
           >
-            {pages.map((p, idx) => {
-              const isActive = activePageIndex === idx;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setActivePageIndex(idx)}
-                  style={{ contentVisibility: 'auto', containIntrinsicSize: '96px 128px' }}
-                  className={`group relative shrink-0 w-24 h-32 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
-                    isActive
-                      ? "border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg scale-105 z-10"
-                      : "border-slate-800 hover:border-violet-500 opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={getProxyImageUrl((p as any).rawImageUrl || p.imageUrl, selectedProject?.sourceUrl)}
-                    alt={`Thumb ${idx + 1}`}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = p.imageUrl;
-                    }}
-                  />
-
-                  {/* Top Badge: Page Number */}
-                  <div className="absolute top-1 left-1 bg-slate-950/90 border border-slate-700 text-cyan-300 text-[9px] font-black px-1.5 py-0.2 rounded">
-                    P{idx + 1}
-                  </div>
-
-                  {/* Bottom Badge: Panels Count */}
-                  <div className="absolute bottom-1 right-1 bg-violet-950/90 border border-violet-800 text-violet-300 text-[8.5px] font-mono px-1 rounded">
-                    {p.panels?.length || 0} pan
-                  </div>
-
-                  {/* Hover Delete Button on Thumbnail */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deletePage(idx);
-                    }}
-                    className="absolute top-1 right-1 bg-red-950/90 text-red-300 hover:bg-red-600 hover:text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
-                    title="Xóa trang này"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-              );
-            })}
+            {pages.map((p, idx) => (
+              <PageThumbnailItem
+                key={p.id}
+                page={p}
+                index={idx}
+                isActive={activePageIndex === idx}
+                sourceUrl={selectedProject?.sourceUrl}
+                onSelect={setActivePageIndex}
+                onDelete={deletePage}
+              />
+            ))}
           </div>
 
           <button
@@ -1952,12 +1974,6 @@ export const OCRView: React.FC = () => {
                                         text: e.target.value,
                                         translatedText: e.target.value,
                                       },
-                                    );
-                                    updateDialogueText(
-                                      activePageIndex,
-                                      panel.id,
-                                      d.id,
-                                      e.target.value,
                                     );
                                   }}
                                   style={fontStyle}

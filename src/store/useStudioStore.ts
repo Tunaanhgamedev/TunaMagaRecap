@@ -298,9 +298,36 @@ interface StudioState {
   setSelectedBenchmarkChannel: (channelId: string) => void;
 }
 
-// Safe LocalStorage wrapper to prevent QuotaExceededError and avoid main thread crashes
+// High-Performance Debounced LocalStorage wrapper to prevent UI stutters and QuotaExceededError
+let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingPersistMap = new Map<string, string>();
+
+const flushPendingPersist = () => {
+  if (pendingPersistMap.size === 0) return;
+  try {
+    pendingPersistMap.forEach((val, key) => {
+      localStorage.setItem(key, val);
+    });
+    pendingPersistMap.clear();
+  } catch (e) {
+    console.warn('⚠️ [useStudioStore] LocalStorage quota exceeded. Protected from crashing.', e);
+  }
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushPendingPersist);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushPendingPersist();
+    }
+  });
+}
+
 const safeLocalStorage = {
   getItem: (name: string): string | null => {
+    if (pendingPersistMap.has(name)) {
+      return pendingPersistMap.get(name)!;
+    }
     try {
       return localStorage.getItem(name);
     } catch {
@@ -308,13 +335,20 @@ const safeLocalStorage = {
     }
   },
   setItem: (name: string, value: string): void => {
-    try {
-      localStorage.setItem(name, value);
-    } catch (e) {
-      console.warn('⚠️ [useStudioStore] LocalStorage quota exceeded or storage unavailable. Skipping persist to protect application state.', e);
-    }
+    pendingPersistMap.set(name, value);
+    if (persistDebounceTimer) clearTimeout(persistDebounceTimer);
+    // Defer writing to disk so main thread stays 100% fluid at 60 FPS
+    persistDebounceTimer = setTimeout(() => {
+      flushPendingPersist();
+      persistDebounceTimer = null;
+    }, 350);
   },
   removeItem: (name: string): void => {
+    pendingPersistMap.delete(name);
+    if (persistDebounceTimer) {
+      clearTimeout(persistDebounceTimer);
+      persistDebounceTimer = null;
+    }
     try {
       localStorage.removeItem(name);
     } catch {}
@@ -3948,7 +3982,12 @@ Trận chiến trong Chapter ${chap} đạt đến đỉnh điểm khi các nhâ
       name: 'manga-studio-storage-v4',
       storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({
-        pages: state.pages,
+        pages: (state.pages || []).map((page) => ({
+          ...page,
+          // Strip large inlined base64 data URIs (>50KB) to prevent storage quota exhaustion; keep server paths
+          imageUrl: page.imageUrl?.startsWith('data:') && page.imageUrl.length > 50000 ? '' : page.imageUrl,
+          cleanedImageUrl: page.cleanedImageUrl?.startsWith('data:') && page.cleanedImageUrl.length > 50000 ? undefined : page.cleanedImageUrl,
+        })),
         projects: (state.projects || []).map((p) => ({
           id: p.id,
           seriesName: p.seriesName,

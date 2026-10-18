@@ -456,6 +456,7 @@ export const LibraryView: React.FC = () => {
                       setActivePageIndex(pIdx);
                       setActiveTab('ocr');
                     }}
+                    style={{ contentVisibility: 'auto', containIntrinsicSize: '180px 280px' }}
                     className="glass-card rounded-lg overflow-hidden border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group shadow-lg relative"
                   >
                     <div className="relative h-56 bg-slate-950 overflow-hidden flex items-center justify-center">

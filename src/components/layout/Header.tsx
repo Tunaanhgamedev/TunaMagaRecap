@@ -10,8 +10,11 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-export const Header: React.FC = () => {
-  const { selectedProject, setActiveTab, runWorkflow, isExecutingWorkflow } = useStudioStore();
+export const Header: React.FC = React.memo(() => {
+  const selectedProject = useStudioStore((state) => state.selectedProject);
+  const setActiveTab = useStudioStore((state) => state.setActiveTab);
+  const runWorkflow = useStudioStore((state) => state.runWorkflow);
+  const isExecutingWorkflow = useStudioStore((state) => state.isExecutingWorkflow);
 
   return (
     <header className="h-12 border-b border-slate-800/80 bg-[#0b0d14]/90 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-50 select-none">
@@ -110,4 +113,5 @@ export const Header: React.FC = () => {
       </div>
     </header>
   );
-};
+});
+Header.displayName = 'Header';
